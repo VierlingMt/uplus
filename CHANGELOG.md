@@ -7,6 +7,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-07-05
+### Behoben
+- App hängte während einer Massen-Verarbeitung: Die frühere synchrone „alle prüfen/
+  bewerten"-Aktion verarbeitete alle Pläne in einem Request und sperrte dabei die
+  PHP-Session, wodurch alle weiteren Anfragen blockierten. Diese Aktion wurde
+  entfernt; die Bulk-Endpunkte geben die Session jetzt sofort frei
+  (`session_write_close`), sodass die App während der Verarbeitung bedienbar bleibt.
+
 ## [0.8.0] - 2026-07-05
 ### Behoben
 - Tabellen-Sortierung und -Suche wurden wegen Browser-Caching des alten JavaScripts
@@ -114,7 +122,8 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Login, Dashboard mit Kennzahlen und Projekt-Timeline, Profil
 - GitHub-Actions-Deploy: `config.local.php` aus Secrets + FTP-Upload
 
-[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/VierlingMt/uplus/releases/tag/v0.8.1
 [0.8.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.8.0
 [0.7.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.7.0
 [0.6.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.6.0

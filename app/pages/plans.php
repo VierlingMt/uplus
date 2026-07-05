@@ -21,6 +21,9 @@ if (is_post()) {
     // --- JSON-Endpunkte für die schrittweise Bulk-Verarbeitung (Fortschrittsbalken) ---
     if ($action === 'bulk_list' || $action === 'process_one') {
         Auth::require('admin');
+        // Session sofort freigeben, damit langsame KI-Calls die App nicht blockieren
+        // (PHP sperrt sonst die Session-Datei für die Dauer des Requests).
+        session_write_close();
         header('Content-Type: application/json; charset=utf-8');
         $type = input('type') === 'ai' ? 'ai' : 'structure';
         $notExists = $type === 'ai'
@@ -108,42 +111,10 @@ if (is_post()) {
         redirect(url('plans'));
     }
 
-    if ($action === 'bulk_structure') {
-        Auth::require('admin');
-        $pending = Database::all(
-            "SELECT bp.id FROM business_plans bp
-             WHERE bp.is_current = 1
-               AND NOT EXISTS (SELECT 1 FROM structure_checks sc WHERE sc.business_plan_id = bp.id AND sc.status = 'done')"
-        );
-        $done = 0; $below = 0; $err = 0;
-        foreach ($pending as $row) {
-            @set_time_limit(120);
-            $res = AiEval::runStructureCheck((int) $row['id']);
-            if (!$res['ok']) { $err++; }
-            else { $done++; if ((int) $res['meets_minimum'] === 0) { $below++; } }
-        }
-        flash($err && !$done ? 'error' : 'success',
-            "Struktur-Check abgeschlossen: {$done} geprüft" . ($below ? ", davon {$below} unter Mindeststandard" : '') . ($err ? ", {$err} Fehler" : '') . '.');
-        redirect(url('plans'));
-    }
-
-    if ($action === 'bulk_ai') {
-        Auth::require('admin');
-        $pending = Database::all(
-            "SELECT bp.id FROM business_plans bp
-             WHERE bp.is_current = 1
-               AND NOT EXISTS (SELECT 1 FROM ai_evaluations ai WHERE ai.business_plan_id = bp.id AND ai.status = 'done')"
-        );
-        $done = 0; $err = 0;
-        foreach ($pending as $row) {
-            @set_time_limit(180);
-            $res = AiEval::run((int) $row['id']);
-            if ($res['ok']) { $done++; } else { $err++; }
-        }
-        flash($err && !$done ? 'error' : 'success',
-            "KI-Vorbewertung abgeschlossen: {$done} bewertet" . ($err ? ", {$err} Fehler" : '') . '.');
-        redirect(url('plans'));
-    }
+    // Hinweis: Die frühere synchrone Massenverarbeitung (bulk_structure/bulk_ai)
+    // wurde entfernt – sie sperrte die Session über die gesamte Laufzeit und ließ
+    // die App hängen. Massenläufe erfolgen jetzt client-getrieben über die
+    // JSON-Endpunkte bulk_list/process_one (Fortschrittsbalken, Session freigegeben).
 
     if ($action === 'run_structure') {
         Auth::require('admin');
