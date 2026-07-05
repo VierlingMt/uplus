@@ -7,6 +7,13 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-07-05
+### Geändert
+- **Zuordnung im Wettbewerbsjahr:** In der Projektleitungs-Auswahl werden nur noch
+  echte **Projektleitungen** (`lead`) angezeigt – das Admin-/Eigentümer-Konto
+  (Super-Admin) taucht dort nicht mehr auf. Bestehende Zuordnungen von Admin-Konten
+  bleiben beim Speichern unangetastet.
+
 ## [0.19.0] - 2026-07-05
 ### Hinzugefügt
 - **Test-Mail-Funktion im Admin** (Karte „Anmeldung & Zustellung"): Zieladresse
