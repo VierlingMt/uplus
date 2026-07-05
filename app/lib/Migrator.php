@@ -217,6 +217,11 @@ final class Migrator
                 'name'    => 'Konfigurierbare Meilensteine (Projektablauf) je Wettbewerbsjahr',
                 'up'      => [self::class, 'cycleMilestones'],
             ],
+            [
+                'version' => '2026_07_17_seed_team_members',
+                'name'    => 'Teammitglieder aus den Businessplänen als Schüler:innen importieren',
+                'up'      => [self::class, 'seedTeamMembers'],
+            ],
         ];
     }
 
@@ -719,5 +724,108 @@ final class Migrator
              VALUES ('admin', 'Martin Vierling', 'mv@vimatec.de', ?, NULL, 1)
              ON DUPLICATE KEY UPDATE role = 'admin', name = 'Martin Vierling', specialty = NULL, is_active = 1"
         )->execute([password_hash($pass, PASSWORD_DEFAULT)]);
+    }
+
+    /**
+     * Teammitglieder aus den eingereichten Businessplänen als Schüler:innen
+     * anlegen. Die Namen sind aus den PDFs in storage/seed_plans extrahiert und
+     * je Plan-Dateiname (= business_plans.original_name) hinterlegt. Zuordnung
+     * erfolgt über den aktuellen Businessplan des jeweiligen Teams.
+     *
+     * Hinweise zur Datenlage:
+     *  - Wo die Pläne nur Vor- oder abgekürzte Nachnamen nennen (z. B. „Anna T.“,
+     *    „Neele K.“) ist das 1:1 übernommen.
+     *  - „EGF_B1_Businessplan_Worksy.pdf“ nennt auf dem Deckblatt „Carla, Carla,
+     *    Salma, Mia“ – der doppelte Vorname ist als ein Eintrag übernommen.
+     *  - „9b_4youcafe.pdf“ und „9b_Heimatbox.pdf“ enthalten keine Namen und
+     *    bleiben ohne Mitglieder.
+     * Idempotent: Teams, die bereits Mitglieder haben, werden übersprungen.
+     */
+    public static function seedTeamMembers(PDO $pdo): void
+    {
+        $byPlan = [
+            'EGF_10a_1_V7SprayserBusinessplan.pdf' => ['Maximilian Halach', 'Jan Phillip Henneberg', 'Paul Müller', 'David Steurer', 'Matteo Zeus'],
+            'EGF_10a_2_BusinessPlanSmartDesk.pdf' => ['Liam Wagner', 'Eric Donath', 'Maximilian Schmitt', 'Bruno Várallyay', 'Philipp Kaiser', 'Ayushmaan Tank'],
+            'EGF_10a_3_BusinessplanApp.pdf' => ['Lea Sammet', 'Robin Sennst', 'Ella Steinmann', 'Kilian Schindler', 'Emmylou Kießling'],
+            'EGF_10a_4_Businessplan - Schullink.PDF' => ['Kiana Afschari', 'Emilia Romanenko', 'Marie Yokotani', 'Neele Lange', 'Tianyi Yang'],
+            'EGF_10a_5_AERO-SMART Businessplan.pdf' => ['Emily Kleinke', 'Anna Eberlein', 'Marlene Ahlers', 'Lucia Strenglein', 'Sophie Duwe'],
+            'EGF_B1_Businessplan_Worksy.pdf' => ['Carla', 'Salma', 'Mia'],
+            'EGF_B2_Businessplan_Bio-Catering.pdf' => ['David M/R', 'Felix Baier', 'Jonas Karger'],
+            'EGF_B4_Businessplan_Mintopia GmbH.pdf' => ['Clara Istratescu', 'Julia Hippacher', 'Anja Hempel', 'Ines Oueslati'],
+            'EGF_B6_ Businessplan_Local Steps.PDF' => ['Louisa Schmidt', 'Dameris Kraus', 'Lena Blumauer', 'Paula Schneider', 'Nora Meise'],
+            'EGF_D1_FashionSwap Businessplan.pdf' => ['Abdal Rahman Aessa', 'Danny Alnakola', 'Tarek Alsheikh Salo', 'Jano Scordo', 'Ben Buschmeyer', 'Leonas Wabra'],
+            'EGF_D2_NexPack - Buissnisplan.pdf' => ['Amelie Thierfelder', 'Elena Kröppel', 'Sarah Worsch', 'Chiara Grunow', 'Elena Gallmetzer', 'Celina Töpfer'],
+            'EGF_D3_Businessplan-VitaBox.pdf' => ['Michael Bongartz', 'Raffael Zenk', 'Vinzenz Klatt', 'Ben Wirth', 'David Pachuntke', 'Tom Schönfelder'],
+            'EGF_D4_Businessplan.pdf' => ['Anni Blümlein', 'Anna Hutzler', 'Elena Utzmann', 'Lea Schütz'],
+            'EGF_D5_ShapeBite - Business-Plan 3.pdf' => ['Ceren Bagriyanik', 'Leonardo Schießl', 'Vincent Bober', 'Lena Schmitt'],
+            'Unternehmen Plus Businessplan 2025_26 EGF 10C Team-C1- ScanPen.pdf' => ['Ida Hartmann', 'Gustav Mayer', 'Lea Schaffer', 'Leni Schuster'],
+            'Unternehmen Plus Businessplan 2025_26 EGF 10C Team-C2 - LMT_Last_Minute_Table.pdf' => ['Elias', 'Tobi', 'Gabriel', 'Anna'],
+            'Unternehmen Plus Businessplan 2025_26 EGF 10C Team-C3 - wor-CO-fé.pdf' => ['Sophie Bögelein', 'Julius Andersen', 'Franziska Wohlleber', 'Sarah Brug', 'Marlene Perle'],
+            'Unternehmen Plus Businessplan 2025_26 EGF 10C Team-C4 - Ur Styl.pdf' => ['Ela Karabag', 'Ena Frick', 'Tom Billes', 'Alisa Engler', 'Simon Petersammer'],
+            'Unternehmen Plus Businessplan 2025_26 EGF 10C Team-C5 - Nap Air.PDF' => ['Alina Post', 'Gizem Kutlu', 'Aneta Chadová', 'Lukas Braun', 'Johanna Klein'],
+            'Unternehmen Plus Businessplan 2025_26 EGF 10C Team-C6 - Soundventure.pdf' => ['Lea Düsterberg', 'Isabel Trode', 'Julian Shaw', 'Anja Bezold', 'Kora Gschoßmann'],
+            'Businessplan 10a_prove your food.pdf' => ['Franka Wibiral', 'Fiona Hack', 'Amelie Brütting', 'Chloe Billman', 'Marie Sitzmann'],
+            'Businessplan_10a_focus mat.pdf' => ['Helene Herold', 'Antonia Stark', 'Melissa Gieser', 'Pauline Hofmann', 'Pia Forstner'],
+            'Businessplan_10a_novigo.pdf' => ['Clarissa Möck', 'Justus Rackelmann', 'Lea Richter', 'Luisa Hostalka', 'Sophia Zipfel', 'Viktoria Mourick'],
+            'Businessplan_10a_safe band.pdf' => ['Maja Zargartalebi', 'Anna-Lena Frenzel', 'Luisa Grey', 'Sebastian Vogel', 'Marie Hack'],
+            'Businessplan_10b_bay mi.pdf' => ['Benedikt Klaassen', 'David Gabler', 'Hannes Brunner', 'Fabian Herbst', 'Nathan Opitz', 'Elias Vogel'],
+            'Businessplan_10b_high protein döner.pdf' => ['Charlotte Thor', 'Elisa Grasser', 'Janina Göhl', 'Leon Krahl', 'Sinah Hornung'],
+            'Businessplan_10b_level up.pdf' => ['Valentina', 'Emilie', 'Johann', 'Johanna'],
+            'Businessplan_10c_FrankenGO.PDF' => ['Bruno', 'Vivien', 'Justus', 'Jonas'],
+            'Businessplan_10c_assistify.pdf' => ['Lukas Höck', 'Raphael Altemeier', 'Mario Wrede', 'Mika Seitz', 'Enrico Thiem'],
+            'Businessplan_10c_mellow.pdf' => ['Cajetan v. Pölnitz', 'Leonas Dippold', 'Julian Dorsch', 'Mats Massobust', 'Max H. Porzelt'],
+            '10a_KÜMMR.pdf' => ['Serena S.', 'Joelle L.', 'Erik M.', 'Johanna H.'],
+            '10a_SafariExpress.pdf' => ['Emma Hack', 'Emma Brehm', 'Melissa Lleshi', 'Hanna Singer', 'Lena Frömel'],
+            '10a_Schülercafe.pdf' => ['Lilli', 'Yasmin', 'Anna T.', 'Kristin', 'Anna S.'],
+            '10a_infiniteat.pdf' => ['Lena Spitzer', 'Elli Dick', 'Leo Wilk', 'Marlon Kaupper', 'Theo Keuchl'],
+            '10b_Bowlmemaybe.pdf' => ['Greta Deckert', 'Kimberly Reichl', 'Paula Röttger', 'Leonie House', 'Pia Heidorn', 'Lina Groß'],
+            '10b_Chstyle.pdf' => ['Karla Gerlach', 'Helen Wendt', 'Lara Wüstner', 'Helena Werber'],
+            '10b_Kosmoseum.pdf' => ['Annemarie', 'Lena', 'Meike', 'Sophie'],
+            '10b_SortiSmart.pdf' => ['Sophie Pöhnlein', 'Maya Ben M’barek', 'Helena Werner', 'Gabriel Bewer', 'Josef Huber'],
+            '10b_SunCharger.pdf' => ['Neele K.', 'Marie D.', 'Lisa W.', 'Felicitas L.', 'Emma S.', 'Lisa N.'],
+            '9b_Mounte.pdf' => ['Montgomery Mart Morant', 'Rene Trautner', 'Philipp de Boer', 'Ben Kraus', 'Phil Alter'],
+            '9b_Schüsselglück.pdf' => ['Jessie Potzner', 'Laura Werber', 'Johanna Balbach', 'Nina Glaser', 'Sophie Nützel'],
+            '9b_SoftnCrunch.pdf' => ['Maja Heidorn', 'Leni Schmitt', 'Klara Böhm', 'Emilia Ponner', 'Livleen Bhullar', 'Jule Stilkerich'],
+        ];
+
+        // Dateinamen können je nach System als NFC oder NFD (zerlegte Umlaute)
+        // vorliegen; deshalb den Abgleich über eine normalisierte Fassung führen.
+        $lookup = [];
+        foreach ($byPlan as $plan => $names) {
+            $lookup[self::nfc($plan)] = $names;
+        }
+
+        $rows     = $pdo->query('SELECT team_id, original_name FROM business_plans WHERE is_current = 1')->fetchAll();
+        $hasStud  = $pdo->prepare('SELECT COUNT(*) FROM students WHERE team_id = ?');
+        $insStud  = $pdo->prepare('INSERT INTO students (team_id, name) VALUES (?, ?)');
+
+        foreach ($rows as $row) {
+            $names = $lookup[self::nfc((string) $row['original_name'])] ?? null;
+            if (!$names) { continue; }
+            $teamId = (int) $row['team_id'];
+            $hasStud->execute([$teamId]);
+            if ((int) $hasStud->fetchColumn() > 0) { continue; } // bereits gepflegt
+            foreach ($names as $name) {
+                $insStud->execute([$teamId, $name]);
+            }
+        }
+    }
+
+    /**
+     * Unicode-Normalisierung nach NFC (zusammengesetzte Umlaute). Nutzt die
+     * intl-Erweiterung, falls vorhanden; sonst ein Fallback für die im Projekt
+     * vorkommenden dekomponierten Zeichen (deutsche Umlaute, Akzente).
+     */
+    private static function nfc(string $s): string
+    {
+        if (class_exists('Normalizer')) {
+            $n = \Normalizer::normalize($s, \Normalizer::FORM_C);
+            if ($n !== false) { return $n; }
+        }
+        return strtr($s, [
+            "a\u{0308}" => 'ä', "o\u{0308}" => 'ö', "u\u{0308}" => 'ü',
+            "A\u{0308}" => 'Ä', "O\u{0308}" => 'Ö', "U\u{0308}" => 'Ü',
+            "e\u{0301}" => 'é', "e\u{0300}" => 'è',
+        ]);
     }
 }

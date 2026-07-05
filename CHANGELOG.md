@@ -7,6 +7,16 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-07-05
+### Hinzugefügt
+- **Teammitglieder aus den Businessplänen importiert:** Die in den eingereichten
+  Businessplan-PDFs (`storage/seed_plans/`) genannten Schüler:innen werden per
+  Migration als Teammitglieder angelegt und dem jeweiligen Team über den
+  aktuellen Businessplan zugeordnet (205 Mitglieder aus 42 Teams). Zwei Pläne
+  (`9b_4youcafe`, `9b_Heimatbox`) nennen keine Namen und bleiben ohne Mitglieder.
+  Der Import ist idempotent – Teams, die bereits gepflegte Mitglieder haben,
+  werden nicht angetastet.
+
 ## [0.29.1] - 2026-07-05
 ### Geändert
 - Businessplan-Detail: Jury-Bewertung, Struktur-Check und KI-Vorbewertung als
