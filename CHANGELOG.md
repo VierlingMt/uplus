@@ -7,6 +7,16 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-07-05
+### Geändert
+- **Eigene Subdomain:** Die App läuft jetzt unter **https://uplus.vimatec.de**
+  (statt im Unterordner `https://vimatec.de/uplus`). Sie liegt damit im Web-Root;
+  der Base-Path wird automatisch leer erkannt, das `BASE_PATH`-Secret entfällt.
+- **PHP 8.5:** Betrieb auf PHP 8.5; der Deploy-Workflow prüft und lintet die
+  Quellen nun ebenfalls gegen PHP 8.5.
+- Dokumentation (README) auf Subdomain, PHP 8.5 und den aktuellen Deploy-Trigger
+  (`main`) aktualisiert; Service-Worker-Cache-Version an die App-Version angeglichen.
+
 ## [0.13.0] - 2026-07-05
 ### Hinzugefügt
 - **Wettbewerbsjahre (Zyklen)** als zentrales Objekt: eigenes Menü „Wettbewerbsjahre“,
@@ -187,7 +197,10 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Login, Dashboard mit Kennzahlen und Projekt-Timeline, Profil
 - GitHub-Actions-Deploy: `config.local.php` aus Secrets + FTP-Upload
 
-[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.14.0
+[0.13.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.13.0
+[0.12.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.12.0
 [0.11.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.11.0
 [0.10.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.10.0
 [0.9.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.9.0
