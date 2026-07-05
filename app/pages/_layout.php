@@ -45,6 +45,9 @@ $roleLabel = ['admin' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 
     </nav>
     <div class="sidebar__foot">
       Businessplanwettbewerb<br>der Wirtschaftsjunioren Forchheim
+      <div style="margin-top:8px">
+        <a href="<?= url('changelog') ?>" style="color:#9fb2d6;text-decoration:none" title="Changelog anzeigen">Version <?= e(APP_VERSION) ?> ↗</a>
+      </div>
     </div>
   </aside>
 

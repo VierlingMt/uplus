@@ -102,6 +102,16 @@ final class Migrator
                 'name'    => 'Grunddaten (Schulen, Jury, Einstellungen)',
                 'up'      => [self::class, 'seed'],
             ],
+            [
+                'version' => '2026_07_03_import_plans',
+                'name'    => 'Import eingereichter Businesspläne',
+                'up'      => [self::class, 'importPlans'],
+            ],
+            [
+                'version' => '2026_07_04_owner_admin',
+                'name'    => 'Dauerhafter App-Admin (mv@vimatec.de)',
+                'up'      => [self::class, 'ownerAdmin'],
+            ],
         ];
     }
 
@@ -170,6 +180,99 @@ final class Migrator
             (string) cfg('explainer_video'),
             'all',
             1,
+        ]);
+    }
+
+    /**
+     * Eingereichte Businesspläne aus storage/seed_plans/<SCHULE>/ importieren.
+     * Legt je PDF ein Team an, kopiert die Datei nach uploads/plans und
+     * verknüpft sie als aktuellen Businessplan. Läuft nur einmal.
+     */
+    public static function importPlans(PDO $pdo): void
+    {
+        $root = ROOT_PATH . '/storage/seed_plans';
+        if (!is_dir($root)) {
+            return; // nichts zu importieren
+        }
+        $dest = UPLOAD_PATH . '/plans';
+        if (!is_dir($dest)) { @mkdir($dest, 0775, true); }
+
+        // Schulen nach Kürzel
+        $schoolByCode = [];
+        foreach ($pdo->query('SELECT id, short_name FROM schools')->fetchAll() as $r) {
+            if ($r['short_name']) { $schoolByCode[strtoupper($r['short_name'])] = (int) $r['id']; }
+        }
+
+        $insTeam = $pdo->prepare('INSERT INTO teams (school_id, name, idea_name, status) VALUES (?,?,?,?)');
+        $insPlan = $pdo->prepare(
+            'INSERT INTO business_plans (team_id, original_name, stored_name, mime, size_bytes, version, is_current)
+             VALUES (?,?,?,?,?,1,1)'
+        );
+
+        foreach (glob($root . '/*', GLOB_ONLYDIR) as $dir) {
+            $code = strtoupper(basename($dir));
+            if (!isset($schoolByCode[$code])) { continue; }
+            $schoolId = $schoolByCode[$code];
+            $files = glob($dir . '/*.[pP][dD][fF]') ?: [];
+            sort($files);
+            foreach ($files as $file) {
+                $orig = basename($file);
+                [$teamName] = self::deriveTeamName($orig, $code);
+                $insTeam->execute([$schoolId, $teamName, $teamName, 'submitted']);
+                $teamId = (int) $pdo->lastInsertId();
+
+                $stored = bin2hex(random_bytes(12)) . '.pdf';
+                @copy($file, $dest . '/' . $stored);
+                $insPlan->execute([$teamId, $orig, $stored, 'application/pdf', (int) @filesize($file)]);
+            }
+        }
+    }
+
+    /**
+     * Aus einem Dateinamen einen lesbaren Team-/Projektnamen ableiten.
+     * @return array{0:string,1:?string} [Name, Klasse]
+     */
+    public static function deriveTeamName(string $filename, string $code): array
+    {
+        $s = pathinfo($filename, PATHINFO_FILENAME);
+        // Klasse extrahieren (z.B. 10a, 9b)
+        $class = null;
+        if (preg_match('/\b(\d{1,2}[a-eA-E])\b/u', $s, $m)) { $class = strtolower($m[1]); }
+
+        // camelCase trennen – aber Akronyme (GmbH, LMT, AERO) erhalten:
+        // nur splitten, wenn auf den Großbuchstaben ein Kleinbuchstabe folgt.
+        $s = preg_replace('/(?<=[a-zäöü])(?=[A-ZÄÖÜ][a-zäöü])/u', ' ', $s);
+        // Trenner zu Leerzeichen
+        $s = preg_replace('/[_\-]+/u', ' ', $s);
+        // Störtokens entfernen (jetzt durch Leerzeichen getrennt)
+        $s = preg_replace('/unternehmen\s*plus/iu', ' ', $s);
+        $s = preg_replace('/\bbusiness\s?plan\b|\bbuissnisplan\b|\bbusinessplan\b/iu', ' ', $s);
+        $s = preg_replace('/\b' . preg_quote($code, '/') . '\b/iu', ' ', $s);
+        $s = preg_replace('/\b20\d{2}\s?\d{0,2}\b/u', ' ', $s);        // Jahr 2025 / 2025 26
+        $s = preg_replace('/\bteam\b/iu', ' ', $s);
+        $s = preg_replace('/\b\d{1,2}[a-eA-E]\b/u', ' ', $s);          // Klasse 10a
+        $s = preg_replace('/\b[a-eA-E]\d{1,2}\b/u', ' ', $s);          // Codes B1, D2, C6
+        $s = preg_replace('/\b\d{1,2}\b/u', ' ', $s);                  // lose Nummerierung
+        $s = trim(preg_replace('/\s+/u', ' ', $s));
+        if ($s === '' || mb_strlen($s) < 2) { $s = pathinfo($filename, PATHINFO_FILENAME); }
+
+        $name = $class ? ($s . ' (' . $class . ')') : $s;
+        return [$name, $class];
+    }
+
+    /**
+     * Dauerhaftes App-Admin-Konto sicherstellen (mv@vimatec.de). Die eigentliche
+     * Projektleitung wechselt jährlich; dieses Konto bleibt Eigentümer der App.
+     */
+    public static function ownerAdmin(PDO $pdo): void
+    {
+        $pass = (string) cfg('seed_admin_password', 'UPlus-Start!2026');
+        $pdo->prepare(
+            'INSERT IGNORE INTO users (role, name, email, password_hash, specialty, is_active)
+             VALUES (?,?,?,?,?,1)'
+        )->execute([
+            'admin', 'Martin Vierling (App-Admin)', 'mv@vimatec.de',
+            password_hash($pass, PASSWORD_DEFAULT), 'App-Verwaltung (dauerhaft)',
         ]);
     }
 }

@@ -36,16 +36,21 @@ try {
             require APP_PATH . '/pages/profile.php';
             break;
 
+        case 'changelog':
+            require APP_PATH . '/pages/changelog.php';
+            break;
+
         // --- Module ---
         case 'schools':
         case 'teams':
         case 'jurors':
         case 'materials':
         case 'material_download':
+        case 'plans':
+        case 'bp_download':
             require APP_PATH . '/pages/' . $route . '.php';
             break;
 
-        case 'plans':
         case 'ranking':
             render('stub', ['route' => $route, 'title' => ucfirst($route)]);
             break;

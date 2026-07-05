@@ -77,6 +77,41 @@ function is_post(): bool
     return ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST';
 }
 
+/** Sehr schlanker, sicherer Markdown-Renderer (Überschriften, Listen, Fett, Links). */
+function render_markdown(string $md): string
+{
+    $lines = preg_split('/\R/', $md);
+    $html = '';
+    $inList = false;
+    $inline = static function (string $t): string {
+        $t = e($t);
+        $t = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $t);
+        $t = preg_replace_callback('/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/', static fn($m) =>
+            '<a href="' . $m[2] . '" target="_blank" rel="noopener">' . $m[1] . '</a>', $t);
+        return $t;
+    };
+    foreach ($lines as $line) {
+        $t = rtrim($line);
+        if (preg_match('/^(#{1,4})\s+(.*)$/', $t, $m)) {
+            if ($inList) { $html .= "</ul>\n"; $inList = false; }
+            $lvl = min(strlen($m[1]) + 1, 4);
+            $html .= "<h{$lvl}>" . $inline($m[2]) . "</h{$lvl}>\n";
+        } elseif (preg_match('/^\s*[-*]\s+(.*)$/', $t, $m)) {
+            if (!$inList) { $html .= "<ul>\n"; $inList = true; }
+            $html .= '<li>' . $inline($m[1]) . "</li>\n";
+        } elseif (trim($t) === '') {
+            if ($inList) { $html .= "</ul>\n"; $inList = false; }
+        } else {
+            if ($inList) { $html .= "</ul>\n"; $inList = false; }
+            // Referenz-Link-Definitionen ([x]: url) ausblenden
+            if (preg_match('/^\[[^\]]+\]:\s/', $t)) { continue; }
+            $html .= '<p>' . $inline($t) . "</p>\n";
+        }
+    }
+    if ($inList) { $html .= "</ul>\n"; }
+    return $html;
+}
+
 /** Minimale, layout-freie Fehlerseite fuer Infrastrukturprobleme (DB/Config). */
 function fail_page(string $title, string $message): void
 {

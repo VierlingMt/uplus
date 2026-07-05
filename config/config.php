@@ -11,6 +11,11 @@
 
 declare(strict_types=1);
 
+// Anwendungsversion (bei relevanten Änderungen zusammen mit CHANGELOG.md pflegen).
+if (!defined('APP_VERSION')) {
+    define('APP_VERSION', '0.3.0');
+}
+
 $defaults = [
     'db_host'           => getenv('DB_HOST')  ?: 'localhost',
     'db_name'           => getenv('DB_NAME')  ?: '',
