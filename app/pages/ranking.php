@@ -73,6 +73,34 @@ $rows = $loadRows();
 $fmt = fn($n) => $n === null ? '–' : rtrim(rtrim(number_format((float) $n, 1, ',', ''), '0'), ',');
 $totalJurors = (int) Database::value("SELECT COUNT(*) FROM users WHERE role IN ('admin','lead','juror') AND is_active=1");
 $phaseLabels = ['submitted' => ['eingereicht', 'muted'], 'nominated' => ['Pitch', 'teal'], 'fallback' => ['Nachrücker', 'amber'], 'eliminated' => ['raus', 'muted'], 'draft' => ['Entwurf', 'muted']];
+$roleLabels  = ['admin' => 'Admin', 'lead' => 'Projektleitung', 'juror' => 'Jury'];
+
+// Bewertungsstand (Businessplan): wer hat welchen Plan noch nicht bewertet? (nur Verwaltung)
+$coverage = [];
+$coverageDone = 0;
+if ($isAdmin) {
+    $evaluators = Database::all(
+        "SELECT id, name, role FROM users WHERE role IN ('admin','lead','juror') AND is_active=1
+         ORDER BY FIELD(role,'juror','lead','admin'), name"
+    );
+    $planTeams = array_values(array_filter($rows, fn($r) => $r['bp_id'])); // nur Teams mit aktuellem Businessplan
+    $doneSet = [];
+    foreach (Database::all("SELECT juror_id, team_id FROM evaluations WHERE bp_submitted=1") as $d) {
+        $doneSet[(int) $d['juror_id'] . '-' . (int) $d['team_id']] = true;
+    }
+    foreach ($evaluators as $ev) {
+        $open = [];
+        foreach ($planTeams as $pt) {
+            if (empty($doneSet[(int) $ev['id'] . '-' . (int) $pt['id']])) {
+                $open[] = $pt['name'];
+            }
+        }
+        if (!$open) { $coverageDone++; }
+        $coverage[] = ['name' => $ev['name'], 'role' => $ev['role'], 'open' => $open, 'total' => count($planTeams)];
+    }
+    // Wer am meisten offen hat, steht oben (zum „Nachfassen").
+    usort($coverage, fn($a, $b) => count($b['open']) <=> count($a['open']));
+}
 
 ob_start(); ?>
 <div class="page-head">
@@ -86,16 +114,20 @@ ob_start(); ?>
 </div>
 
 <div class="card">
-  <div class="card__head">Ranking <span class="muted" style="font-weight:400;font-size:13px">· Gesamt = 2 × Businessplan + 1 × Pitch (max 140) · <?= $totalJurors ?> Bewertende</span></div>
+  <div class="card__head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <span>Ranking <span class="muted" style="font-weight:400;font-size:13px">· Gesamt = 2 × Businessplan + 1 × Pitch (max 140) · <?= $totalJurors ?> Bewertende</span></span>
+    <label class="toggle-eval" style="font-weight:400"><input type="checkbox" id="hideCompleteToggle"> Nur unvollständig bewertete</label>
+  </div>
   <div class="table-wrap">
-    <table class="data data--cards">
+    <table class="data data--cards" id="rankingTable">
       <thead><tr>
         <th style="width:40px">#</th><th>Team</th><th>Schule</th><th>Jury</th>
         <th>Ø BP<br>/50</th><th>Ø Pitch<br>/40</th><th>Gesamt<br>/140</th><?php if ($showAiEval): ?><th>KI</th><?php endif; ?><th>Status</th><th></th>
       </tr></thead>
       <tbody>
-      <?php foreach ($rows as $i => $r): [$sl, $sc] = $phaseLabels[$r['status']] ?? [$r['status'], 'muted']; ?>
-        <tr>
+      <?php foreach ($rows as $i => $r): [$sl, $sc] = $phaseLabels[$r['status']] ?? [$r['status'], 'muted'];
+          $complete = $totalJurors > 0 && (int) $r['n_bp'] >= $totalJurors ? 1 : 0; ?>
+        <tr data-complete="<?= $complete ?>">
           <td data-label="Platz"><strong><?= $i + 1 ?></strong><?php if ($r['pitch_order']): ?> <span class="pill teal" title="Pitch-Reihenfolge">P<?= (int) $r['pitch_order'] ?></span><?php endif; ?></td>
           <td data-label="Team">
             <?php if ($r['bp_id']): ?>
@@ -120,7 +152,7 @@ ob_start(); ?>
           </td>
         </tr>
         <?php if ($isAdmin): ?>
-        <tr class="admin-row"><td colspan="<?= $cols ?>" style="padding-top:0">
+        <tr class="admin-row" data-complete="<?= $complete ?>"><td colspan="<?= $cols ?>" style="padding-top:0">
           <form method="post" action="<?= url('ranking') ?>" style="display:flex;gap:8px;align-items:center;justify-content:flex-end">
             <?= Csrf::field() ?><input type="hidden" name="action" value="set_status"><input type="hidden" name="team_id" value="<?= (int) $r['id'] ?>">
             <span class="muted" style="font-size:12px">Status setzen:</span>
@@ -140,7 +172,52 @@ ob_start(); ?>
     </table>
   </div>
 </div>
-<style>.admin-row td{border-bottom:2px solid var(--line)}.admin-row form{opacity:.75}.admin-row:hover form{opacity:1}</style>
+
+<?php if ($isAdmin && $coverage): ?>
+<details class="card mt collapse">
+  <summary class="collapse__head">
+    <span class="collapse__title"><span class="collapse__chev" aria-hidden="true">▸</span> Bewertungsstand (Businessplan)
+      <span class="collapse__info"><?= $coverageDone ?> von <?= count($coverage) ?> Bewertenden fertig</span></span>
+  </summary>
+  <div class="card__body">
+    <p class="muted" style="margin-top:0;font-size:13px">Wer hat welche eingereichten Businesspläne noch nicht bewertet? (Sortiert nach den meisten offenen zuerst.)</p>
+    <table class="data data--cards">
+      <thead><tr><th>Bewertende:r</th><th>Fortschritt</th><th>Noch offen</th></tr></thead>
+      <tbody>
+      <?php if (!$coverage[0]['total']): ?>
+        <tr><td colspan="3" class="muted">Noch keine eingereichten Businesspläne.</td></tr>
+      <?php else: foreach ($coverage as $c): $done = $c['total'] - count($c['open']); ?>
+        <tr>
+          <td data-label="Bewertende:r"><strong><?= e($c['name']) ?></strong>
+            <span class="pill <?= ['admin'=>'blue','lead'=>'blue','juror'=>'teal'][$c['role']] ?? 'muted' ?>"><?= e($roleLabels[$c['role']] ?? $c['role']) ?></span></td>
+          <td data-label="Fortschritt"><strong><?= $done ?></strong>/<?= $c['total'] ?></td>
+          <td data-label="Noch offen"><?php if ($c['open']): ?><span style="color:#b32a22"><?= e(implode(', ', $c['open'])) ?></span><?php else: ?><span class="pill teal">✓ alle bewertet</span><?php endif; ?></td>
+        </tr>
+      <?php endforeach; endif; ?>
+      </tbody>
+    </table>
+  </div>
+</details>
+<?php endif; ?>
+
+<style>
+.admin-row td{border-bottom:2px solid var(--line)}.admin-row form{opacity:.75}.admin-row:hover form{opacity:1}
+table.hide-complete tr[data-complete="1"]{display:none}
+</style>
+<script>
+(function(){
+  var t=document.getElementById('hideCompleteToggle'), tbl=document.getElementById('rankingTable');
+  if(!t||!tbl) return;
+  var KEY='uplus_ranking_hide_complete';
+  var saved=null; try{saved=localStorage.getItem(KEY);}catch(e){}
+  var on=saved==='1';
+  t.checked=on; tbl.classList.toggle('hide-complete',on);
+  t.addEventListener('change',function(){
+    try{localStorage.setItem(KEY,t.checked?'1':'0');}catch(e){}
+    tbl.classList.toggle('hide-complete',t.checked);
+  });
+})();
+</script>
 <?php
 $content = ob_get_clean();
 $title = 'Bewertung & Ranking';

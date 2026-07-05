@@ -7,6 +7,16 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-07-05
+### Hinzugefügt
+- **Bewertungsstand: Wer hat welchen Plan noch nicht bewertet?** Unter „Bewertung &
+  Ranking" zeigt eine neue, einklappbare Übersicht (nur Verwaltung) je Bewertende:r den
+  Fortschritt (z. B. „2/12") und – rot hervorgehoben – die Namen der noch offenen
+  Businesspläne; wer fertig ist, erscheint als „✓ alle bewertet". Sortiert nach den
+  meisten offenen zuerst, damit man gezielt nachfassen kann.
+- **Filter „Nur unvollständig bewertete"** in der Ranking-Tabelle: blendet Teams aus,
+  die bereits von allen Bewertenden bewertet wurden (Auswahl wird pro Gerät gemerkt).
+
 ## [0.37.0] - 2026-07-05
 ### Hinzugefügt
 - **Eigene E-Mail-Adresse und Handynummer selbst ändern – immer mit Bestätigung.**
