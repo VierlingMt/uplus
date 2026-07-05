@@ -61,11 +61,24 @@ final class AiEval
             Database::run('UPDATE structure_checks SET status=?, error_message=? WHERE id=?', ['error', $res['error'], $id]);
             return ['ok' => false, 'error' => $res['error']];
         }
+
+        // Substanz-Score aus den fünf KERN-Abschnitten (behandelt=2, oberflächlich=1, fehlt=0) -> 0..10
+        $depth = ['behandelt' => 2, 'oberflaechlich' => 1, 'fehlt' => 0];
+        $core = ['idea', 'sales', 'team', 'company', 'finance'];
+        $score = 0;
+        foreach ($core as $k) {
+            $st = $res['sections'][$k]['status'] ?? 'fehlt';
+            $score += $depth[$st] ?? 0;
+        }
+        // Gate anhand des im Admin einstellbaren Schwellwerts (Default 6 von 10)
+        $threshold = Settings::getInt('ai_min_score', 6);
+        $meets = $score >= $threshold ? 1 : 0;
+
         Database::run(
-            'UPDATE structure_checks SET status=?, model=?, meets_minimum=?, reason=?, sections_json=? WHERE id=?',
-            ['done', $res['model'], $res['meets_minimum'], $res['reason'], json_encode($res['sections'], JSON_UNESCAPED_UNICODE), $id]
+            'UPDATE structure_checks SET status=?, model=?, meets_minimum=?, completeness_score=?, reason=?, sections_json=? WHERE id=?',
+            ['done', $res['model'], $meets, $score, $res['reason'], json_encode($res['sections'], JSON_UNESCAPED_UNICODE), $id]
         );
-        return ['ok' => true, 'meets_minimum' => $res['meets_minimum']];
+        return ['ok' => true, 'meets_minimum' => $meets, 'score' => $score];
     }
 
     /** Neuesten Struktur-Check zu einem Businessplan laden. */

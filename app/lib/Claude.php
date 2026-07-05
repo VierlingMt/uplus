@@ -186,24 +186,33 @@ TXT;
         }
 
         $prompt = <<<TXT
-Du prüfst schnell und günstig, ob ein Schüler-Businessplan (PDF) die vorgegebene
-Vorlagen-Struktur inhaltlich abdeckt. Es geht NICHT um inhaltliche Qualität/Note,
-sondern nur um Vollständigkeit und Bearbeitungstiefe je Abschnitt.
+Du bist erfahrenes Jurymitglied und machst eine schnelle Triage von Schüler-
+Businessplänen (10. Klasse, PDF). Ziel: erkennen, welche Pläne so wenig
+Bearbeitungstiefe haben, dass man sie beim ersten Durchsehen aussortieren würde.
+Es geht NICHT um die inhaltliche Note, sondern um die tatsächliche Ausarbeitungstiefe
+je Kernabschnitt.
 
-Bewerte für jeden Abschnitt der Vorlage den Status:
-- "behandelt": inhaltlich ausgearbeitet (ganze Sätze/Erklärungen, mehr als bloße Stichworte)
-- "oberflaechlich": nur 1-3 Stichworte, sehr dünn, kaum Substanz
-- "fehlt": Abschnitt gar nicht vorhanden/leer
+Vergib je Abschnitt EINEN Status – sei dabei streng wie beim schnellen Durchscrollen:
+- "behandelt": echte Ausarbeitung – zusammenhängende Sätze, die den Aspekt konkret
+  erklären (nicht nur benennen). Mehrere Aussagen mit Substanz.
+- "oberflaechlich": nur angerissen – Stichpunkte, ein, zwei Halbsätze, Floskeln oder
+  bloßes Benennen ohne echte Ausführung.
+- "fehlt": Abschnitt gar nicht vorhanden oder praktisch leer.
 
-Abschnitte der Vorlage:
+Bewertet werden die fünf KERN-Abschnitte (Geschäftsidee, Vertrieb & Wettbewerb,
+Team & Partner, Dein Unternehmen, Finanzen). Zusammenfassung und Anhang sind OPTIONAL
+und dürfen NICHT gegen den Plan zählen (fehlende Zusammenfassung ist kein Mangel).
+
+Abschnitte:
 {$listText}
 
-Mindeststandard (wann ist er NICHT erfüllt):
-{$def}
+Wichtig: Ein Plan mit vollständiger Gliederung, aber überall nur Stichpunkten/
+Ein-Satz-Antworten ist NICHT ausreichend bearbeitet. Ein Plan mit ausformulierten,
+konkreten Abschnitten ist ausreichend – auch ohne Zusammenfassung.
 
-Setze meets_minimum_standard = false, wenn wesentliche (nicht-optionale) Abschnitte
-fehlen oder überwiegend nur oberflächlich (Stichworte) behandelt sind – solche Pläne
-werden ohne weitere Sichtung aussortiert. Begründe kurz und konkret.
+Gib in "reason" 1-2 Sätze, die den Gesamteindruck der Bearbeitungstiefe begründen.
+Das Feld meets_minimum_standard darfst du nach eigenem Eindruck setzen; die endgültige
+Aussortier-Entscheidung trifft aber das System anhand der Abschnitts-Tiefe.
 Nutze ausschließlich das Tool "submit_structure_check".
 TXT;
 

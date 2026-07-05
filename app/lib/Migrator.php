@@ -147,6 +147,12 @@ final class Migrator
                 'name'    => 'Sponsoren + Beiträge (Verwaltung, Auto-Anzeige je Jahr)',
                 'up'      => [self::class, 'sponsorsSetup'],
             ],
+            [
+                'version' => '2026_07_09_structure_score',
+                'name'    => 'Substanz-Score für den Struktur-Check',
+                'up'      => 'ALTER TABLE structure_checks
+                    ADD COLUMN IF NOT EXISTS completeness_score TINYINT NULL AFTER meets_minimum',
+            ],
         ];
     }
 

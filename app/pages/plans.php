@@ -158,7 +158,7 @@ $teams = Database::all(
     "SELECT t.*, s.name AS school_name, s.short_name,
             bp.id AS bp_id, bp.version, bp.created_at AS uploaded_at,
             ai.total_score AS ai_score, ai.status AS ai_status,
-            sc.meets_minimum AS sc_min, sc.status AS sc_status
+            sc.meets_minimum AS sc_min, sc.status AS sc_status, sc.completeness_score AS sc_score
      FROM teams t
      JOIN schools s ON s.id = t.school_id
      LEFT JOIN business_plans bp ON bp.team_id = t.id AND bp.is_current = 1
@@ -214,8 +214,8 @@ ob_start(); ?>
           <td>
             <?php if (!$t['bp_id']): ?>—
             <?php elseif ($t['sc_status'] === 'done'): ?>
-              <?php if ((int) $t['sc_min'] === 0): ?><span class="pill red" title="Mindeststandard nicht erfüllt">⚠ unter Standard</span>
-              <?php else: ?><span class="pill teal">✓ ok</span><?php endif; ?>
+              <strong><?= $t['sc_score'] !== null ? (int) $t['sc_score'] : '–' ?></strong>/10
+              <?php if ((int) $t['sc_min'] === 0): ?><br><span class="pill red" title="unter Mindeststandard">⚠ unter Standard</span><?php endif; ?>
             <?php elseif ($t['sc_status'] === 'error'): ?><span class="pill red">Fehler</span>
             <?php else: ?><span class="pill muted">offen</span><?php endif; ?>
           </td>

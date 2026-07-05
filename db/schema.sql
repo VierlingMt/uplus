@@ -142,6 +142,7 @@ CREATE TABLE IF NOT EXISTS structure_checks (
     model            VARCHAR(80) NULL,
     status           ENUM('running','done','error') NOT NULL DEFAULT 'running',
     meets_minimum    TINYINT(1) NULL,
+    completeness_score TINYINT NULL,
     reason           TEXT NULL,
     sections_json    LONGTEXT NULL,
     error_message    TEXT NULL,

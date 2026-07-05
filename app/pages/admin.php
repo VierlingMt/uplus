@@ -14,6 +14,7 @@ if (is_post()) {
         if (input('clear_key')) { Settings::set('anthropic_api_key', ''); }
         Settings::set('anthropic_model', trim((string) input('anthropic_model')) ?: 'claude-sonnet-5');
         Settings::set('ai_gate_model', trim((string) input('ai_gate_model')) ?: 'claude-haiku-4-5-20251001');
+        Settings::set('ai_min_score', (string) max(0, min(10, (int) input('ai_min_score', 6))));
         Settings::set('ai_min_standard', trim((string) input('ai_min_standard')) ?: Claude::DEFAULT_MIN_STANDARD);
         Settings::set('ai_extra_guidance', trim((string) input('ai_extra_guidance')));
         flash('success', 'KI-Einstellungen gespeichert.');
@@ -79,6 +80,12 @@ ob_start(); ?>
             <?php endforeach; ?>
           </select>
           <div class="help">Günstiges Modell (Haiku) genügt – reiner Vollständigkeits-/Struktur-Check gegen die Vorlage.</div>
+        </div>
+        <div class="field">
+          <label>Mindest-Substanz-Score (Schwellwert 0–10)</label>
+          <input type="number" name="ai_min_score" min="0" max="10" value="<?= (int) Settings::getInt('ai_min_score', 6) ?>" style="width:90px">
+          <div class="help">Summe der Bearbeitungstiefe über die 5 Kernabschnitte (behandelt=2, oberflächlich=1, fehlt=0).
+            Pläne <strong>unter</strong> diesem Wert gelten als „unter Mindeststandard". Höher = strenger (mehr Pläne werden aussortiert).</div>
         </div>
         <div class="field">
           <label>Mindeststandard-Gate (Definition für die KI)</label>

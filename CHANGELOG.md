@@ -7,6 +7,17 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-07-05
+### Geändert
+- **Struktur-Check kalibriert & steuerbar:** statt einer unzuverlässigen Ja/Nein-
+  Entscheidung des Modells liefert der Check nun je Kernabschnitt eine Bearbeitungstiefe
+  (behandelt=2 / oberflächlich=1 / fehlt=0) → **Substanz-Score 0–10**. „Unter Standard"
+  ergibt sich aus einem **im Admin einstellbaren Schwellwert** (Standard 6) — so lässt
+  sich die Aussortier-Quote selbst auf ~30–50 % kalibrieren. Der Score ist sortierbar.
+- Zusammenfassung und Anhang zählen **nicht** mehr als Pflichtabschnitt (behebt
+  Falsch-Markierungen solider Pläne ohne Executive Summary, z. B. „Schülercafe").
+- Struktur-Check-Prompt als strenge Jury-Triage geschärft (Stichpunkte-only = nicht ausreichend).
+
 ## [0.9.0] - 2026-07-05
 ### Hinzugefügt
 - **Sponsoren-Verwaltung** (Menü, nur Admin): Logo, Name, Anschrift, Ansprechpartner,
@@ -131,7 +142,8 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Login, Dashboard mit Kennzahlen und Projekt-Timeline, Profil
 - GitHub-Actions-Deploy: `config.local.php` aus Secrets + FTP-Upload
 
-[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.10.0
 [0.9.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.9.0
 [0.8.1]: https://github.com/VierlingMt/uplus/releases/tag/v0.8.1
 [0.8.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.8.0

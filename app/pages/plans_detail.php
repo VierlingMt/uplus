@@ -87,7 +87,9 @@ ob_start(); ?>
       <div class="flash error">Fehler: <?= e($sc['error_message'] ?: 'unbekannt') ?></div>
     <?php elseif ($sc['status'] !== 'done'): ?>
       <p class="muted">Prüfung läuft …</p>
-    <?php else: ?>
+    <?php else: $thr = Settings::getInt('ai_min_score', 6); ?>
+      <p><strong style="font-size:22px;color:var(--wj-blue)"><?= $sc['completeness_score'] !== null ? (int) $sc['completeness_score'] : '–' ?></strong> / 10
+         <span class="muted">Substanz-Score (Kernabschnitte) · Schwelle <?= $thr ?></span></p>
       <?php if ((int) $sc['meets_minimum'] === 0): ?>
         <div class="flash error"><strong>⚠ Mindeststandard nicht erfüllt</strong> – kann ohne weitere Sichtung aussortiert werden.
           <?php if ($sc['reason']): ?><br><span style="font-size:13px"><?= nl2br(e($sc['reason'])) ?></span><?php endif; ?></div>

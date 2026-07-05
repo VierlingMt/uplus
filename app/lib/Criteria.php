@@ -102,8 +102,8 @@ final class Criteria
     {
         $bp = self::BUSINESSPLAN;
         return [
-            ['key' => 'summary', 'title' => 'Zusammenfassung', 'required' => true,
-             'aspects' => ['Kurzer Gesamtüberblick der Geschäftsidee auf einen Blick']],
+            ['key' => 'summary', 'title' => 'Zusammenfassung', 'required' => false,
+             'aspects' => ['Kurzer Gesamtüberblick der Geschäftsidee auf einen Blick (optional)']],
             ['key' => 'idea',    'title' => 'Geschäftsidee', 'required' => true, 'aspects' => $bp['idea']['points']],
             ['key' => 'sales',   'title' => 'Vertrieb & Wettbewerb', 'required' => true, 'aspects' => $bp['sales']['points']],
             ['key' => 'team',    'title' => 'Team & Partner', 'required' => true, 'aspects' => $bp['team']['points']],
