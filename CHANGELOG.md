@@ -7,6 +7,12 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.35.2] - 2026-07-05
+### Geändert
+- **Teams-Verwaltung für Lehrkräfte ohne Schulzuordnung:** Ist einer Lehrkraft keine
+  Schule zugeordnet, erscheint unter „Teams & Schüler" jetzt ein klarer Hinweis (statt
+  einer stumm leeren, funktionslosen Ansicht) und der „+ Neu"-Button wird ausgeblendet.
+
 ## [0.35.1] - 2026-07-05
 ### Behoben
 - **Kontakt-Seite zeigt nur noch die Projektleitung.** Bisher erschien dort auch das

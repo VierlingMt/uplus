@@ -6,6 +6,7 @@ Auth::require('admin', 'lead', 'teacher');
 $me = Auth::user();
 $isAdmin = Auth::isManager(); // Admin oder Projektleitung = volle Verwaltung
 $mySchool = $me['school_id'] ? (int) $me['school_id'] : null;
+$noSchool = !$isAdmin && !$mySchool; // Lehrkraft ohne Schulzuordnung: kann nichts verwalten
 
 /** Zugriff auf ein Team pruefen (Lehrkraft nur eigene Schule). */
 $canAccessTeam = function (array $team) use ($isAdmin, $mySchool): bool {
@@ -103,8 +104,12 @@ $teamFill = fn(array $t) => e(json_encode([
 ob_start(); ?>
 <div class="page-head">
   <h1>Teams &amp; Schüler</h1>
-  <?php if (!$edit): ?><button type="button" class="btn btn--teal" data-modal-open="teamModal">+ Neu</button><?php endif; ?>
+  <?php if (!$edit && !$noSchool): ?><button type="button" class="btn btn--teal" data-modal-open="teamModal">+ Neu</button><?php endif; ?>
 </div>
+
+<?php if ($noSchool): ?>
+  <div class="flash info">Dir ist noch keine Schule zugeordnet. Bitte wende dich an die Projektleitung, damit du die Teams deiner Schule verwalten kannst.</div>
+<?php endif; ?>
 
 <?php if ($edit !== null): [$sl,$sc] = status_label($edit['status']); ?>
   <div style="margin-bottom:14px"><a href="<?= url('teams') ?>" class="btn btn--ghost btn--sm">← Zurück zur Übersicht</a></div>
