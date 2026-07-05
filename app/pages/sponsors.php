@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 Auth::requireManager();
 
-$curYear = Settings::getInt('competition_year', 2026);
+// Wettbewerbsjahr = aktiver Zyklus (einzige Quelle). Beiträge hängen am Zyklus.
+$cycles      = Cycle::all();
+$activeCycle  = Cycle::active();
+$activeCycleId = (int) ($activeCycle['id'] ?? 0);
+$activeLabel  = (string) ($activeCycle['year_label'] ?? '—');
 
 /** Bild-Upload verarbeiten → gibt logo_path (relativ zu assets/) zurück oder null. */
 $handleLogo = function (): ?string {
@@ -67,16 +71,17 @@ if (is_post()) {
 
     if ($action === 'add_contribution') {
         $sid = (int) input('sponsor_id');
-        $year = (int) input('year', $curYear);
+        $cycleId = (int) input('cycle_id', $activeCycleId);
         $amountRaw = trim((string) input('amount'));
         $amount = $amountRaw === '' ? null : (float) str_replace(',', '.', $amountRaw);
         $desc = trim((string) input('description')) ?: null;
-        if ($sid && $year > 2000 && ($amount !== null || $desc)) {
-            Database::run('INSERT INTO sponsor_contributions (sponsor_id, year, amount, description) VALUES (?,?,?,?)',
-                [$sid, $year, $amount, $desc]);
+        $cycleOk = $cycleId > 0 && Cycle::find($cycleId) !== null;
+        if ($sid && $cycleOk && ($amount !== null || $desc)) {
+            Database::run('INSERT INTO sponsor_contributions (sponsor_id, cycle_id, amount, description) VALUES (?,?,?,?)',
+                [$sid, $cycleId, $amount, $desc]);
             flash('success', 'Beitrag hinzugefügt.');
         } else {
-            flash('error', 'Jahr und Betrag oder Sachleistung angeben.');
+            flash('error', 'Wettbewerbsjahr und Betrag oder Sachleistung angeben.');
         }
         redirect(url('sponsors', ['edit' => $sid]));
     }
@@ -91,12 +96,18 @@ if (is_post()) {
 $edit = null; $contribs = [];
 if ($eid = (int) input('edit', 0)) {
     $edit = Database::one('SELECT * FROM sponsors WHERE id = ?', [$eid]);
-    if ($edit) { $contribs = Database::all('SELECT * FROM sponsor_contributions WHERE sponsor_id=? ORDER BY year DESC, id', [$eid]); }
+    if ($edit) {
+        $contribs = Database::all(
+            'SELECT c.*, cy.year_label FROM sponsor_contributions c
+             JOIN competition_cycles cy ON cy.id = c.cycle_id
+             WHERE c.sponsor_id = ? ORDER BY cy.year_label DESC, c.id', [$eid]
+        );
+    }
 }
 $sponsors = Database::all(
-    "SELECT s.*, (SELECT COUNT(*) FROM sponsor_contributions c WHERE c.sponsor_id=s.id AND c.year=?) AS active_now,
+    "SELECT s.*, (SELECT COUNT(*) FROM sponsor_contributions c WHERE c.sponsor_id=s.id AND c.cycle_id=?) AS active_now,
             (SELECT COUNT(*) FROM sponsor_contributions c WHERE c.sponsor_id=s.id) AS n_contrib
-     FROM sponsors s ORDER BY s.name", [$curYear]
+     FROM sponsors s ORDER BY s.name", [$activeCycleId]
 );
 $money = fn($a) => number_format((float) $a, 2, ',', '.') . ' €';
 
@@ -137,11 +148,11 @@ ob_start(); ?>
           <p class="muted">Sponsor zuerst speichern, dann Beiträge erfassen.</p>
         <?php else: ?>
           <table class="data" style="margin-bottom:14px">
-            <thead><tr><th>Jahr</th><th>Betrag</th><th>Leistung</th><th></th></tr></thead>
+            <thead><tr><th>Wettbewerbsjahr</th><th>Betrag</th><th>Leistung</th><th></th></tr></thead>
             <tbody>
             <?php foreach ($contribs as $c): ?>
               <tr>
-                <td><strong><?= (int) $c['year'] ?></strong></td>
+                <td><strong><?= e($c['year_label']) ?></strong></td>
                 <td><?= $c['amount'] !== null ? $money($c['amount']) : '<span class="muted">–</span>' ?></td>
                 <td><?= e($c['description'] ?? '') ?></td>
                 <td style="text-align:right"><form method="post" action="<?= url('sponsors') ?>" style="display:inline">
@@ -152,15 +163,25 @@ ob_start(); ?>
             <?php if (!$contribs): ?><tr><td colspan="4" class="muted">Noch keine Beiträge.</td></tr><?php endif; ?>
             </tbody>
           </table>
+          <?php if (!$cycles): ?>
+            <p class="muted">Zuerst unter „Wettbewerbsjahre“ ein Jahr anlegen, dann Beiträge erfassen.</p>
+          <?php else: ?>
           <form method="post" action="<?= url('sponsors') ?>">
             <?= Csrf::field() ?><input type="hidden" name="action" value="add_contribution"><input type="hidden" name="sponsor_id" value="<?= (int) $edit['id'] ?>">
             <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
-              <div><label>Jahr</label><input type="number" name="year" value="<?= $curYear ?>" style="width:90px"></div>
+              <div><label>Wettbewerbsjahr</label>
+                <select name="cycle_id" style="min-width:120px">
+                  <?php foreach ($cycles as $cy): ?>
+                    <option value="<?= (int) $cy['id'] ?>" <?= (int) $cy['id'] === $activeCycleId ? 'selected' : '' ?>><?= e($cy['year_label']) ?><?= $cy['is_active'] ? ' •' : '' ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
               <div><label>Betrag (€)</label><input type="text" name="amount" placeholder="z. B. 500" style="width:110px"></div>
               <div style="flex:1;min-width:160px"><label>oder Sachleistung</label><input type="text" name="description" placeholder="z. B. kostenfreier Bustransfer"></div>
               <button class="btn btn--teal">+</button>
             </div>
           </form>
+          <?php endif; ?>
         <?php endif; ?>
       </div>
     </div>
@@ -169,7 +190,7 @@ ob_start(); ?>
   <div class="card">
     <div class="table-wrap">
       <table class="data">
-        <thead><tr><th></th><th>Sponsor</th><th>Ansprechpartner</th><th>E-Mail</th><th><?= $curYear ?> aktiv</th><th>Beiträge</th><th></th></tr></thead>
+        <thead><tr><th></th><th>Sponsor</th><th>Ansprechpartner</th><th>E-Mail</th><th><?= e($activeLabel) ?> aktiv</th><th>Beiträge</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($sponsors as $s): ?>
           <tr>
@@ -193,7 +214,7 @@ ob_start(); ?>
       </table>
     </div>
   </div>
-  <p class="muted mt" style="font-size:13px">Logos erscheinen automatisch im Dashboard, sobald ein Sponsor im aktuellen Wettbewerbsjahr (<?= $curYear ?>) eine Leistung erbringt. Das Jahr ist unter Admin → Einstellungen wählbar.</p>
+  <p class="muted mt" style="font-size:13px">Logos erscheinen automatisch im Dashboard, sobald ein Sponsor im aktiven Wettbewerbsjahr (<?= e($activeLabel) ?>) eine Leistung erbringt. Das aktive Jahr wird unter „Wettbewerbsjahre“ festgelegt.</p>
 <?php endif; ?>
 <?php
 $content = ob_get_clean();

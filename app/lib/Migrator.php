@@ -201,6 +201,11 @@ final class Migrator
                 'name'    => 'Eigene Admin-Rolle (Eigentümer) über der Projektleitung (lead)',
                 'up'      => [self::class, 'adminRoleTier'],
             ],
+            [
+                'version' => '2026_07_14_sponsor_cycle',
+                'name'    => 'Sponsoren-Beiträge an Wettbewerbszyklus koppeln (year → cycle_id vereinheitlicht)',
+                'up'      => [self::class, 'sponsorCycle'],
+            ],
         ];
     }
 
@@ -237,7 +242,19 @@ final class Migrator
         )->execute($owners);
     }
 
-    /** Sponsoren-Tabellen anlegen + bekannte Sponsoren mit Beitrag fürs aktuelle Jahr seeden. */
+    /** Bekannte Sponsoren (Logos liegen als Assets bereit). Beitrag/Wettbewerbsjahr
+     *  wird in der Migration 2026_07_14_sponsor_cycle am aktiven Zyklus gesetzt. */
+    public const SEED_SPONSORS = [
+        ['Sparkasse Forchheim', 'img/sponsors/sparkasse.png'],
+        ['Medical Valley', 'img/sponsors/medical-valley.png'],
+        ['Bildungsregion Forchheim', 'img/sponsors/bildungsregion.png'],
+        ['VIERLING', 'img/sponsors/vierling.jpg'],
+        ['Stadtwerke Ebermannstadt', 'img/sponsors/stadtwerke-ebs.png'],
+        ['Stadt Ebermannstadt', 'img/sponsors/stadt-ebs.png'],
+        ['Wirtschaftsjunioren Bayern', 'img/sponsors/wj-bayern.jpg'],
+    ];
+
+    /** Sponsoren-Tabellen anlegen + bekannte Sponsoren seeden (Beiträge folgen je Zyklus). */
     public static function sponsorsSetup(PDO $pdo): void
     {
         $pdo->exec(
@@ -254,46 +271,27 @@ final class Migrator
                 UNIQUE KEY uq_sponsors_name (name)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
         );
+        // Beiträge hängen am Wettbewerbszyklus (cycle_id). Für bestehende Installationen,
+        // die diese Tabelle noch mit der alten Spalte `year` besitzen, überführt die
+        // Migration 2026_07_14_sponsor_cycle die Daten und entfernt `year`.
         $pdo->exec(
             'CREATE TABLE IF NOT EXISTS sponsor_contributions (
                 id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 sponsor_id  INT UNSIGNED NOT NULL,
-                year        SMALLINT UNSIGNED NOT NULL,
+                cycle_id    INT UNSIGNED NULL,
                 amount      DECIMAL(10,2) NULL,
                 description VARCHAR(190) NULL,
                 created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (id),
                 KEY idx_contrib_sponsor (sponsor_id),
-                KEY idx_contrib_year (year),
+                KEY idx_contrib_cycle (cycle_id),
                 CONSTRAINT fk_contrib_sponsor FOREIGN KEY (sponsor_id) REFERENCES sponsors(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
         );
 
-        $pdo->prepare('INSERT IGNORE INTO settings (k, v) VALUES (?, ?)')->execute(['competition_year', '2026']);
-
-        // Bekannte Sponsoren (Logos bereits als Assets vorhanden) + Beitrag 2026.
-        $sponsors = [
-            ['Sparkasse Forchheim', 'img/sponsors/sparkasse.png'],
-            ['Medical Valley', 'img/sponsors/medical-valley.png'],
-            ['Bildungsregion Forchheim', 'img/sponsors/bildungsregion.png'],
-            ['VIERLING', 'img/sponsors/vierling.jpg'],
-            ['Stadtwerke Ebermannstadt', 'img/sponsors/stadtwerke-ebs.png'],
-            ['Stadt Ebermannstadt', 'img/sponsors/stadt-ebs.png'],
-            ['Wirtschaftsjunioren Bayern', 'img/sponsors/wj-bayern.jpg'],
-        ];
         $insS = $pdo->prepare('INSERT INTO sponsors (name, logo_path) VALUES (?, ?) ON DUPLICATE KEY UPDATE logo_path=VALUES(logo_path)');
-        $insC = $pdo->prepare('INSERT INTO sponsor_contributions (sponsor_id, year, description) VALUES (?, ?, ?)');
-        foreach ($sponsors as $s) {
+        foreach (self::SEED_SPONSORS as $s) {
             $insS->execute($s);
-            $sid = (int) $pdo->lastInsertId();
-            if ($sid === 0) {
-                $sid = (int) $pdo->query('SELECT id FROM sponsors WHERE name=' . $pdo->quote($s[0]))->fetchColumn();
-            }
-            // Beitrag 2026 nur setzen, wenn noch keiner existiert (idempotent)
-            $has = (int) $pdo->query("SELECT COUNT(*) FROM sponsor_contributions WHERE sponsor_id=$sid AND year=2026")->fetchColumn();
-            if ($sid && !$has) {
-                $insC->execute([$sid, 2026, 'Unterstützung 2025/2026']);
-            }
         }
     }
 
@@ -377,6 +375,106 @@ final class Migrator
         $sIns = $pdo->prepare('INSERT IGNORE INTO cycle_schools (cycle_id, school_id) VALUES (?,?)');
         foreach ($pdo->query('SELECT id FROM schools')->fetchAll() as $s) {
             $sIns->execute([$cycleId, (int) $s['id']]);
+        }
+    }
+
+    /**
+     * Sponsoren-Beiträge an den Wettbewerbszyklus koppeln – vereinheitlicht die
+     * beiden früheren Jahres-Konzepte zu einer Quelle: `competition_cycles`.
+     *
+     * Bestehende Installationen: fügt `cycle_id` hinzu, überführt die bisherigen
+     * `year`-Beiträge auf den passenden Zyklus (Label enthält das Jahr, sonst
+     * aktiver Zyklus), erzwingt den Fremdschlüssel und entfernt Spalte `year`
+     * sowie die überflüssige Einstellung `competition_year`.
+     * Neuinstallationen: legt für die bekannten Sponsoren einen Beitrag im aktiven
+     * Zyklus an, damit die Auto-Anzeige im Dashboard funktioniert.
+     */
+    public static function sponsorCycle(PDO $pdo): void
+    {
+        $has = static function (string $table, string $column) use ($pdo): bool {
+            return (bool) $pdo->query(
+                "SELECT COUNT(*) FROM information_schema.columns
+                 WHERE table_schema = DATABASE() AND table_name = " . $pdo->quote($table) . "
+                   AND column_name = " . $pdo->quote($column)
+            )->fetchColumn();
+        };
+
+        if (!$has('sponsor_contributions', 'cycle_id')) {
+            $pdo->exec('ALTER TABLE sponsor_contributions ADD COLUMN cycle_id INT UNSIGNED NULL AFTER sponsor_id');
+        }
+
+        // Ziel-Zyklus für die Überführung bestimmen (aktiv, sonst neuester).
+        $active = (int) ($pdo->query('SELECT id FROM competition_cycles WHERE is_active = 1 ORDER BY id DESC LIMIT 1')->fetchColumn() ?: 0);
+        if (!$active) {
+            $active = (int) ($pdo->query('SELECT id FROM competition_cycles ORDER BY year_label DESC, id DESC LIMIT 1')->fetchColumn() ?: 0);
+        }
+
+        // Altbestand (year) auf einen Zyklus überführen.
+        if ($has('sponsor_contributions', 'year') && $active) {
+            foreach ($pdo->query('SELECT DISTINCT year FROM sponsor_contributions WHERE cycle_id IS NULL AND year IS NOT NULL')->fetchAll() as $r) {
+                $y = (int) $r['year'];
+                $cid = (int) ($pdo->query(
+                    'SELECT id FROM competition_cycles WHERE year_label LIKE ' . $pdo->quote('%' . $y . '%') . ' ORDER BY id DESC LIMIT 1'
+                )->fetchColumn() ?: 0);
+                if (!$cid) { $cid = $active; }
+                $st = $pdo->prepare('UPDATE sponsor_contributions SET cycle_id = ? WHERE cycle_id IS NULL AND year = ?');
+                $st->execute([$cid, $y]);
+            }
+        }
+        // Verbleibende ohne Zuordnung dem aktiven Zyklus zuschlagen.
+        if ($active) {
+            $pdo->prepare('UPDATE sponsor_contributions SET cycle_id = ? WHERE cycle_id IS NULL')->execute([$active]);
+        }
+
+        // Fremdschlüssel + NOT NULL erzwingen (nur wenn alle Zeilen zugeordnet sind).
+        $nulls = (int) $pdo->query('SELECT COUNT(*) FROM sponsor_contributions WHERE cycle_id IS NULL')->fetchColumn();
+        if ($nulls === 0) {
+            $pdo->exec('ALTER TABLE sponsor_contributions MODIFY cycle_id INT UNSIGNED NOT NULL');
+        }
+        $fkExists = (bool) $pdo->query(
+            "SELECT COUNT(*) FROM information_schema.table_constraints
+             WHERE table_schema = DATABASE() AND table_name = 'sponsor_contributions'
+               AND constraint_name = 'fk_contrib_cycle'"
+        )->fetchColumn();
+        if (!$fkExists) {
+            $idxExists = (bool) $pdo->query(
+                "SELECT COUNT(*) FROM information_schema.statistics
+                 WHERE table_schema = DATABASE() AND table_name = 'sponsor_contributions'
+                   AND index_name = 'idx_contrib_cycle'"
+            )->fetchColumn();
+            if (!$idxExists) {
+                $pdo->exec('ALTER TABLE sponsor_contributions ADD KEY idx_contrib_cycle (cycle_id)');
+            }
+            $pdo->exec('ALTER TABLE sponsor_contributions
+                ADD CONSTRAINT fk_contrib_cycle FOREIGN KEY (cycle_id) REFERENCES competition_cycles(id) ON DELETE CASCADE');
+        }
+
+        // Alte Spalte `year` samt Index entfernen.
+        if ($has('sponsor_contributions', 'year')) {
+            $yIdx = (bool) $pdo->query(
+                "SELECT COUNT(*) FROM information_schema.statistics
+                 WHERE table_schema = DATABASE() AND table_name = 'sponsor_contributions'
+                   AND index_name = 'idx_contrib_year'"
+            )->fetchColumn();
+            if ($yIdx) { $pdo->exec('ALTER TABLE sponsor_contributions DROP INDEX idx_contrib_year'); }
+            $pdo->exec('ALTER TABLE sponsor_contributions DROP COLUMN year');
+        }
+
+        // Überflüssige Einstellung entfernen – das Jahr steuert jetzt der aktive Zyklus.
+        $pdo->exec("DELETE FROM settings WHERE k = 'competition_year'");
+
+        // Für bekannte Sponsoren einen Beitrag im aktiven Zyklus sicherstellen
+        // (Neuinstallation; für Bestand bereits durch die Überführung vorhanden).
+        if ($active) {
+            $ins = $pdo->prepare('INSERT INTO sponsor_contributions (sponsor_id, cycle_id, description) VALUES (?,?,?)');
+            foreach (self::SEED_SPONSORS as $s) {
+                $sid = (int) ($pdo->query('SELECT id FROM sponsors WHERE name = ' . $pdo->quote($s[0]))->fetchColumn() ?: 0);
+                if (!$sid) { continue; }
+                $exists = (int) $pdo->query("SELECT COUNT(*) FROM sponsor_contributions WHERE sponsor_id = $sid AND cycle_id = $active")->fetchColumn();
+                if (!$exists) {
+                    $ins->execute([$sid, $active, 'Unterstützung ' . ($pdo->query("SELECT year_label FROM competition_cycles WHERE id = $active")->fetchColumn() ?: '')]);
+                }
+            }
         }
     }
 

@@ -37,7 +37,7 @@
 </div>
 
 <div class="card">
-  <div class="card__head">Partner &amp; Sponsoren <?= (int) $year ?></div>
+  <div class="card__head">Partner &amp; Sponsoren <?= e((string) $year) ?></div>
   <div class="card__body">
     <?php if (!empty($sponsors)): ?>
       <div class="partner-bar">
@@ -47,7 +47,7 @@
         <?php endforeach; ?>
       </div>
     <?php else: ?>
-      <p class="muted">Für <?= (int) $year ?> sind noch keine Sponsoren mit Leistung hinterlegt.</p>
+      <p class="muted">Für <?= e((string) $year) ?> sind noch keine Sponsoren mit Leistung hinterlegt.</p>
     <?php endif; ?>
   </div>
 </div>

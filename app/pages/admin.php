@@ -19,7 +19,6 @@ if (is_post()) {
         Settings::set('ai_extra_guidance', trim((string) input('ai_extra_guidance')));
         flash('success', 'KI-Einstellungen gespeichert.');
     } elseif ($section === 'general') {
-        Settings::set('competition_year', (string) max(2000, (int) input('competition_year', 2026)));
         Settings::set('pitch_slots', (string) max(1, (int) input('pitch_slots', 7)));
         Settings::set('fallback_slots', (string) max(0, (int) input('fallback_slots', 2)));
         Settings::set('current_phase', (string) input('current_phase', 'evaluation'));
@@ -128,8 +127,10 @@ ob_start(); ?>
       <form method="post" action="<?= url('admin') ?>">
         <?= Csrf::field() ?><input type="hidden" name="section" value="general">
         <div class="field"><label>Wettbewerbsjahr</label>
-          <input type="number" name="competition_year" value="<?= (int) Settings::getInt('competition_year', 2026) ?>" style="width:120px">
-          <div class="help">Bestimmt, welche Sponsoren (mit Leistung in diesem Jahr) im Dashboard erscheinen.</div>
+          <?php $adminCycle = Cycle::active(); ?>
+          <p style="margin:4px 0"><span class="pill teal"><?= e($adminCycle['year_label'] ?? '– keins aktiv –') ?></span>
+            <a href="<?= url('cycles') ?>" style="margin-left:8px">verwalten →</a></p>
+          <div class="help">Das aktive Wettbewerbsjahr wird zentral unter „Wettbewerbsjahre“ festgelegt und steuert u. a. die Sponsoren-Anzeige im Dashboard.</div>
         </div>
         <div class="field"><label>Aktuelle Phase</label>
           <select name="current_phase">
