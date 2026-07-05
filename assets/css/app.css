@@ -69,7 +69,9 @@ img { max-width: 100%; }
   position: sticky; top: 0; z-index: 5;
 }
 .topbar__title { font-family: "Chivo", sans-serif; font-weight: 700; font-size: 19px; }
-.topbar__user { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+.topbar__user { display: flex; align-items: center; gap: 12px; font-size: 14px; min-width: 0; }
+.topbar__profile { display: inline-flex; align-items: center; gap: 8px; min-width: 0; text-decoration: none; color: var(--ink); }
+.topbar__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .badge-role { background: var(--wj-grey-l); color: var(--wj-blue); padding: 3px 10px; border-radius: 20px; font-size: 12px; font-family: "Chivo",sans-serif; font-weight: 700; }
 .content { padding: 26px 24px 60px; max-width: 1180px; width: 100%; }
 
@@ -466,6 +468,16 @@ body.modal-open { overflow: hidden; }
   /* Suchleiste über Karten-Listen volle Breite */
   .table-toolbar { flex-wrap: wrap; }
   .table-search { max-width: none; flex: 1 1 100%; }
+}
+
+/* Topbar mobil entschlacken: Titel steht ohnehin als H1 auf der Seite. */
+@media (max-width: 600px) {
+  .topbar { padding: 0 12px; gap: 8px; }
+  .topbar__title { display: none; }
+  .topbar__user { gap: 8px; }
+  .topbar .badge-role { display: none; }
+  .topbar__name { display: none; }
+  .topbar__user .btn { flex: 0 0 auto; }
 }
 
 /* Formular-/Bestätigungs-Dialoge als Bottom-Sheet auf dem Handy. */

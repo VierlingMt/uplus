@@ -7,6 +7,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.25.1] - 2026-07-05
+### Behoben
+- **Topbar auf dem Handy entschlackt:** Der Seitentitel brach dort mehrzeilig um
+  und überlappte Burger-Menü und Nutzerbereich, „Abmelden" war teils abgeschnitten.
+  Auf schmalen Bildschirmen zeigt die Topbar jetzt nur noch Menü-Button, Profil-Avatar
+  und „Abmelden" (Titel steht ohnehin als Überschrift auf der Seite; Rolle und Name
+  werden ausgeblendet). Ohne Profilfoto erscheint ein Initial-Avatar.
+
 ## [0.25.0] - 2026-07-05
 ### Geändert
 - **Mobile-First-Politur der Stammdaten-Listen:** Auf schmalen Bildschirmen

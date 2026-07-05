@@ -83,9 +83,13 @@ $roleLabel = ['admin' => 'Admin', 'lead' => 'Projektleitung', 'teacher' => 'Lehr
       <div class="topbar__title"><?= e($title ?? 'Dashboard') ?></div>
       <div class="topbar__user">
         <span class="badge-role"><?= e($roleLabel) ?></span>
-        <a href="<?= url('profile') ?>" style="text-decoration:none;color:var(--ink);display:inline-flex;align-items:center;gap:8px">
-          <?php if (!empty($u['photo_path'])): ?><img class="avatar avatar--sm" src="<?= asset($u['photo_path']) ?>" alt=""><?php endif; ?>
-          <?= e($u['name'] ?? '') ?></a>
+        <a href="<?= url('profile') ?>" class="topbar__profile" title="Mein Profil">
+          <?php if (!empty($u['photo_path'])): ?>
+            <img class="avatar avatar--sm" src="<?= asset($u['photo_path']) ?>" alt="">
+          <?php else: ?>
+            <span class="avatar avatar--sm avatar--ph" aria-hidden="true"><?= e(mb_strtoupper(mb_substr((string) ($u['name'] ?? '?'), 0, 1))) ?></span>
+          <?php endif; ?>
+          <span class="topbar__name"><?= e($u['name'] ?? '') ?></span></a>
         <a href="<?= url('logout') ?>" class="btn btn--ghost btn--sm">Abmelden</a>
       </div>
     </div>
