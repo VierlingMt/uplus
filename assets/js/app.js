@@ -177,8 +177,12 @@
   // ---------------------------------------------------------------------------
   document.addEventListener('submit', function (e) {
     var f = e.target;
-    if (f.matches('[data-confirm]') && !window.confirm(f.getAttribute('data-confirm'))) {
+    if (f.matches('[data-confirm]') && !f.__confirmed) {
       e.preventDefault();
+      confirmDialog(f.getAttribute('data-confirm'), function () {
+        f.__confirmed = true;
+        if (typeof f.requestSubmit === 'function') { f.requestSubmit(); } else { f.submit(); }
+      });
       return;
     }
     var btn = e.submitter || f.querySelector('button[type="submit"], button:not([type])');
@@ -454,6 +458,174 @@
       e.preventDefault();
       openPdf(trg.getAttribute('data-pdf-url'), trg.getAttribute('data-pdf-title'));
     });
+  })();
+
+  // ---------------------------------------------------------------------------
+  // Modal-Dialoge: Formulare (Neu/Ändern) + Bestätigung
+  // ---------------------------------------------------------------------------
+
+  // Sexy Bestätigungs-Dialog – ersetzt window.confirm für [data-confirm].
+  function confirmDialog(message, onOk) {
+    var ov = document.createElement('div');
+    ov.className = 'modal-overlay';
+    ov.innerHTML =
+      '<div class="modal modal--confirm" role="alertdialog" aria-modal="true">' +
+      '<h3><span aria-hidden="true">⚠️</span> Wirklich löschen?</h3>' +
+      '<p></p>' +
+      '<div class="modal__foot">' +
+      '<button type="button" class="btn btn--ghost" data-cancel>Abbrechen</button>' +
+      '<button type="button" class="btn btn--danger" data-ok>Löschen</button>' +
+      '</div></div>';
+    ov.querySelector('p').textContent = message;
+    document.body.appendChild(ov);
+    document.body.classList.add('modal-open');
+    function done() {
+      ov.remove();
+      if (!document.querySelector('.modal-overlay:not([hidden]), .crop-modal:not([hidden])')) document.body.classList.remove('modal-open');
+      document.removeEventListener('keydown', onKey);
+    }
+    function onKey(ev) { if (ev.key === 'Escape') done(); }
+    ov.querySelector('[data-cancel]').addEventListener('click', done);
+    ov.addEventListener('click', function (ev) { if (ev.target === ov) done(); });
+    ov.querySelector('[data-ok]').addEventListener('click', function () { done(); onOk(); });
+    document.addEventListener('keydown', onKey);
+    setTimeout(function () { ov.querySelector('[data-ok]').focus(); }, 30);
+  }
+
+  (function initModals() {
+    var openEl = null, lastFocus = null;
+
+    // Bild-Dropzone (image_field) im Formular zurücksetzen bzw. Vorschau setzen.
+    function resetImgdrops(form) {
+      form.querySelectorAll('[data-imgdrop]').forEach(function (drop) {
+        var img = drop.querySelector('.imgdrop__img');
+        var ph = drop.querySelector('.imgdrop__placeholder');
+        var clr = drop.querySelector('[data-imgdrop-clear]');
+        var data = drop.querySelector('.imgdrop__data');
+        var file = drop.querySelector('.imgdrop__file');
+        if (data) data.value = '';
+        if (file) file.value = '';
+        if (img) { img.removeAttribute('src'); img.hidden = true; }
+        if (ph) ph.hidden = false;
+        if (clr) clr.hidden = true;
+      });
+    }
+    function setImage(form, field, url) {
+      var drop = form.querySelector('[data-imgdrop][data-field="' + field + '"]');
+      if (!drop || !url) return;
+      var img = drop.querySelector('.imgdrop__img');
+      var ph = drop.querySelector('.imgdrop__placeholder');
+      var clr = drop.querySelector('[data-imgdrop-clear]');
+      if (img) { img.src = url; img.hidden = false; }
+      if (ph) ph.hidden = true;
+      if (clr) clr.hidden = false;
+    }
+
+    function fillForm(form, data) {
+      if (!form) return;
+      form.reset();
+      resetImgdrops(form);
+      Object.keys(data || {}).forEach(function (name) {
+        var val = data[name];
+        var els = form.querySelectorAll('[name="' + name + '"], [name="' + name + '[]"]');
+        if (!els.length) return;
+        if (Array.isArray(val)) {
+          var set = val.map(String);
+          els.forEach(function (el) {
+            if (el.type === 'checkbox' || el.type === 'radio') el.checked = set.indexOf(String(el.value)) >= 0;
+          });
+        } else if (els.length === 1) {
+          var el = els[0];
+          if (el.type === 'checkbox' || el.type === 'radio') el.checked = !!val && String(val) !== '0';
+          else el.value = (val == null) ? '' : val;
+        } else {
+          els.forEach(function (el) {
+            if (el.type === 'checkbox' || el.type === 'radio') el.checked = String(el.value) === String(val);
+            else el.value = (val == null) ? '' : val;
+          });
+        }
+      });
+      // rollen-/statusabhängige Felder o. Ä. benachrichtigen
+      form.querySelectorAll('select, input, textarea').forEach(function (el) {
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
+
+    function open(overlay, opts) {
+      opts = opts || {};
+      if (!overlay) return;
+      var isEdit = !!opts.edit;
+      var titleEl = overlay.querySelector('[data-modal-title]');
+      if (titleEl) {
+        var t = titleEl.getAttribute(isEdit ? 'data-title-edit' : 'data-title-new');
+        if (t) titleEl.textContent = t;
+      }
+      var form = overlay.querySelector('[data-modal-form]');
+      var submit = overlay.querySelector('[data-modal-form] [type="submit"], [data-modal-form] button:not([type="button"])');
+      if (submit) {
+        var lbl = submit.getAttribute(isEdit ? 'data-label-edit' : 'data-label-new');
+        if (lbl) submit.textContent = lbl;
+      }
+      if (form) {
+        fillForm(form, opts.fill || {});
+        if (opts.images) Object.keys(opts.images).forEach(function (k) { setImage(form, k, opts.images[k]); });
+      }
+      lastFocus = document.activeElement;
+      overlay.hidden = false;
+      document.body.classList.add('modal-open');
+      openEl = overlay;
+      var focusable = overlay.querySelector('.modal__body input:not([type=hidden]):not([disabled]), .modal__body select, .modal__body textarea');
+      if (focusable) setTimeout(function () { focusable.focus(); }, 40);
+    }
+
+    function close(overlay) {
+      if (!overlay) return;
+      overlay.hidden = true;
+      if (openEl === overlay) openEl = null;
+      if (!document.querySelector('.modal-overlay:not([hidden]), .crop-modal:not([hidden])')) document.body.classList.remove('modal-open');
+      if (lastFocus && lastFocus.focus) { try { lastFocus.focus(); } catch (e) {} }
+    }
+
+    document.addEventListener('click', function (e) {
+      var opener = e.target.closest('[data-modal-open]');
+      if (opener) {
+        e.preventDefault();
+        var overlay = document.getElementById(opener.getAttribute('data-modal-open'));
+        if (!overlay) return;
+        var fill = null, raw = opener.getAttribute('data-fill');
+        if (raw) { try { fill = JSON.parse(raw); } catch (err) { fill = null; } }
+        var images = null, rawImg = opener.getAttribute('data-images');
+        if (rawImg) { try { images = JSON.parse(rawImg); } catch (err) { images = null; } }
+        open(overlay, { fill: fill, images: images, edit: opener.hasAttribute('data-edit') || (fill && (fill.id | 0) > 0) });
+        return;
+      }
+      var closer = e.target.closest('[data-modal-close]');
+      if (closer) { e.preventDefault(); close(closer.closest('.modal-overlay')); return; }
+      if (e.target.classList && e.target.classList.contains('modal-overlay') && !e.target.hasAttribute('data-modal-static')) {
+        close(e.target);
+      }
+    });
+
+    document.addEventListener('keydown', function (e) {
+      // Nur schließen, wenn kein Zuschnitt-Dialog (crop-modal, z-index höher) offen ist.
+      if (e.key === 'Escape' && openEl && !document.querySelector('.crop-modal:not([hidden])')) close(openEl);
+      if (e.key === 'Tab' && openEl) {
+        var f = openEl.querySelectorAll('a[href], button:not([disabled]), input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+        if (!f.length) return;
+        var first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    });
+
+    // Server-seitig angeforderte Modals (z. B. nach Validierungsfehler)
+    document.querySelectorAll('[data-modal-autoopen]').forEach(function (overlay) {
+      var data = null, raw = overlay.getAttribute('data-modal-autoopen');
+      if (raw && raw !== '1') { try { data = JSON.parse(raw); } catch (e) {} }
+      open(overlay, { fill: data, edit: !!(data && (data.id | 0) > 0) });
+    });
+
+    window.UplusModal = { open: open, close: close };
   })();
 
   recalc();

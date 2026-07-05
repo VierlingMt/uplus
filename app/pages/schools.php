@@ -43,53 +43,65 @@ $schools = Database::all(
      FROM schools s ORDER BY s.name'
 );
 
+$fill = fn(array $s) => e(json_encode([
+    'id' => (int) $s['id'], 'name' => $s['name'], 'short_name' => $s['short_name'],
+    'city' => $s['city'], 'note' => $s['note'],
+], JSON_UNESCAPED_UNICODE));
+$imgs = fn(array $s) => $s['logo_path'] ? e(json_encode(['logo' => asset($s['logo_path'])], JSON_UNESCAPED_UNICODE)) : '';
+
 ob_start(); ?>
-<div class="page-head"><h1>Schulen</h1></div>
-<div class="grid cols-2">
-  <div class="card">
-    <div class="card__head"><?= $edit ? 'Schule bearbeiten' : 'Neue Schule' ?></div>
-    <div class="card__body">
-      <form method="post" action="<?= url('schools') ?>" enctype="multipart/form-data">
-        <?= Csrf::field() ?>
-        <input type="hidden" name="id" value="<?= (int) ($edit['id'] ?? 0) ?>">
-        <div class="field"><label>Name *</label><input type="text" name="name" required value="<?= e($edit['name'] ?? '') ?>"></div>
-        <div class="field"><label>Kürzel</label><input type="text" name="short_name" value="<?= e($edit['short_name'] ?? '') ?>" placeholder="z. B. EGF"></div>
-        <div class="field"><label>Ort</label><input type="text" name="city" value="<?= e($edit['city'] ?? '') ?>"></div>
-        <div class="field"><label>Notiz</label><textarea name="note" rows="2"><?= e($edit['note'] ?? '') ?></textarea></div>
-        <?= image_field('logo', $edit['logo_path'] ?? null, [
-            'label' => 'Schul-Logo' . ($edit ? ' (ersetzen)' : ''),
-            'aspect' => null, 'shape' => 'rect', 'format' => 'png',
-        ]) ?>
-        <button class="btn btn--primary"><?= $edit ? 'Speichern' : 'Anlegen' ?></button>
-        <?php if ($edit): ?><a href="<?= url('schools') ?>" class="btn btn--ghost">Abbrechen</a><?php endif; ?>
-      </form>
-    </div>
+<div class="page-head">
+  <h1>Schulen</h1>
+  <button type="button" class="btn btn--teal" data-modal-open="schoolModal">+ Neu</button>
+</div>
+<div class="card">
+  <div class="card__head"><?= count($schools) ?> Schulen</div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th></th><th>Schule</th><th>Ort</th><th>Teams</th><th></th></tr></thead>
+      <tbody>
+      <?php foreach ($schools as $s): ?>
+        <tr>
+          <td style="width:52px"><?php if ($s['logo_path']): ?><img src="<?= asset($s['logo_path']) ?>" alt="" style="width:40px;height:40px;object-fit:contain"><?php endif; ?></td>
+          <td><strong><?= e($s['name']) ?></strong><?php if ($s['short_name']): ?> <span class="pill muted"><?= e($s['short_name']) ?></span><?php endif; ?></td>
+          <td><?= e($s['city'] ?? '—') ?></td>
+          <td><?= (int) $s['teams'] ?></td>
+          <td style="white-space:nowrap;text-align:right">
+            <button type="button" class="btn btn--ghost btn--sm" data-modal-open="schoolModal" data-fill="<?= $fill($s) ?>"<?= $imgs($s) ? ' data-images="' . $imgs($s) . '"' : '' ?>>Bearbeiten</button>
+            <form method="post" action="<?= url('schools') ?>" style="display:inline" data-confirm="Schule „<?= e($s['name']) ?>“ inkl. Teams wirklich löschen?">
+              <?= Csrf::field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int) $s['id'] ?>">
+              <button class="btn btn--danger btn--sm">Löschen</button>
+            </form>
+          </td>
+        </tr>
+      <?php endforeach; ?>
+      <?php if (!$schools): ?><tr><td colspan="5" class="muted">Noch keine Schulen.</td></tr><?php endif; ?>
+      </tbody>
+    </table>
   </div>
-  <div class="card">
-    <div class="card__head"><?= count($schools) ?> Schulen</div>
-    <div class="table-wrap">
-      <table class="data">
-        <thead><tr><th></th><th>Schule</th><th>Ort</th><th>Teams</th><th></th></tr></thead>
-        <tbody>
-        <?php foreach ($schools as $s): ?>
-          <tr>
-            <td style="width:52px"><?php if ($s['logo_path']): ?><img src="<?= asset($s['logo_path']) ?>" alt="" style="width:40px;height:40px;object-fit:contain"><?php endif; ?></td>
-            <td><strong><?= e($s['name']) ?></strong><?php if ($s['short_name']): ?> <span class="pill muted"><?= e($s['short_name']) ?></span><?php endif; ?></td>
-            <td><?= e($s['city'] ?? '—') ?></td>
-            <td><?= (int) $s['teams'] ?></td>
-            <td style="white-space:nowrap;text-align:right">
-              <a href="<?= url('schools', ['edit' => $s['id']]) ?>" class="btn btn--ghost btn--sm">Bearbeiten</a>
-              <form method="post" action="<?= url('schools') ?>" style="display:inline" data-confirm="Schule „<?= e($s['name']) ?>“ inkl. Teams wirklich löschen?">
-                <?= Csrf::field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int) $s['id'] ?>">
-                <button class="btn btn--danger btn--sm">Löschen</button>
-              </form>
-            </td>
-          </tr>
-        <?php endforeach; ?>
-        <?php if (!$schools): ?><tr><td colspan="5" class="muted">Noch keine Schulen.</td></tr><?php endif; ?>
-        </tbody>
-      </table>
+</div>
+
+<div class="modal-overlay" id="schoolModal" hidden>
+  <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="schoolModalTitle">
+    <div class="modal__head">
+      <h3 id="schoolModalTitle" data-modal-title data-title-new="Neue Schule" data-title-edit="Schule bearbeiten">Neue Schule</h3>
+      <button type="button" class="modal__close" data-modal-close aria-label="Schließen">&times;</button>
     </div>
+    <form method="post" action="<?= url('schools') ?>" enctype="multipart/form-data" class="modal__body" data-modal-form>
+      <?= Csrf::field() ?>
+      <input type="hidden" name="id" value="0">
+      <div class="field"><label>Name *</label><input type="text" name="name" required></div>
+      <div class="field"><label>Kürzel</label><input type="text" name="short_name" placeholder="z. B. EGF"></div>
+      <div class="field"><label>Ort</label><input type="text" name="city"></div>
+      <div class="field"><label>Notiz</label><textarea name="note" rows="2"></textarea></div>
+      <?= image_field('logo', null, [
+          'label' => 'Schul-Logo', 'aspect' => null, 'shape' => 'rect', 'format' => 'png',
+      ]) ?>
+      <div class="modal__foot">
+        <button type="button" class="btn btn--ghost" data-modal-close>Abbrechen</button>
+        <button class="btn btn--primary" data-label-new="Anlegen" data-label-edit="Speichern">Anlegen</button>
+      </div>
+    </form>
   </div>
 </div>
 <?php

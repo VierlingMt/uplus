@@ -85,42 +85,40 @@ $sponsors = Database::all(
 );
 $money = fn($a) => number_format((float) $a, 2, ',', '.') . ' €';
 
+$fill = fn(array $s) => e(json_encode([
+    'id' => (int) $s['id'], 'name' => $s['name'], 'address' => $s['address'],
+    'contact_name' => $s['contact_name'], 'email' => $s['email'], 'website' => $s['website'],
+], JSON_UNESCAPED_UNICODE));
+$imgs = fn(array $s) => $s['logo_path'] ? e(json_encode(['logo' => asset($s['logo_path'])], JSON_UNESCAPED_UNICODE)) : '';
 ob_start(); ?>
 <div class="page-head">
   <h1>Sponsoren</h1>
-  <?php if (!$edit): ?><a href="<?= url('sponsors', ['edit' => 'new']) ?>" class="btn btn--teal">+ Neuer Sponsor</a><?php endif; ?>
+  <?php if (!$edit): ?><button type="button" class="btn btn--teal" data-modal-open="sponsorModal">+ Neu</button><?php endif; ?>
 </div>
 
-<?php if ($edit !== null || input('edit') === 'new'): $isNew = ($edit === null); ?>
+<?php if ($edit !== null): ?>
+  <div style="margin-bottom:14px"><a href="<?= url('sponsors') ?>" class="btn btn--ghost btn--sm">← Zurück zur Übersicht</a></div>
   <div class="grid cols-2">
     <div class="card">
-      <div class="card__head"><?= $isNew ? 'Neuer Sponsor' : 'Sponsor bearbeiten' ?></div>
+      <div class="card__head" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <span>Sponsor</span>
+        <button type="button" class="btn btn--ghost btn--sm" data-modal-open="sponsorModal" data-fill="<?= $fill($edit) ?>"<?= $imgs($edit) ? ' data-images="' . $imgs($edit) . '"' : '' ?>>Bearbeiten</button>
+      </div>
       <div class="card__body">
-        <form method="post" action="<?= url('sponsors') ?>" enctype="multipart/form-data">
-          <?= Csrf::field() ?><input type="hidden" name="action" value="save_sponsor"><input type="hidden" name="id" value="<?= (int) ($edit['id'] ?? 0) ?>">
-          <div class="field"><label>Name *</label><input type="text" name="name" required value="<?= e($edit['name'] ?? '') ?>"></div>
-          <div class="field"><label>Anschrift</label><textarea name="address" rows="2"><?= e($edit['address'] ?? '') ?></textarea></div>
-          <div class="field"><label>Ansprechpartner</label><input type="text" name="contact_name" value="<?= e($edit['contact_name'] ?? '') ?>"></div>
-          <div class="grid cols-2">
-            <div class="field"><label>E-Mail</label><input type="email" name="email" value="<?= e($edit['email'] ?? '') ?>"></div>
-            <div class="field"><label>Website</label><input type="text" name="website" value="<?= e($edit['website'] ?? '') ?>"></div>
-          </div>
-          <?= image_field('logo', $isNew ? null : ($edit['logo_path'] ?? null), [
-              'label'  => 'Logo' . ($isNew ? '' : ' (ersetzen)'),
-              'aspect' => null, 'shape' => 'rect', 'format' => 'png',
-          ]) ?>
-          <button class="btn btn--primary">Speichern</button>
-          <a href="<?= url('sponsors') ?>" class="btn btn--ghost">Zurück</a>
-        </form>
+        <?php if ($edit['logo_path']): ?><img src="<?= asset($edit['logo_path']) ?>" alt="" style="max-height:60px;margin-bottom:12px"><?php endif; ?>
+        <h2 style="margin:0 0 10px;font-size:22px"><?= e($edit['name']) ?></h2>
+        <?php if ($edit['contact_name']): ?><div class="field" style="margin-bottom:10px"><label>Ansprechpartner</label><div><?= e($edit['contact_name']) ?></div></div><?php endif; ?>
+        <?php if ($edit['address']): ?><div class="field" style="margin-bottom:10px"><label>Anschrift</label><div class="muted"><?= nl2br(e($edit['address'])) ?></div></div><?php endif; ?>
+        <div class="grid cols-2">
+          <?php if ($edit['email']): ?><div class="field" style="margin:0"><label>E-Mail</label><div><a href="mailto:<?= e($edit['email']) ?>"><?= e($edit['email']) ?></a></div></div><?php endif; ?>
+          <?php if ($edit['website']): ?><div class="field" style="margin:0"><label>Website</label><div><?= e($edit['website']) ?></div></div><?php endif; ?>
+        </div>
       </div>
     </div>
 
     <div class="card">
       <div class="card__head">Beiträge / Zuwendungen</div>
       <div class="card__body">
-        <?php if ($isNew): ?>
-          <p class="muted">Sponsor zuerst speichern, dann Beiträge erfassen.</p>
-        <?php else: ?>
           <table class="data" style="margin-bottom:14px">
             <thead><tr><th>Wettbewerbsjahr</th><th>Betrag</th><th>Leistung</th><th></th></tr></thead>
             <tbody>
@@ -156,7 +154,6 @@ ob_start(); ?>
             </div>
           </form>
           <?php endif; ?>
-        <?php endif; ?>
       </div>
     </div>
   </div>
@@ -175,7 +172,8 @@ ob_start(); ?>
             <td><?= $s['active_now'] ? '<span class="pill teal">ja</span>' : '<span class="pill muted">nein</span>' ?></td>
             <td><?= (int) $s['n_contrib'] ?></td>
             <td style="white-space:nowrap;text-align:right">
-              <a href="<?= url('sponsors', ['edit' => $s['id']]) ?>" class="btn btn--ghost btn--sm">Öffnen</a>
+              <a href="<?= url('sponsors', ['edit' => $s['id']]) ?>" class="btn btn--ghost btn--sm" title="Sponsor öffnen: Beiträge verwalten">💶 Beiträge</a>
+              <button type="button" class="btn btn--ghost btn--sm" data-modal-open="sponsorModal" data-fill="<?= $fill($s) ?>"<?= $imgs($s) ? ' data-images="' . $imgs($s) . '"' : '' ?>>Bearbeiten</button>
               <form method="post" action="<?= url('sponsors') ?>" style="display:inline" data-confirm="Sponsor „<?= e($s['name']) ?>“ löschen?">
                 <?= Csrf::field() ?><input type="hidden" name="action" value="delete_sponsor"><input type="hidden" name="id" value="<?= (int) $s['id'] ?>">
                 <button class="btn btn--danger btn--sm">×</button>
@@ -190,6 +188,32 @@ ob_start(); ?>
   </div>
   <p class="muted mt" style="font-size:13px">Logos erscheinen automatisch im Dashboard, sobald ein Sponsor im aktiven Wettbewerbsjahr (<?= e($activeLabel) ?>) eine Leistung erbringt. Das aktive Jahr wird unter „Wettbewerbsjahre“ festgelegt.</p>
 <?php endif; ?>
+
+<div class="modal-overlay" id="sponsorModal" hidden>
+  <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="sponsorModalTitle">
+    <div class="modal__head">
+      <h3 id="sponsorModalTitle" data-modal-title data-title-new="Neuer Sponsor" data-title-edit="Sponsor bearbeiten">Neuer Sponsor</h3>
+      <button type="button" class="modal__close" data-modal-close aria-label="Schließen">&times;</button>
+    </div>
+    <form method="post" action="<?= url('sponsors') ?>" enctype="multipart/form-data" class="modal__body" data-modal-form>
+      <?= Csrf::field() ?><input type="hidden" name="action" value="save_sponsor"><input type="hidden" name="id" value="0">
+      <div class="field"><label>Name *</label><input type="text" name="name" required></div>
+      <div class="field"><label>Anschrift</label><textarea name="address" rows="2"></textarea></div>
+      <div class="field"><label>Ansprechpartner</label><input type="text" name="contact_name"></div>
+      <div class="grid cols-2">
+        <div class="field"><label>E-Mail</label><input type="email" name="email"></div>
+        <div class="field"><label>Website</label><input type="text" name="website"></div>
+      </div>
+      <?= image_field('logo', null, [
+          'label' => 'Logo', 'aspect' => null, 'shape' => 'rect', 'format' => 'png',
+      ]) ?>
+      <div class="modal__foot">
+        <button type="button" class="btn btn--ghost" data-modal-close>Abbrechen</button>
+        <button class="btn btn--primary" data-label-new="Anlegen" data-label-edit="Speichern">Anlegen</button>
+      </div>
+    </form>
+  </div>
+</div>
 <?php
 $content = ob_get_clean();
 $title = 'Sponsoren';

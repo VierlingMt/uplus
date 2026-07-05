@@ -7,6 +7,20 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-07-05
+### Geändert
+- **Stammdaten-Verwaltung überarbeitet (Schulen, Jury & Nutzer, Wettbewerbsjahre,
+  Teams, Sponsoren):** Jede Übersicht hat jetzt oben rechts einen **„+ Neu"-Button**,
+  Anlegen und Bearbeiten laufen einheitlich über ein **modales Formular-Fenster**
+  (mit Abdunkeln/Weichzeichnen des Hintergrunds, Schließen per ×, Escape oder
+  Klick daneben). Das Bearbeiten befüllt das Formular ohne Neuladen der Seite –
+  inkl. Vorschau eines bereits hinterlegten Logos/Porträtfotos.
+- **Löschen** ist überall vorhanden und fragt jetzt über einen gestalteten
+  Bestätigungs-Dialog nach (statt des schlichten Browser-Hinweises).
+- Bei **Teams** ist damit erstmals das Löschen aus der Übersicht möglich; die
+  Detailansicht konzentriert sich auf die Teammitglieder, bei **Sponsoren** auf
+  die Beiträge/Zuwendungen.
+
 ## [0.22.1] - 2026-07-05
 ### Behoben
 - **Bild-Zuschnitt: „Übernehmen" blieb wirkungslos.** Der Zoom-Slider wurde beim

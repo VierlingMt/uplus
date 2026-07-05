@@ -43,13 +43,13 @@ if (is_post()) {
 
     if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !isset($roles[$role])) {
         flash('error', 'Bitte Name, gültige E-Mail und Rolle angeben.');
-        redirect(url('jurors', $id ? ['edit' => $id] : []));
+        redirect(url('jurors'));
     }
     // E-Mail-Eindeutigkeit
     $dup = Database::value('SELECT id FROM users WHERE email = ? AND id <> ?', [$email, $id]);
     if ($dup) {
         flash('error', 'Diese E-Mail wird bereits verwendet.');
-        redirect(url('jurors', $id ? ['edit' => $id] : []));
+        redirect(url('jurors'));
     }
 
     // Rollen-Hierarchie absichern: nur der Eigentümer/Admin darf die Admin-Rolle
@@ -61,7 +61,7 @@ if (is_post()) {
     }
     if (!$isOwner && ($role === 'admin' || ($target && $target['role'] === 'admin'))) {
         flash('error', 'Nur ein Admin kann Admin-Konten anlegen oder bearbeiten.');
-        redirect(url('jurors', $id ? ['edit' => $id] : []));
+        redirect(url('jurors'));
     }
 
     $photo = save_image('photo', 'usr', 'avatars');
@@ -87,10 +87,6 @@ if (is_post()) {
     redirect(url('jurors'));
 }
 
-$edit = null;
-if ($eid = (int) input('edit', 0)) {
-    $edit = Database::one('SELECT * FROM users WHERE id = ?', [$eid]);
-}
 $schools = Database::all('SELECT id, name FROM schools ORDER BY name');
 $users = Database::all(
     'SELECT u.*, s.name AS school_name FROM users u LEFT JOIN schools s ON s.id = u.school_id
@@ -99,81 +95,37 @@ $users = Database::all(
 
 // Wettbewerbsjahre (Zyklen) für die Zuordnung im Formular und die Übersicht
 $cycles = Cycle::all();
-$editCycleIds = $edit ? Cycle::forUser((int) $edit['id']) : [Cycle::activeId()];
-$editCycleIds = array_filter($editCycleIds);
-// Jahres-Labels je Nutzer für die Liste
-$userCycles = [];
+// Jahres-Labels + IDs je Nutzer (Labels für die Liste, IDs zum Vorbelegen des Modals)
+$userCycles = $userCycleIds = [];
 foreach (Database::all(
-    'SELECT cm.user_id, c.year_label FROM cycle_members cm
+    'SELECT cm.user_id, cm.cycle_id, c.year_label FROM cycle_members cm
      JOIN competition_cycles c ON c.id = cm.cycle_id ORDER BY c.year_label DESC') as $r) {
     $userCycles[(int) $r['user_id']][] = $r['year_label'];
+    $userCycleIds[(int) $r['user_id']][] = (int) $r['cycle_id'];
 }
 
-ob_start(); ?>
-<div class="page-head"><h1>Jury &amp; Nutzer</h1></div>
-<div class="grid cols-2">
-  <div class="card">
-    <div class="card__head"><?= $edit ? 'Nutzer bearbeiten' : 'Neuer Nutzer' ?></div>
-    <div class="card__body">
-      <form method="post" action="<?= url('jurors') ?>" enctype="multipart/form-data">
-        <?= Csrf::field() ?>
-        <input type="hidden" name="id" value="<?= (int) ($edit['id'] ?? 0) ?>">
-        <?= image_field('photo', $edit['photo_path'] ?? null, [
-            'label' => 'Porträtfoto' . ($edit ? ' (ersetzen)' : ''),
-            'aspect' => 1, 'shape' => 'round', 'format' => 'jpeg',
-            'hint' => 'Foto hierher ziehen oder klicken – quadratisch zuschneiden, zoomen, drehen.',
-        ]) ?>
-        <div class="field"><label>Rolle *</label>
-          <select name="role" id="roleSel">
-            <?php foreach ($roles as $rk => $rl): ?>
-              <?php if ($rk === 'admin' && !$isOwner) { continue; } // Admin-Rolle nur für Eigentümer ?>
-              <option value="<?= $rk ?>" <?= ($edit['role'] ?? 'juror') === $rk ? 'selected' : '' ?>><?= e($rl) ?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        <div class="field"><label>Name *</label><input type="text" name="name" required value="<?= e($edit['name'] ?? '') ?>"></div>
-        <div class="field"><label>E-Mail *</label><input type="email" name="email" required value="<?= e($edit['email'] ?? '') ?>"></div>
-        <div class="field" id="schoolField"><label>Schule (für Lehrkräfte)</label>
-          <select name="school_id">
-            <option value="">—</option>
-            <?php foreach ($schools as $s): ?>
-              <option value="<?= (int) $s['id'] ?>" <?= (int) ($edit['school_id'] ?? 0) === (int) $s['id'] ? 'selected' : '' ?>><?= e($s['name']) ?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        <div class="field"><label>Spezialgebiet (Jury)</label><input type="text" name="specialty" value="<?= e($edit['specialty'] ?? '') ?>" placeholder="z. B. Marketing, Finanzen"></div>
-        <div class="field"><label>Telefon</label><input type="text" name="phone" value="<?= e($edit['phone'] ?? '') ?>"></div>
-        <div class="field" id="cyclesField"><label>Wettbewerbsjahre (Teilnahme)</label>
-          <?php if (!$cycles): ?>
-            <div class="help">Noch kein Wettbewerbsjahr angelegt – zuerst unter „Wettbewerbsjahre“ eines anlegen.</div>
-          <?php else: ?>
-            <div style="display:flex;flex-wrap:wrap;gap:6px 16px">
-              <?php foreach ($cycles as $c): ?>
-                <label style="font-weight:400;white-space:nowrap">
-                  <input type="checkbox" name="cycles[]" value="<?= (int) $c['id'] ?>" <?= in_array((int) $c['id'], $editCycleIds, true) ? 'checked' : '' ?>>
-                  <?= e($c['year_label']) ?><?= $c['is_active'] ? ' •' : '' ?>
-                </label>
-              <?php endforeach; ?>
-            </div>
-            <div class="help">Mehrfachauswahl möglich – auch mit Lücken zwischen den Jahren. Die Zuordnung bleibt als Historie erhalten.</div>
-          <?php endif; ?>
-        </div>
-        <div class="field"><label><input type="checkbox" name="is_active" value="1" <?= ($edit['is_active'] ?? 1) ? 'checked' : '' ?>> Aktiv (Login erlaubt)</label></div>
-        <p class="muted" style="font-size:13px;margin:0 0 12px">Anmeldung passwortlos per Login-Link an die E-Mail – kein Passwort nötig.</p>
-        <button class="btn btn--primary"><?= $edit ? 'Speichern' : 'Anlegen' ?></button>
-        <?php if ($edit): ?><a href="<?= url('jurors') ?>" class="btn btn--ghost">Abbrechen</a><?php endif; ?>
-      </form>
-    </div>
-  </div>
+$fill = function (array $u) use ($userCycleIds): string {
+    return e(json_encode([
+        'id' => (int) $u['id'], 'role' => $u['role'], 'name' => $u['name'], 'email' => $u['email'],
+        'school_id' => (int) ($u['school_id'] ?? 0) ?: '', 'specialty' => $u['specialty'], 'phone' => $u['phone'],
+        'is_active' => (int) $u['is_active'], 'cycles' => $userCycleIds[(int) $u['id']] ?? [],
+    ], JSON_UNESCAPED_UNICODE));
+};
+$imgs = fn(array $u) => !empty($u['photo_path']) ? e(json_encode(['photo' => asset($u['photo_path'])], JSON_UNESCAPED_UNICODE)) : '';
 
-  <div class="card">
-    <div class="card__head"><?= count($users) ?> Nutzer</div>
-    <div class="table-wrap">
-      <table class="data">
-        <thead><tr><th>Name</th><th>Rolle</th><th>Login</th><th></th></tr></thead>
-        <tbody>
-        <?php foreach ($users as $u): ?>
-          <tr>
+ob_start(); ?>
+<div class="page-head">
+  <h1>Jury &amp; Nutzer</h1>
+  <button type="button" class="btn btn--teal" data-modal-open="userModal">+ Neu</button>
+</div>
+<div class="card">
+  <div class="card__head"><?= count($users) ?> Nutzer</div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Name</th><th>Rolle</th><th>Login</th><th></th></tr></thead>
+      <tbody>
+      <?php foreach ($users as $u): ?>
+        <tr>
             <td>
               <div style="display:flex;align-items:center;gap:10px">
                 <?php if (!empty($u['photo_path'])): ?>
@@ -198,7 +150,7 @@ ob_start(); ?>
                 <a href="<?= url('viewas', ['user' => $u['id']]) ?>" class="btn btn--ghost btn--sm" title="App aus Sicht dieses Nutzers ansehen (nur Lesen)">👁</a>
               <?php endif; ?>
               <?php if ($canManageRow): ?>
-                <a href="<?= url('jurors', ['edit' => $u['id']]) ?>" class="btn btn--ghost btn--sm">Bearbeiten</a>
+                <button type="button" class="btn btn--ghost btn--sm" data-modal-open="userModal" data-fill="<?= $fill($u) ?>"<?= $imgs($u) ? ' data-images="' . $imgs($u) . '"' : '' ?>>Bearbeiten</button>
               <?php endif; ?>
               <?php if ($u['id'] !== Auth::id() && !$isPermOwner && $canManageRow): ?>
                 <form method="post" action="<?= url('jurors') ?>" style="display:inline" data-confirm="„<?= e($u['name']) ?>“ löschen?">
@@ -212,6 +164,63 @@ ob_start(); ?>
         </tbody>
       </table>
     </div>
+  </div>
+
+<div class="modal-overlay" id="userModal" hidden>
+  <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
+    <div class="modal__head">
+      <h3 id="userModalTitle" data-modal-title data-title-new="Neuer Nutzer" data-title-edit="Nutzer bearbeiten">Neuer Nutzer</h3>
+      <button type="button" class="modal__close" data-modal-close aria-label="Schließen">&times;</button>
+    </div>
+    <form method="post" action="<?= url('jurors') ?>" enctype="multipart/form-data" class="modal__body" data-modal-form>
+      <?= Csrf::field() ?>
+      <input type="hidden" name="id" value="0">
+      <?= image_field('photo', null, [
+          'label' => 'Porträtfoto', 'aspect' => 1, 'shape' => 'round', 'format' => 'jpeg',
+          'hint' => 'Foto hierher ziehen oder klicken – quadratisch zuschneiden, zoomen, drehen.',
+      ]) ?>
+      <div class="field"><label>Rolle *</label>
+        <select name="role" id="roleSel">
+          <?php foreach ($roles as $rk => $rl): ?>
+            <?php if ($rk === 'admin' && !$isOwner) { continue; } // Admin-Rolle nur für Eigentümer ?>
+            <option value="<?= $rk ?>" <?= $rk === 'juror' ? 'selected' : '' ?>><?= e($rl) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="field"><label>Name *</label><input type="text" name="name" required></div>
+      <div class="field"><label>E-Mail *</label><input type="email" name="email" required></div>
+      <div class="field" id="schoolField"><label>Schule (für Lehrkräfte)</label>
+        <select name="school_id">
+          <option value="">—</option>
+          <?php foreach ($schools as $s): ?>
+            <option value="<?= (int) $s['id'] ?>"><?= e($s['name']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="field"><label>Spezialgebiet (Jury)</label><input type="text" name="specialty" placeholder="z. B. Marketing, Finanzen"></div>
+      <div class="field"><label>Telefon</label><input type="text" name="phone"></div>
+      <div class="field" id="cyclesField"><label>Wettbewerbsjahre (Teilnahme)</label>
+        <?php if (!$cycles): ?>
+          <div class="help">Noch kein Wettbewerbsjahr angelegt – zuerst unter „Wettbewerbsjahre“ eines anlegen.</div>
+        <?php else: ?>
+          <div style="display:flex;flex-wrap:wrap;gap:6px 16px">
+            <?php foreach ($cycles as $c): ?>
+              <label style="font-weight:400;white-space:nowrap">
+                <input type="checkbox" name="cycles[]" value="<?= (int) $c['id'] ?>" <?= $c['is_active'] ? 'checked' : '' ?>>
+                <?= e($c['year_label']) ?><?= $c['is_active'] ? ' •' : '' ?>
+              </label>
+            <?php endforeach; ?>
+          </div>
+          <div class="help">Mehrfachauswahl möglich – auch mit Lücken zwischen den Jahren. Die Zuordnung bleibt als Historie erhalten.</div>
+        <?php endif; ?>
+      </div>
+      <div class="field"><label style="font-weight:400"><input type="checkbox" name="is_active" value="1" checked> Aktiv (Login erlaubt)</label></div>
+      <p class="muted" style="font-size:13px;margin:0">Anmeldung passwortlos per Login-Link an die E-Mail – kein Passwort nötig.</p>
+      <div class="modal__foot">
+        <button type="button" class="btn btn--ghost" data-modal-close>Abbrechen</button>
+        <button class="btn btn--primary" data-label-new="Anlegen" data-label-edit="Speichern">Anlegen</button>
+      </div>
+    </form>
   </div>
 </div>
 <script>

@@ -398,3 +398,24 @@ body.modal-open { overflow: hidden; }
   display: flex; justify-content: flex-end; gap: 10px;
   padding: 12px 18px; border-top: 1px solid var(--line);
 }
+
+/* ---------- Formular-Dialoge (Neu/Ändern) ---------- */
+.modal-overlay[hidden] { display: none; }
+.modal-overlay { animation: modal-fade .16s ease; }
+@keyframes modal-fade { from { opacity: 0; } to { opacity: 1; } }
+.modal--form { display: flex; flex-direction: column; max-width: 560px; max-height: calc(100vh - 40px); padding: 0; overflow: hidden; animation: modal-pop .2s cubic-bezier(.16,.84,.44,1); }
+.modal--form.modal--wide { max-width: 720px; }
+@keyframes modal-pop { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+.modal__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 17px 22px; border-bottom: 1px solid var(--line); }
+.modal__head h3 { margin: 0; font-size: 19px; }
+.modal__close { flex: 0 0 auto; background: none; border: 0; cursor: pointer; font-size: 26px; line-height: 1; color: var(--muted); width: 34px; height: 34px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; }
+.modal__close:hover { background: var(--wj-grey-l); color: var(--ink); }
+.modal__body { padding: 20px 22px; overflow-y: auto; }
+.modal__foot { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 0 0; margin-top: 6px; border-top: 1px solid var(--line); }
+.modal__body .field:last-of-type { margin-bottom: 4px; }
+
+/* Bestätigungs-Dialog */
+.modal--confirm { max-width: 420px; animation: modal-pop .2s cubic-bezier(.16,.84,.44,1); }
+.modal--confirm h3 { display: flex; align-items: center; gap: 10px; }
+.modal--confirm p { margin: 0 0 22px; color: #3a4655; }
+.modal--confirm .modal__foot { border: 0; padding: 0; margin: 0; }

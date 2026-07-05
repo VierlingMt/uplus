@@ -93,75 +93,60 @@ $teams = Database::all(
 );
 $statusList = ['draft'=>'In Arbeit','submitted'=>'Eingereicht','nominated'=>'Pitch nominiert','fallback'=>'Nachrücker','eliminated'=>'Ausgeschieden'];
 
+$teamFill = fn(array $t) => e(json_encode([
+    'id' => (int) $t['id'], 'name' => $t['name'], 'school_id' => (int) ($t['school_id'] ?? 0) ?: '',
+    'idea_name' => $t['idea_name'], 'idea_pitch' => $t['idea_pitch'], 'status' => $t['status'],
+], JSON_UNESCAPED_UNICODE));
 ob_start(); ?>
 <div class="page-head">
   <h1>Teams &amp; Schüler</h1>
-  <?php if (!$edit): ?><a href="<?= url('teams', ['edit' => 'new']) ?>" class="btn btn--teal">+ Neues Team</a><?php endif; ?>
+  <?php if (!$edit): ?><button type="button" class="btn btn--teal" data-modal-open="teamModal">+ Neu</button><?php endif; ?>
 </div>
 
-<?php if ($edit !== null || input('edit') === 'new'): ?>
-  <?php $isNew = ($edit === null); ?>
+<?php if ($edit !== null): [$sl,$sc] = status_label($edit['status']); ?>
+  <div style="margin-bottom:14px"><a href="<?= url('teams') ?>" class="btn btn--ghost btn--sm">← Zurück zur Übersicht</a></div>
   <div class="grid cols-2">
     <div class="card">
-      <div class="card__head"><?= $isNew ? 'Neues Team' : 'Team bearbeiten' ?></div>
+      <div class="card__head" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <span>Team</span>
+        <button type="button" class="btn btn--ghost btn--sm" data-modal-open="teamModal" data-fill="<?= $teamFill($edit) ?>">Bearbeiten</button>
+      </div>
       <div class="card__body">
-        <form method="post" action="<?= url('teams') ?>">
-          <?= Csrf::field() ?>
-          <input type="hidden" name="action" value="save_team">
-          <input type="hidden" name="id" value="<?= (int) ($edit['id'] ?? 0) ?>">
-          <div class="field"><label>Team-/Projektname *</label><input type="text" name="name" required value="<?= e($edit['name'] ?? '') ?>"></div>
-          <?php if ($isAdmin): ?>
-          <div class="field"><label>Schule *</label>
-            <select name="school_id" required>
-              <option value="">— wählen —</option>
-              <?php foreach ($schools as $s): ?>
-                <option value="<?= (int) $s['id'] ?>" <?= (int) ($edit['school_id'] ?? 0) === (int) $s['id'] ? 'selected' : '' ?>><?= e($s['name']) ?></option>
-              <?php endforeach; ?>
-            </select>
-          </div>
+        <h2 style="margin:0 0 4px;font-size:22px"><?= e($edit['name']) ?></h2>
+        <p style="margin:0 0 14px"><span class="pill <?= $sc ?>"><?= e($sl) ?></span>
+          <?php if ($isAdmin && !empty($edit['school_id'])): $sn = array_column($schools, 'name', 'id')[(int) $edit['school_id']] ?? null; ?>
+            <?php if ($sn): ?><span class="pill muted"><?= e($sn) ?></span><?php endif; ?>
           <?php endif; ?>
-          <div class="field"><label>Name der Geschäftsidee</label><input type="text" name="idea_name" value="<?= e($edit['idea_name'] ?? '') ?>"></div>
-          <div class="field"><label>Kurzbeschreibung</label><textarea name="idea_pitch" rows="3"><?= e($edit['idea_pitch'] ?? '') ?></textarea></div>
-          <div class="field"><label>Status</label>
-            <select name="status">
-              <?php foreach ($statusList as $sk => $sl): ?>
-                <option value="<?= $sk ?>" <?= ($edit['status'] ?? 'draft') === $sk ? 'selected' : '' ?>><?= e($sl) ?></option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-          <button class="btn btn--primary">Speichern</button>
-          <a href="<?= url('teams') ?>" class="btn btn--ghost">Zurück</a>
-        </form>
+        </p>
+        <?php if ($edit['idea_name']): ?><div class="field" style="margin-bottom:12px"><label>Geschäftsidee</label><div><?= e($edit['idea_name']) ?></div></div><?php endif; ?>
+        <?php if ($edit['idea_pitch']): ?><div class="field" style="margin:0"><label>Kurzbeschreibung</label><div class="muted"><?= nl2br(e($edit['idea_pitch'])) ?></div></div><?php endif; ?>
+        <?php if (!$edit['idea_name'] && !$edit['idea_pitch']): ?><p class="muted" style="margin:0">Noch keine Geschäftsidee hinterlegt – über „Bearbeiten“ ergänzen.</p><?php endif; ?>
       </div>
     </div>
     <div class="card">
       <div class="card__head">Teammitglieder<?= $students ? ' (' . count($students) . ')' : '' ?></div>
       <div class="card__body">
-        <?php if ($isNew): ?>
-          <p class="muted">Speichere das Team zuerst, dann kannst du Mitglieder hinzufügen.</p>
-        <?php else: ?>
-          <table class="data" style="margin-bottom:14px">
-            <tbody>
-            <?php foreach ($students as $st): ?>
-              <tr><td><?= e($st['name']) ?></td><td><?= $st['role_color'] ? '<span class="pill muted">'.e($st['role_color']).'</span>' : '' ?></td>
-              <td style="text-align:right">
-                <form method="post" action="<?= url('teams') ?>" style="display:inline">
-                  <?= Csrf::field() ?><input type="hidden" name="action" value="del_student"><input type="hidden" name="id" value="<?= (int) $st['id'] ?>">
-                  <button class="btn btn--ghost btn--sm">×</button>
-                </form></td></tr>
-            <?php endforeach; ?>
-            <?php if (!$students): ?><tr><td class="muted">Noch keine Mitglieder.</td></tr><?php endif; ?>
-            </tbody>
-          </table>
-          <form method="post" action="<?= url('teams') ?>">
-            <?= Csrf::field() ?><input type="hidden" name="action" value="add_student"><input type="hidden" name="team_id" value="<?= (int) $edit['id'] ?>">
-            <div style="display:flex;gap:8px">
-              <input type="text" name="sname" placeholder="Name" required>
-              <input type="text" name="role_color" placeholder="Farbe/Typ" style="max-width:130px">
-              <button class="btn btn--teal">+</button>
-            </div>
-          </form>
-        <?php endif; ?>
+        <table class="data" style="margin-bottom:14px">
+          <tbody>
+          <?php foreach ($students as $st): ?>
+            <tr><td><?= e($st['name']) ?></td><td><?= $st['role_color'] ? '<span class="pill muted">'.e($st['role_color']).'</span>' : '' ?></td>
+            <td style="text-align:right">
+              <form method="post" action="<?= url('teams') ?>" style="display:inline" data-confirm="„<?= e($st['name']) ?>“ aus dem Team entfernen?">
+                <?= Csrf::field() ?><input type="hidden" name="action" value="del_student"><input type="hidden" name="id" value="<?= (int) $st['id'] ?>">
+                <button class="btn btn--ghost btn--sm">×</button>
+              </form></td></tr>
+          <?php endforeach; ?>
+          <?php if (!$students): ?><tr><td class="muted">Noch keine Mitglieder.</td></tr><?php endif; ?>
+          </tbody>
+        </table>
+        <form method="post" action="<?= url('teams') ?>">
+          <?= Csrf::field() ?><input type="hidden" name="action" value="add_student"><input type="hidden" name="team_id" value="<?= (int) $edit['id'] ?>">
+          <div style="display:flex;gap:8px">
+            <input type="text" name="sname" placeholder="Name" required>
+            <input type="text" name="role_color" placeholder="Farbe/Typ" style="max-width:130px">
+            <button class="btn btn--teal">+</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -178,7 +163,14 @@ ob_start(); ?>
             <td><?= (int) $t['members'] ?></td>
             <td><?= $t['has_plan'] ? '<span class="pill teal">vorhanden</span>' : '<span class="pill muted">—</span>' ?></td>
             <td><span class="pill <?= $sc ?>"><?= e($sl) ?></span></td>
-            <td style="text-align:right"><a href="<?= url('teams', ['edit' => $t['id']]) ?>" class="btn btn--ghost btn--sm">Öffnen</a></td>
+            <td style="white-space:nowrap;text-align:right">
+              <a href="<?= url('teams', ['edit' => $t['id']]) ?>" class="btn btn--ghost btn--sm" title="Team öffnen: Mitglieder verwalten">👥 Mitglieder</a>
+              <button type="button" class="btn btn--ghost btn--sm" data-modal-open="teamModal" data-fill="<?= $teamFill($t) ?>">Bearbeiten</button>
+              <form method="post" action="<?= url('teams') ?>" style="display:inline" data-confirm="Team „<?= e($t['name']) ?>“ inkl. Mitglieder wirklich löschen?">
+                <?= Csrf::field() ?><input type="hidden" name="action" value="delete_team"><input type="hidden" name="id" value="<?= (int) $t['id'] ?>">
+                <button class="btn btn--danger btn--sm">×</button>
+              </form>
+            </td>
           </tr>
         <?php endforeach; ?>
         <?php if (!$teams): ?><tr><td colspan="6" class="muted">Noch keine Teams.</td></tr><?php endif; ?>
@@ -187,6 +179,45 @@ ob_start(); ?>
     </div>
   </div>
 <?php endif; ?>
+
+<div class="modal-overlay" id="teamModal" hidden>
+  <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="teamModalTitle">
+    <div class="modal__head">
+      <h3 id="teamModalTitle" data-modal-title data-title-new="Neues Team" data-title-edit="Team bearbeiten">Neues Team</h3>
+      <button type="button" class="modal__close" data-modal-close aria-label="Schließen">&times;</button>
+    </div>
+    <form method="post" action="<?= url('teams') ?>" class="modal__body" data-modal-form>
+      <?= Csrf::field() ?>
+      <input type="hidden" name="action" value="save_team">
+      <input type="hidden" name="id" value="0">
+      <div class="field"><label>Team-/Projektname *</label><input type="text" name="name" required></div>
+      <?php if ($isAdmin): ?>
+      <div class="field"><label>Schule *</label>
+        <select name="school_id" required>
+          <option value="">— wählen —</option>
+          <?php foreach ($schools as $s): ?>
+            <option value="<?= (int) $s['id'] ?>"><?= e($s['name']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <?php endif; ?>
+      <div class="field"><label>Name der Geschäftsidee</label><input type="text" name="idea_name"></div>
+      <div class="field"><label>Kurzbeschreibung</label><textarea name="idea_pitch" rows="3"></textarea></div>
+      <div class="field"><label>Status</label>
+        <select name="status">
+          <?php foreach ($statusList as $sk => $sl): ?>
+            <option value="<?= $sk ?>"><?= e($sl) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <p class="muted" style="font-size:13px;margin:0">Teammitglieder werden nach dem Anlegen über „👥 Mitglieder“ verwaltet.</p>
+      <div class="modal__foot">
+        <button type="button" class="btn btn--ghost" data-modal-close>Abbrechen</button>
+        <button class="btn btn--primary" data-label-new="Anlegen" data-label-edit="Speichern">Anlegen</button>
+      </div>
+    </form>
+  </div>
+</div>
 <?php
 $content = ob_get_clean();
 $title = 'Teams & Schüler';

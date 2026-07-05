@@ -71,12 +71,12 @@ if (is_post()) {
 
     if ($year === '') {
         flash('error', 'Bitte ein Wettbewerbsjahr angeben (z. B. „2026/27“).');
-        redirect(url('cycles', $id ? ['edit' => $id] : []));
+        redirect(url('cycles'));
     }
     $dup = Database::value('SELECT id FROM competition_cycles WHERE year_label = ? AND id <> ?', [$year, $id]);
     if ($dup) {
         flash('error', 'Dieses Wettbewerbsjahr existiert bereits.');
-        redirect(url('cycles', $id ? ['edit' => $id] : []));
+        redirect(url('cycles'));
     }
 
     if ($id > 0) {
@@ -101,11 +101,6 @@ if (is_post()) {
 $cycles = Cycle::all();
 $active = Cycle::active();
 
-$edit = null;
-if ($eid = (int) input('edit', 0)) {
-    $edit = Cycle::find($eid);
-}
-
 // Ausgewähltes Jahr zur Zuordnung von Jury/Projektleitung/Schulen
 $selId = (int) input('cycle', 0) ?: (int) ($active['id'] ?? 0);
 $sel = $selId ? Cycle::find($selId) : null;
@@ -126,78 +121,81 @@ if ($sel) {
     $selSchools = Cycle::schoolIds((int) $sel['id']);
 }
 
+$fill = fn(array $c) => e(json_encode([
+    'id' => (int) $c['id'], 'year_label' => $c['year_label'], 'title' => $c['title'],
+    'starts_on' => $c['starts_on'], 'ends_on' => $c['ends_on'], 'note' => $c['note'],
+    'is_active' => (int) $c['is_active'],
+], JSON_UNESCAPED_UNICODE));
 ob_start(); ?>
-<div class="page-head"><h1>Wettbewerbsjahre</h1></div>
+<div class="page-head">
+  <h1>Wettbewerbsjahre</h1>
+  <button type="button" class="btn btn--teal" data-modal-open="cycleModal">+ Neu</button>
+</div>
 <p class="muted" style="margin-top:-6px;max-width:680px">
   Ein Wettbewerbsjahr (Zyklus) ist das zentrale Objekt: Jury, Projektleitung und Schulen
   hängen daran. Genau ein Jahr ist <em>aktiv</em>; frühere Jahre bleiben als Historie erhalten.
 </p>
 
-<div class="grid cols-2">
-  <div class="card">
-    <div class="card__head"><?= $edit ? 'Wettbewerbsjahr bearbeiten' : 'Neues Wettbewerbsjahr anlegen' ?></div>
-    <div class="card__body">
-      <form method="post" action="<?= url('cycles') ?>">
-        <?= Csrf::field() ?>
-        <input type="hidden" name="id" value="<?= (int) ($edit['id'] ?? 0) ?>">
-        <div class="field"><label>Wettbewerbsjahr *</label>
-          <input type="text" name="year_label" required placeholder="z. B. 2026/27" value="<?= e($edit['year_label'] ?? '') ?>">
-        </div>
-        <div class="field"><label>Bezeichnung / Motto</label>
-          <input type="text" name="title" value="<?= e($edit['title'] ?? '') ?>" placeholder="optional">
-        </div>
-        <div class="grid cols-2">
-          <div class="field"><label>Start</label><input type="date" name="starts_on" value="<?= e($edit['starts_on'] ?? '') ?>"></div>
-          <div class="field"><label>Ende</label><input type="date" name="ends_on" value="<?= e($edit['ends_on'] ?? '') ?>"></div>
-        </div>
-        <div class="field"><label>Notiz</label><textarea name="note" rows="2"><?= e($edit['note'] ?? '') ?></textarea></div>
-        <?php if (!$edit || !($edit['is_active'] ?? 0)): ?>
-          <div class="field"><label><input type="checkbox" name="is_active" value="1" <?= $edit ? '' : 'checked' ?>> Als aktives Wettbewerbsjahr setzen</label></div>
-        <?php else: ?>
-          <p class="muted" style="font-size:13px">Dies ist aktuell das aktive Wettbewerbsjahr.</p>
-        <?php endif; ?>
-        <button class="btn btn--primary"><?= $edit ? 'Speichern' : 'Anlegen' ?></button>
-        <?php if ($edit): ?><a href="<?= url('cycles') ?>" class="btn btn--ghost">Abbrechen</a><?php endif; ?>
-      </form>
-    </div>
+<div class="card">
+  <div class="card__head"><?= count($cycles) ?> Wettbewerbsjahre</div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Jahr</th><th>Jury</th><th>Leitung</th><th>Schulen</th><th></th></tr></thead>
+      <tbody>
+      <?php foreach ($cycles as $c): $cid = (int) $c['id']; ?>
+        <tr<?= $cid === $selId ? ' style="background:var(--bg-soft,#f4f7fc)"' : '' ?>>
+          <td>
+            <strong><?= e($c['year_label']) ?></strong>
+            <?php if ($c['is_active']): ?><span class="pill teal">aktiv</span><?php endif; ?>
+            <?php if ($c['title']): ?><br><span class="muted" style="font-size:13px"><?= e($c['title']) ?></span><?php endif; ?>
+          </td>
+          <td><?= (int) ($memberCountsJ[$cid] ?? 0) ?></td>
+          <td><?= (int) ($memberCountsL[$cid] ?? 0) ?></td>
+          <td><?= (int) ($schoolCounts[$cid] ?? 0) ?></td>
+          <td style="white-space:nowrap;text-align:right">
+            <a href="<?= url('cycles', ['cycle' => $cid]) ?>" class="btn btn--ghost btn--sm">Zuordnen</a>
+            <button type="button" class="btn btn--ghost btn--sm" data-modal-open="cycleModal" data-fill="<?= $fill($c) ?>">Bearbeiten</button>
+            <?php if (!$c['is_active']): ?>
+              <form method="post" action="<?= url('cycles') ?>" style="display:inline">
+                <?= Csrf::field() ?><input type="hidden" name="action" value="activate"><input type="hidden" name="id" value="<?= $cid ?>">
+                <button class="btn btn--teal btn--sm">Aktiv</button>
+              </form>
+              <form method="post" action="<?= url('cycles') ?>" style="display:inline" data-confirm="Wettbewerbsjahr „<?= e($c['year_label']) ?>“ und alle Zuordnungen löschen?">
+                <?= Csrf::field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $cid ?>">
+                <button class="btn btn--danger btn--sm">×</button>
+              </form>
+            <?php endif; ?>
+          </td>
+        </tr>
+      <?php endforeach; ?>
+      <?php if (!$cycles): ?><tr><td colspan="5" class="muted">Noch kein Wettbewerbsjahr angelegt.</td></tr><?php endif; ?>
+      </tbody>
+    </table>
   </div>
+</div>
 
-  <div class="card">
-    <div class="card__head"><?= count($cycles) ?> Wettbewerbsjahre</div>
-    <div class="table-wrap">
-      <table class="data">
-        <thead><tr><th>Jahr</th><th>Jury</th><th>Leitung</th><th>Schulen</th><th></th></tr></thead>
-        <tbody>
-        <?php foreach ($cycles as $c): $cid = (int) $c['id']; ?>
-          <tr<?= $cid === $selId ? ' style="background:var(--bg-soft,#f4f7fc)"' : '' ?>>
-            <td>
-              <strong><?= e($c['year_label']) ?></strong>
-              <?php if ($c['is_active']): ?><span class="pill teal">aktiv</span><?php endif; ?>
-              <?php if ($c['title']): ?><br><span class="muted" style="font-size:13px"><?= e($c['title']) ?></span><?php endif; ?>
-            </td>
-            <td><?= (int) ($memberCountsJ[$cid] ?? 0) ?></td>
-            <td><?= (int) ($memberCountsL[$cid] ?? 0) ?></td>
-            <td><?= (int) ($schoolCounts[$cid] ?? 0) ?></td>
-            <td style="white-space:nowrap;text-align:right">
-              <a href="<?= url('cycles', ['cycle' => $cid]) ?>" class="btn btn--ghost btn--sm">Zuordnen</a>
-              <a href="<?= url('cycles', ['edit' => $cid]) ?>" class="btn btn--ghost btn--sm">Bearbeiten</a>
-              <?php if (!$c['is_active']): ?>
-                <form method="post" action="<?= url('cycles') ?>" style="display:inline">
-                  <?= Csrf::field() ?><input type="hidden" name="action" value="activate"><input type="hidden" name="id" value="<?= $cid ?>">
-                  <button class="btn btn--teal btn--sm">Aktiv</button>
-                </form>
-                <form method="post" action="<?= url('cycles') ?>" style="display:inline" data-confirm="Wettbewerbsjahr „<?= e($c['year_label']) ?>“ und alle Zuordnungen löschen?">
-                  <?= Csrf::field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $cid ?>">
-                  <button class="btn btn--danger btn--sm">×</button>
-                </form>
-              <?php endif; ?>
-            </td>
-          </tr>
-        <?php endforeach; ?>
-        <?php if (!$cycles): ?><tr><td colspan="5" class="muted">Noch kein Wettbewerbsjahr angelegt.</td></tr><?php endif; ?>
-        </tbody>
-      </table>
+<div class="modal-overlay" id="cycleModal" hidden>
+  <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="cycleModalTitle">
+    <div class="modal__head">
+      <h3 id="cycleModalTitle" data-modal-title data-title-new="Neues Wettbewerbsjahr" data-title-edit="Wettbewerbsjahr bearbeiten">Neues Wettbewerbsjahr</h3>
+      <button type="button" class="modal__close" data-modal-close aria-label="Schließen">&times;</button>
     </div>
+    <form method="post" action="<?= url('cycles') ?>" class="modal__body" data-modal-form>
+      <?= Csrf::field() ?>
+      <input type="hidden" name="id" value="0">
+      <div class="field"><label>Wettbewerbsjahr *</label><input type="text" name="year_label" required placeholder="z. B. 2026/27"></div>
+      <div class="field"><label>Bezeichnung / Motto</label><input type="text" name="title" placeholder="optional"></div>
+      <div class="grid cols-2">
+        <div class="field"><label>Start</label><input type="date" name="starts_on"></div>
+        <div class="field"><label>Ende</label><input type="date" name="ends_on"></div>
+      </div>
+      <div class="field"><label>Notiz</label><textarea name="note" rows="2"></textarea></div>
+      <div class="field"><label style="font-weight:400"><input type="checkbox" name="is_active" value="1" checked> Als aktives Wettbewerbsjahr setzen</label></div>
+      <div class="modal__foot">
+        <button type="button" class="btn btn--ghost" data-modal-close>Abbrechen</button>
+        <button class="btn btn--primary" data-label-new="Anlegen" data-label-edit="Speichern">Anlegen</button>
+      </div>
+    </form>
   </div>
 </div>
 
