@@ -7,6 +7,15 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-07-05
+### Geändert
+- **Mobile-First auch für die restlichen Tabellen:** „Bewertung & Ranking" und
+  „Businesspläne" sowie die Bewertungs-Detailtabelle, „Material & Vorlagen" und die
+  Sponsoren-Beiträge werden auf schmalen Bildschirmen zu **gestapelten Karten** –
+  kein horizontales Scrollen mehr. Beim Ranking wird die Admin-Zeile „Status setzen"
+  direkt in die jeweilige Team-Karte integriert (statt als separater Block).
+- Damit sind alle Übersichts- und Ergebnistabellen der App durchgängig mobil bedienbar.
+
 ## [0.25.1] - 2026-07-05
 ### Behoben
 - **Topbar auf dem Handy entschlackt:** Der Seitentitel brach dort mehrzeilig um

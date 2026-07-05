@@ -189,15 +189,15 @@ if (Auth::is('admin', 'lead', 'juror')):
         <?php if (!$evals): ?>
           <p class="muted">Noch keine Jury-Bewertung abgegeben.</p>
         <?php else: ?>
-          <table class="data">
+          <table class="data data--cards">
             <thead><tr><th>Juror:in</th><th>Businessplan /50</th><th>Pitch /40</th><th>Gesamt /140</th></tr></thead>
             <tbody>
             <?php foreach ($evals as $ev): ?>
               <tr>
-                <td><?= e($ev['juror_name']) ?></td>
-                <td><strong><?= $fmt($ev['bp_total']) ?></strong></td>
-                <td><?= $ev['pitch_submitted'] ? $fmt($ev['pitch_total']) : '–' ?></td>
-                <td><strong style="color:var(--wj-blue)"><?= $fmt($ev['grand_total']) ?></strong></td>
+                <td data-label="Juror:in"><?= e($ev['juror_name']) ?></td>
+                <td data-label="Businessplan /50"><strong><?= $fmt($ev['bp_total']) ?></strong></td>
+                <td data-label="Pitch /40"><?= $ev['pitch_submitted'] ? $fmt($ev['pitch_total']) : '–' ?></td>
+                <td data-label="Gesamt /140"><strong style="color:var(--wj-blue)"><?= $fmt($ev['grand_total']) ?></strong></td>
               </tr>
             <?php endforeach; ?>
             </tbody>

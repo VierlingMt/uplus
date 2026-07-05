@@ -465,6 +465,12 @@ body.modal-open { overflow: hidden; }
   /* Reine Icon-Buttons (×, 👁) bleiben schmal statt volle Breite */
   .data--cards td.row-actions > .btn--icon { flex: 0 0 auto; min-width: 46px; }
   .data--cards td[colspan] { text-align: center; }
+  /* Zusammengehörige Unterzeile (z. B. „Status setzen" im Ranking, Jury-Details)
+     schließt direkt an die Hauptzeilen-Karte an, statt eine eigene Karte zu bilden. */
+  .data--cards tr:has(+ .admin-row), .data--cards tr:has(+ .subrow) { margin-bottom: 0; border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
+  .data--cards tr.admin-row, .data--cards tr.subrow { margin-top: 0; border-top: 0; border-radius: 0 0 var(--radius) var(--radius); }
+  .data--cards tr.admin-row > td[colspan] { text-align: left; padding-top: 6px; }
+  .data--cards tr.admin-row form { flex-wrap: wrap; justify-content: flex-start !important; }
   /* Suchleiste über Karten-Listen volle Breite */
   .table-toolbar { flex-wrap: wrap; }
   .table-search { max-width: none; flex: 1 1 100%; }

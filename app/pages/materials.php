@@ -86,7 +86,7 @@ if ($video): ?>
   <div class="card">
     <div class="card__head">Downloads &amp; Links</div>
     <div class="table-wrap">
-      <table class="data">
+      <table class="data data--cards">
         <tbody>
         <?php foreach ($materials as $m): ?>
           <tr>
@@ -95,7 +95,7 @@ if ($video): ?>
               <?php if ($m['description']): ?><br><span class="muted" style="font-size:13px"><?= e($m['description']) ?></span><?php endif; ?>
               <?php if ($isAdmin && $m['visibility'] !== 'all'): ?> <span class="pill muted"><?= e($m['visibility']) ?></span><?php endif; ?>
             </td>
-            <td style="text-align:right;white-space:nowrap">
+            <td class="row-actions" style="text-align:right;white-space:nowrap">
               <?php if ($m['stored_name']): ?>
                 <a class="btn btn--ghost btn--sm" href="<?= url('material_download', ['id' => $m['id']]) ?>">Download</a>
               <?php elseif ($m['link_url']): ?>
@@ -104,7 +104,7 @@ if ($video): ?>
               <?php if ($isAdmin): ?>
                 <form method="post" action="<?= url('materials') ?>" style="display:inline" data-confirm="Löschen?">
                   <?= Csrf::field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int) $m['id'] ?>">
-                  <button class="btn btn--danger btn--sm">×</button>
+                  <button class="btn btn--danger btn--sm">Löschen</button>
                 </form>
               <?php endif; ?>
             </td>

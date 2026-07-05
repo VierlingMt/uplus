@@ -85,7 +85,7 @@ ob_start(); ?>
 <div class="card">
   <div class="card__head">Ranking <span class="muted" style="font-weight:400;font-size:13px">· Gesamt = 2 × Businessplan + 1 × Pitch (max 140) · <?= $totalJurors ?> Bewertende</span></div>
   <div class="table-wrap">
-    <table class="data">
+    <table class="data data--cards">
       <thead><tr>
         <th style="width:40px">#</th><th>Team</th><th>Schule</th><th>Jury</th>
         <th>Ø BP<br>/50</th><th>Ø Pitch<br>/40</th><th>Gesamt<br>/140</th><th>KI</th><th>Status</th><th></th>
@@ -93,16 +93,16 @@ ob_start(); ?>
       <tbody>
       <?php foreach ($rows as $i => $r): [$sl, $sc] = $phaseLabels[$r['status']] ?? [$r['status'], 'muted']; ?>
         <tr>
-          <td><strong><?= $i + 1 ?></strong><?php if ($r['pitch_order']): ?><br><span class="pill teal" title="Pitch-Reihenfolge">P<?= (int) $r['pitch_order'] ?></span><?php endif; ?></td>
-          <td><strong><?= e($r['name']) ?></strong><?php if ($r['idea_name']): ?><br><span class="muted" style="font-size:12px"><?= e($r['idea_name']) ?></span><?php endif; ?></td>
-          <td><?= e($r['short_name'] ?: $r['school_name']) ?></td>
-          <td><?= (int) $r['n_bp'] ?>/<?= $totalJurors ?><?php if ($r['n_pitch']): ?> <span class="muted">(P:<?= (int) $r['n_pitch'] ?>)</span><?php endif; ?></td>
-          <td><strong><?= $fmt($r['avg_bp']) ?></strong></td>
-          <td><?= $fmt($r['avg_pitch']) ?></td>
-          <td><strong style="color:var(--wj-blue)"><?= $fmt($r['grand']) ?></strong></td>
-          <td class="muted"><?= $r['ai_score'] !== null ? $fmt($r['ai_score']) . '/50' : '–' ?></td>
-          <td><span class="pill <?= $sc ?>"><?= e($sl) ?></span></td>
-          <td style="white-space:nowrap;text-align:right">
+          <td data-label="Platz"><strong><?= $i + 1 ?></strong><?php if ($r['pitch_order']): ?> <span class="pill teal" title="Pitch-Reihenfolge">P<?= (int) $r['pitch_order'] ?></span><?php endif; ?></td>
+          <td data-label="Team"><strong><?= e($r['name']) ?></strong><?php if ($r['idea_name']): ?><br><span class="muted" style="font-size:12px"><?= e($r['idea_name']) ?></span><?php endif; ?></td>
+          <td data-label="Schule"><?= e($r['short_name'] ?: $r['school_name']) ?></td>
+          <td data-label="Jury"><?= (int) $r['n_bp'] ?>/<?= $totalJurors ?><?php if ($r['n_pitch']): ?> <span class="muted">(P:<?= (int) $r['n_pitch'] ?>)</span><?php endif; ?></td>
+          <td data-label="Ø BP /50"><strong><?= $fmt($r['avg_bp']) ?></strong></td>
+          <td data-label="Ø Pitch /40"><?= $fmt($r['avg_pitch']) ?></td>
+          <td data-label="Gesamt /140"><strong style="color:var(--wj-blue)"><?= $fmt($r['grand']) ?></strong></td>
+          <td class="muted" data-label="KI"><?= $r['ai_score'] !== null ? $fmt($r['ai_score']) . '/50' : '–' ?></td>
+          <td data-label="Status"><span class="pill <?= $sc ?>"><?= e($sl) ?></span></td>
+          <td class="row-actions" style="white-space:nowrap;text-align:right">
             <?php if ($r['bp_id']): ?>
               <a class="btn btn--<?= $r['my_eval'] ? 'ghost' : 'teal' ?> btn--sm" href="<?= url('evaluate', ['team' => $r['id']]) ?>"><?= $r['my_eval'] ? '✓ bewertet' : 'Bewerten' ?></a>
             <?php else: ?><span class="muted" style="font-size:12px">kein Plan</span><?php endif; ?>

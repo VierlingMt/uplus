@@ -119,17 +119,17 @@ ob_start(); ?>
     <div class="card">
       <div class="card__head">Beiträge / Zuwendungen</div>
       <div class="card__body">
-          <table class="data" style="margin-bottom:14px">
+          <table class="data data--cards" style="margin-bottom:14px">
             <thead><tr><th>Wettbewerbsjahr</th><th>Betrag</th><th>Leistung</th><th></th></tr></thead>
             <tbody>
             <?php foreach ($contribs as $c): ?>
               <tr>
-                <td><strong><?= e($c['year_label']) ?></strong></td>
-                <td><?= $c['amount'] !== null ? $money($c['amount']) : '<span class="muted">–</span>' ?></td>
-                <td><?= e($c['description'] ?? '') ?></td>
-                <td style="text-align:right"><form method="post" action="<?= url('sponsors') ?>" style="display:inline">
+                <td data-label="Wettbewerbsjahr"><strong><?= e($c['year_label']) ?></strong></td>
+                <td data-label="Betrag"><?= $c['amount'] !== null ? $money($c['amount']) : '<span class="muted">–</span>' ?></td>
+                <td data-label="Leistung"><?= e($c['description'] ?? '') ?></td>
+                <td class="row-actions" style="text-align:right"><form method="post" action="<?= url('sponsors') ?>" style="display:inline" data-confirm="Beitrag löschen?">
                   <?= Csrf::field() ?><input type="hidden" name="action" value="del_contribution"><input type="hidden" name="id" value="<?= (int) $c['id'] ?>">
-                  <button class="btn btn--ghost btn--sm">×</button></form></td>
+                  <button class="btn btn--ghost btn--sm">Löschen</button></form></td>
               </tr>
             <?php endforeach; ?>
             <?php if (!$contribs): ?><tr><td colspan="4" class="muted">Noch keine Beiträge.</td></tr><?php endif; ?>

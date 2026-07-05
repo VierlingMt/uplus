@@ -210,12 +210,12 @@ ob_start(); ?>
 </div>
 <div class="card">
   <div class="table-wrap">
-    <table class="data">
+    <table class="data data--cards">
       <thead><tr><th>Team</th><th>Schule</th><th>Businessplan</th><?php if (!$isTeacher): ?><th>Struktur-Check</th><th>KI-Vorbewertung</th><?php endif; ?><th></th></tr></thead>
       <tbody>
       <?php foreach ($teams as $t): ?>
         <tr>
-          <td>
+          <td data-label="Team">
             <?php if ($t['bp_id']): ?>
               <a class="pdf-link" href="<?= url('bp_download', ['id' => $t['bp_id']]) ?>"
                  data-pdf-url="<?= url('bp_download', ['id' => $t['bp_id']]) ?>"
@@ -226,14 +226,14 @@ ob_start(); ?>
             <?php endif; ?>
             <?php if ($t['idea_name']): ?><br><span class="muted" style="font-size:13px"><?= e($t['idea_name']) ?></span><?php endif; ?>
           </td>
-          <td><?= e($t['short_name'] ?: $t['school_name']) ?></td>
-          <td>
+          <td data-label="Schule"><?= e($t['short_name'] ?: $t['school_name']) ?></td>
+          <td data-label="Businessplan">
             <?php if ($t['bp_id']): ?>
               <span class="pill teal">v<?= (int) $t['version'] ?></span> <span class="muted" style="font-size:12px"><?= e(date('d.m.Y', strtotime((string) $t['uploaded_at']))) ?></span>
             <?php else: ?><span class="pill muted">nicht eingereicht</span><?php endif; ?>
           </td>
           <?php if (!$isTeacher): ?>
-          <td>
+          <td data-label="Struktur-Check">
             <?php if (!$t['bp_id']): ?>—
             <?php elseif ($t['sc_status'] === 'done'): ?>
               <strong><?= $t['sc_score'] !== null ? (int) $t['sc_score'] : '–' ?></strong>/10
@@ -241,14 +241,14 @@ ob_start(); ?>
             <?php elseif ($t['sc_status'] === 'error'): ?><span class="pill red">Fehler</span>
             <?php else: ?><span class="pill muted">offen</span><?php endif; ?>
           </td>
-          <td>
+          <td data-label="KI-Vorbewertung">
             <?php if (!$t['bp_id']): ?>—
             <?php elseif ($t['ai_status'] === 'done'): ?><strong><?= $fmt($t['ai_score']) ?></strong> / 50
             <?php elseif ($t['ai_status'] === 'error'): ?><span class="pill red">Fehler</span>
             <?php else: ?><span class="pill muted">offen</span><?php endif; ?>
           </td>
           <?php endif; ?>
-          <td style="text-align:right"><a href="<?= url('plans', ['team' => $t['id']]) ?>" class="btn btn--ghost btn--sm">Öffnen</a></td>
+          <td class="row-actions" style="text-align:right"><a href="<?= url('plans', ['team' => $t['id']]) ?>" class="btn btn--ghost btn--sm">Öffnen</a></td>
         </tr>
       <?php endforeach; ?>
       <?php if (!$teams): ?><tr><td colspan="<?= $isTeacher ? 4 : 6 ?>" class="muted">Noch keine Teams.</td></tr><?php endif; ?>
