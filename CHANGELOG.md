@@ -7,6 +7,16 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.40.1] - 2026-07-05
+### Behoben
+- **KI-Vorbewertung: „Finanzen 0 Punkte" trotz ausführlichem Inhalt.** Das Token-Limit
+  der KI-Antwort war zu knapp (2000). Bei ausführlichen Plänen riss das Modell das Limit,
+  bevor es das letzte Kriterium (Finanzen) geschrieben hatte – der fehlende Wert wurde
+  dann still als 0 gespeichert. Jetzt: höheres Limit (4096) und bei abgeschnittener bzw.
+  unvollständiger Antwort wird ein **Fehler** gemeldet (erneut bewerten) statt einer
+  falschen 0-Bewertung. Betroffene Pläne einfach „Neu bewerten". Der Struktur-Check ist
+  analog abgesichert (Limit 3000, Fehler statt Teilergebnis bei Abschneiden).
+
 ## [0.40.0] - 2026-07-05
 ### Hinzugefügt
 - **Businessplan-Übersicht (Verwaltung): KI- und Jury-Bewertung auf einen Blick.**

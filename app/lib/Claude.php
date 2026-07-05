@@ -90,7 +90,10 @@ TXT;
 
         $payload = [
             'model'       => $model,
-            'max_tokens'  => 2000,
+            // Reserve für 5 Begründungen + Zusammenfassung/Stärken/Schwächen. Zu knapp
+            // führt zu abgeschnittenem Tool-Output (stop_reason=max_tokens), wodurch das
+            // letzte Kriterium (finance) fehlt und still als 0 gewertet würde.
+            'max_tokens'  => 4096,
             'tools'       => [$tool],
             'tool_choice' => ['type' => 'tool', 'name' => 'submit_evaluation'],
             'messages'    => [[
@@ -113,6 +116,12 @@ TXT;
         }
 
         $data = json_decode($body, true);
+        // Abgeschnittene Antwort: das Modell hat das Token-Limit gerissen, bevor alle
+        // Kriterien geschrieben waren. Nicht still mit 0 werten, sondern als Fehler
+        // melden (erneut bewerten). Genau das verursachte "finance 0 trotz ausführlich".
+        if (($data['stop_reason'] ?? '') === 'max_tokens') {
+            return self::fail('KI-Antwort wurde abgeschnitten (Token-Limit) – bitte erneut bewerten.', $model);
+        }
         $toolInput = null;
         foreach ($data['content'] ?? [] as $block) {
             if (($block['type'] ?? '') === 'tool_use' && ($block['name'] ?? '') === 'submit_evaluation') {
@@ -124,10 +133,20 @@ TXT;
             return self::fail('Unerwartete API-Antwort (kein tool_use).', $model);
         }
 
+        // Fehlt ein Kriterium ganz, würde es sonst still als 0 einfließen – lieber ehrlich
+        // als Fehler melden, statt eine falsche 0-Bewertung zu speichern.
+        $missing = [];
+        foreach (Criteria::BUSINESSPLAN as $k => $_) {
+            if (!isset($toolInput[$k]['score'])) { $missing[] = Criteria::title($k); }
+        }
+        if ($missing) {
+            return self::fail('Unvollständige KI-Antwort – fehlende Kriterien: ' . implode(', ', $missing) . '. Bitte erneut bewerten.', $model);
+        }
+
         $scores = [];
         $total = 0.0;
         foreach (Criteria::BUSINESSPLAN as $k => $_) {
-            $score = isset($toolInput[$k]['score']) ? (float) $toolInput[$k]['score'] : 0.0;
+            $score = (float) $toolInput[$k]['score'];
             $score = max(0.0, min(10.0, $score));
             $scores[$k] = ['score' => $score, 'rationale' => (string) ($toolInput[$k]['rationale'] ?? '')];
             $total += $score;
@@ -244,7 +263,7 @@ TXT;
 
         $payload = [
             'model' => $model,
-            'max_tokens' => 1500,
+            'max_tokens' => 3000,
             'tools' => [$tool],
             'tool_choice' => ['type' => 'tool', 'name' => 'submit_structure_check'],
             'messages' => [[
@@ -261,6 +280,9 @@ TXT;
         if ($code !== 200) { return ['ok' => false, 'error' => 'API-Fehler (HTTP ' . $code . '): ' . substr($body, 0, 400)]; }
 
         $data = json_decode($body, true);
+        if (($data['stop_reason'] ?? '') === 'max_tokens') {
+            return ['ok' => false, 'error' => 'KI-Antwort wurde abgeschnitten (Token-Limit) – bitte erneut prüfen.'];
+        }
         $in = null;
         foreach ($data['content'] ?? [] as $b) {
             if (($b['type'] ?? '') === 'tool_use') { $in = $b['input'] ?? null; break; }
