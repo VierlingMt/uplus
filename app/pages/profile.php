@@ -14,6 +14,7 @@ if (is_post() && !$readonly) {
         $photo = save_image('photo', 'usr', 'avatars');
         if ($photo) {
             Database::run('UPDATE users SET photo_path=? WHERE id=?', [$photo, $uid]);
+            Audit::log('profile.photo', 'Porträtfoto geändert', 'user', $uid);
             flash('success', 'Foto gespeichert.');
         }
         redirect(url('profile'));
@@ -55,6 +56,7 @@ if (is_post() && !$readonly) {
                 . "angeklickt wird. Warst du das nicht, wende dich an die Projektleitung.\n"
             );
 
+            Audit::log('profile.email_requested', 'E-Mail-Änderung angefordert nach: ' . $new, 'user', $uid);
             flash('success', 'Wir haben einen Bestätigungslink an die neue Adresse (' . e($new) . ') geschickt. Erst nach dem Klick wird sie übernommen.');
         }
         redirect(url('profile'));
@@ -76,6 +78,7 @@ if (is_post() && !$readonly) {
             $text = 'Unternehmen Plus: Bestätigungscode für deine neue Handynummer: ' . $code
                   . ' (' . ContactChange::phoneTtlMinutes() . ' Min. gültig).';
             if (Sms::send($norm, $text)) {
+                Audit::log('profile.phone_requested', 'Handynummer-Änderung angefordert', 'user', $uid);
                 flash('success', 'Wir haben einen Code an die neue Nummer geschickt. Gib ihn unten ein, um die Änderung zu bestätigen.');
             } else {
                 flash('error', 'Der Code konnte nicht per SMS gesendet werden. Bitte prüfe die Nummer.');
@@ -88,6 +91,7 @@ if (is_post() && !$readonly) {
     if ($action === 'verify_phone') {
         $newPhone = ContactChange::verifyPhone($uid, (string) input('code'));
         if ($newPhone !== null) {
+            Audit::log('profile.phone_changed', 'Handynummer bestätigt und geändert', 'user', $uid);
             flash('success', 'Handynummer geändert: ' . e($newPhone) . '.');
         } else {
             flash('error', 'Der Code ist ungültig oder abgelaufen. Bitte fordere einen neuen an.');

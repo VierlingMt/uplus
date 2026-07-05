@@ -97,6 +97,7 @@ if (is_post()) {
         if (in_array($team['status'], ['draft'], true)) {
             Database::run('UPDATE teams SET status = ? WHERE id = ?', ['submitted', $tid]);
         }
+        Audit::log('plan.upload', 'Businessplan hochgeladen (v' . $ver . '): ' . $team['name'], 'team', $tid, ['file' => (string) $f['name']]);
         flash('success', 'Businessplan hochgeladen (Version ' . $ver . ').');
         redirect(url('plans', ['team' => $tid]));
     }
@@ -142,6 +143,7 @@ if (is_post()) {
             $mode = (string) input('override'); // 'pass', 'fail' oder 'clear'
             if ($mode === 'clear') {
                 Database::run('UPDATE business_plans SET sc_override=NULL, sc_override_by=NULL, sc_override_reason=NULL, sc_override_at=NULL WHERE id=?', [$bpId]);
+                Audit::log('plan.override_clear', 'Struktur-Override aufgehoben (BP #' . $bpId . ')', 'team', (int) $bp['team_id']);
                 flash('success', 'Override aufgehoben – es gilt wieder das automatische Ergebnis.');
             } else {
                 $val = $mode === 'pass' ? 1 : 0;
@@ -150,6 +152,7 @@ if (is_post()) {
                     'UPDATE business_plans SET sc_override=?, sc_override_by=?, sc_override_reason=?, sc_override_at=NOW() WHERE id=?',
                     [$val, Auth::id(), $reason !== '' ? mb_substr($reason, 0, 255) : null, $bpId]
                 );
+                Audit::log('plan.override_set', 'Struktur-Override: ' . ($val === 1 ? 'bestanden' : 'aussortiert') . ' (BP #' . $bpId . ')', 'team', (int) $bp['team_id'], $reason !== '' ? ['reason' => $reason] : null);
                 flash('success', $val === 1 ? 'Override gesetzt: Plan gilt als bestanden.' : 'Override gesetzt: Plan gilt als aussortiert.');
             }
             redirect(url('plans', ['team' => (int) $bp['team_id']]));
@@ -166,6 +169,7 @@ if (is_post()) {
             // ggf. vorherige Version wieder aktuell setzen
             $prev = Database::one('SELECT id FROM business_plans WHERE team_id = ? ORDER BY version DESC LIMIT 1', [(int) $bp['team_id']]);
             if ($prev) { Database::run('UPDATE business_plans SET is_current = 1 WHERE id = ?', [(int) $prev['id']]); }
+            Audit::log('plan.delete', 'Businessplan gelöscht (v' . (int) $bp['version'] . ', BP #' . (int) $bp['id'] . ')', 'team', (int) $bp['team_id']);
             flash('success', 'Businessplan gelöscht.');
             redirect(url('plans', ['team' => (int) $bp['team_id']]));
         }

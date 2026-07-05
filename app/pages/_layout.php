@@ -26,6 +26,7 @@ $navGroups = [
         ['schools',  'Schulen', '🏫', ['admin', 'lead']],
         ['jurors',   'Jury & Nutzer', '⚖', ['admin', 'lead']],
         ['sponsors', 'Sponsoren', '🤝', ['admin', 'lead']],
+        ['audit',    'Audit-Log', '🧾', ['admin', 'lead']],
         ['admin',    'Admin', '⚙', ['admin', 'lead']],
     ]],
 ];

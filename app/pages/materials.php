@@ -15,6 +15,7 @@ if (is_post()) {
         if ($m) {
             if ($m['stored_name']) { @unlink(UPLOAD_PATH . '/materials/' . $m['stored_name']); }
             Database::run('DELETE FROM materials WHERE id = ?', [(int) $m['id']]);
+            Audit::log('material.delete', 'Material gelöscht: ' . (string) $m['title'], 'material', (int) $m['id']);
             flash('success', 'Material gelöscht.');
         }
         redirect(url('materials'));
@@ -23,6 +24,7 @@ if (is_post()) {
     // Eingangstext (Markdown) speichern.
     if ($action === 'save_intro') {
         Settings::set('materials_intro', trim((string) input('intro')));
+        Audit::log('material.intro', 'Material-Eingangstext bearbeitet');
         flash('success', 'Eingangstext gespeichert.');
         redirect(url('materials'));
     }
@@ -93,15 +95,17 @@ if (is_post()) {
             'UPDATE materials SET title=?, description=?, original_name=?, stored_name=?, link_url=?, visibility=? WHERE id=?',
             [$title, $desc ?: null, $keepOrig, $keepStored, $link ?: null, $vis, $id]
         );
+        Audit::log('material.update', 'Material bearbeitet: ' . $title, 'material', $id);
         flash('success', 'Material aktualisiert.');
         redirect(url('materials'));
     }
 
-    Database::run(
+    $newId = Database::insert(
         'INSERT INTO materials (title, description, original_name, stored_name, link_url, visibility, uploaded_by)
          VALUES (?,?,?,?,?,?,?)',
         [$title, $desc ?: null, $origName, $storedName, $link ?: null, $vis, Auth::id()]
     );
+    Audit::log('material.create', 'Material hinzugefügt: ' . $title, 'material', $newId);
     flash('success', 'Material hinzugefügt.');
     redirect(url('materials'));
 }

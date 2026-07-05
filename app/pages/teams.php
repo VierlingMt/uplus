@@ -35,11 +35,13 @@ if (is_post()) {
             if (!$isAdmin) { $school = (int) $team['school_id']; } // Lehrkraft darf Schule nicht umhängen
             Database::run('UPDATE teams SET school_id=?, name=?, idea_name=?, idea_pitch=?, status=? WHERE id=?',
                 [$school, $name, $idea ?: null, $pitch ?: null, $status, $id]);
+            Audit::log('team.update', 'Team bearbeitet: ' . $name . ' (Status ' . $status . ')', 'team', $id);
             flash('success', 'Team gespeichert.');
             redirect(url('teams', ['edit' => $id]));
         } else {
             $nid = Database::insert('INSERT INTO teams (school_id,name,idea_name,idea_pitch,status) VALUES (?,?,?,?,?)',
                 [$school, $name, $idea ?: null, $pitch ?: null, $status]);
+            Audit::log('team.create', 'Team angelegt: ' . $name, 'team', $nid);
             flash('success', 'Team angelegt.');
             redirect(url('teams', ['edit' => $nid]));
         }
@@ -50,6 +52,7 @@ if (is_post()) {
         $team = Database::one('SELECT * FROM teams WHERE id = ?', [(int) input('id')]);
         if ($team && $canAccessTeam($team)) {
             Database::run('DELETE FROM teams WHERE id = ?', [(int) $team['id']]);
+            Audit::log('team.delete', 'Team gelöscht: ' . $team['name'], 'team', (int) $team['id']);
             flash('success', 'Team gelöscht.');
         }
         redirect(url('teams'));
@@ -61,6 +64,7 @@ if (is_post()) {
         if ($team && $canAccessTeam($team) && trim((string) input('sname')) !== '') {
             Database::run('INSERT INTO students (team_id,name,role_color) VALUES (?,?,?)',
                 [$tid, trim((string) input('sname')), trim((string) input('role_color')) ?: null]);
+            Audit::log('student.add', 'Teammitglied hinzugefügt: ' . trim((string) input('sname')) . ' (Team ' . $team['name'] . ')', 'team', $tid);
         }
         redirect(url('teams', ['edit' => $tid]));
     }
@@ -70,6 +74,7 @@ if (is_post()) {
         $st = Database::one('SELECT s.*, t.school_id FROM students s JOIN teams t ON t.id=s.team_id WHERE s.id=?', [$sid]);
         if ($st && $canAccessTeam($st)) {
             Database::run('DELETE FROM students WHERE id = ?', [$sid]);
+            Audit::log('student.delete', 'Teammitglied entfernt: ' . $st['name'], 'team', (int) $st['team_id']);
             redirect(url('teams', ['edit' => (int) $st['team_id']]));
         }
         redirect(url('teams'));

@@ -269,6 +269,27 @@ final class Migrator
                         REFERENCES users(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             ],
+            [
+                'version' => '2026_07_24_audit_log',
+                'name'    => 'Audit-Log: wer hat wann was geändert (inkl. Login/Login-Versuche)',
+                'up'      => "CREATE TABLE IF NOT EXISTS audit_log (
+                    id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    user_id    INT UNSIGNED NULL,
+                    actor      VARCHAR(190) NULL,
+                    action     VARCHAR(64) NOT NULL,
+                    entity     VARCHAR(40) NULL,
+                    entity_id  INT UNSIGNED NULL,
+                    summary    VARCHAR(500) NULL,
+                    ip         VARCHAR(45) NULL,
+                    meta       TEXT NULL,
+                    PRIMARY KEY (id),
+                    KEY idx_audit_created (created_at),
+                    KEY idx_audit_action (action),
+                    KEY idx_audit_user (user_id),
+                    KEY idx_audit_entity (entity, entity_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ],
         ];
     }
 

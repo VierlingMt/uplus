@@ -6,6 +6,11 @@ $token   = (string) input('token', '');
 $applied = $token !== '' ? ContactChange::applyEmail($token) : null;
 $ok      = $applied !== null;
 $loggedIn = Auth::check();
+if ($ok) {
+    $uid = isset($applied['user_id']) ? (int) $applied['user_id'] : null;
+    Audit::event('profile.email_changed', 'E-Mail-Adresse bestätigt und geändert: ' . (string) $applied['new_value'],
+        $uid ? ['id' => $uid, 'email' => (string) $applied['new_value']] : null);
+}
 ?>
 <!doctype html>
 <html lang="de" data-base="<?= e(rtrim(cfg('base_path', ''), '/')) ?>">

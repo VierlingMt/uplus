@@ -26,6 +26,7 @@ if (is_post()) {
             flash('error', 'Nur ein Admin kann Admin-Konten löschen.');
         } else {
             Database::run('DELETE FROM users WHERE id = ?', [$id]);
+            Audit::log('user.delete', 'Nutzer gelöscht: ' . ($target['email'] ?? ('#' . $id)), 'user', $id);
             flash('success', 'Nutzer gelöscht.');
         }
         redirect(url('jurors'));
@@ -71,10 +72,12 @@ if (is_post()) {
         Database::run('UPDATE users SET role=?, name=?, email=?, specialty=?, phone=?, school_id=?, is_active=? WHERE id=?',
             [$role, $name, $email, $spec ?: null, $phone ?: null, $school, $active, $id]);
         if ($photo) { Database::run('UPDATE users SET photo_path=? WHERE id=?', [$photo, $id]); }
+        Audit::log('user.update', 'Nutzer bearbeitet: ' . $name . ' <' . $email . '> (' . $role . ')', 'user', $id);
         flash('success', 'Nutzer aktualisiert.');
     } else {
         $id = Database::insert('INSERT INTO users (role,name,email,specialty,phone,school_id,is_active,photo_path) VALUES (?,?,?,?,?,?,?,?)',
             [$role, $name, $email, $spec ?: null, $phone ?: null, $school, $active, $photo]);
+        Audit::log('user.create', 'Nutzer angelegt: ' . $name . ' <' . $email . '> (' . $role . ')', 'user', $id);
         flash('success', 'Nutzer angelegt. Anmeldung erfolgt passwortlos per Login-Link an die E-Mail.');
     }
 

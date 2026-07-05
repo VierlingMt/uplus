@@ -51,12 +51,14 @@ try {
                 flash('error', 'Nutzer für die Ansicht nicht gefunden.');
                 redirect(url('jurors'));
             }
+            Audit::log('impersonate.start', 'Ansehen als „' . $target['name'] . '" gestartet', 'user', (int) $target['id']);
             Auth::startImpersonation($target);
             flash('success', 'Ansicht als „' . $target['name'] . '" – Nur-Lese-Modus.');
             redirect(url('dashboard'));
             break;
 
         case 'viewstop':
+            Audit::log('impersonate.stop', 'Ansehen-als beendet');
             Auth::stopImpersonation();
             redirect(url('jurors'));
             break;
@@ -90,6 +92,7 @@ try {
         case 'materials':
         case 'material_download':
         case 'sponsors':
+        case 'audit':
         case 'plans':
         case 'bp_download':
         case 'ranking':

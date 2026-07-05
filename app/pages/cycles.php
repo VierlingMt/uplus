@@ -15,13 +15,16 @@ if (is_post()) {
     $id     = (int) input('id', 0);
 
     if ($action === 'delete') {
+        $yl = (string) Database::value('SELECT year_label FROM competition_cycles WHERE id = ?', [$id]);
         Database::run('DELETE FROM competition_cycles WHERE id = ?', [$id]);
+        Audit::log('cycle.delete', 'Wettbewerbsjahr gelöscht: ' . ($yl ?: ('#' . $id)), 'cycle', $id);
         flash('success', 'Wettbewerbsjahr gelöscht.');
         redirect(url('cycles'));
     }
 
     if ($action === 'activate') {
         Cycle::setActive($id);
+        Audit::log('cycle.activate', 'Aktives Wettbewerbsjahr gesetzt (#' . $id . ')', 'cycle', $id);
         flash('success', 'Aktives Wettbewerbsjahr gesetzt.');
         redirect(url('cycles', ['cycle' => $id]));
     }
@@ -57,12 +60,16 @@ if (is_post()) {
         }
         Cycle::syncSchools($id, $schools);
 
+        Audit::log('cycle.members', 'Zuordnungen gespeichert: ' . count($jurors) . ' Jury, ' . count($leads) . ' Leitung, ' . count($schools) . ' Schulen', 'cycle', $id);
         flash('success', 'Zuordnungen für das Wettbewerbsjahr gespeichert.');
         redirect(url('cycles', ['cycle' => $id]));
     }
 
     if ($action === 'milestone_delete') {
-        Database::run('DELETE FROM cycle_milestones WHERE id = ? AND cycle_id = ?', [(int) input('milestone_id', 0), $id]);
+        $mlid = (int) input('milestone_id', 0);
+        $mlbl = (string) Database::value('SELECT label FROM cycle_milestones WHERE id = ? AND cycle_id = ?', [$mlid, $id]);
+        Database::run('DELETE FROM cycle_milestones WHERE id = ? AND cycle_id = ?', [$mlid, $id]);
+        Audit::log('cycle.milestone_delete', 'Meilenstein gelöscht: ' . ($mlbl ?: ('#' . $mlid)), 'cycle', $id);
         flash('success', 'Meilenstein gelöscht.');
         redirect(url('cycles', ['cycle' => $id]));
     }
@@ -92,6 +99,7 @@ if (is_post()) {
                  WHERE id=? AND cycle_id=?',
                 [$label, $from ?: null, $to ?: null, $period ?: null, $status, $sort, $mid, $id]
             );
+            Audit::log('cycle.milestone_update', 'Meilenstein bearbeitet: ' . $label, 'cycle', $id);
             flash('success', 'Meilenstein aktualisiert.');
         } else {
             Database::insert(
@@ -99,6 +107,7 @@ if (is_post()) {
                  VALUES (?,?,?,?,?,?,?)',
                 [$id, $label, $from ?: null, $to ?: null, $period ?: null, $status, $sort]
             );
+            Audit::log('cycle.milestone_create', 'Meilenstein hinzugefügt: ' . $label, 'cycle', $id);
             flash('success', 'Meilenstein hinzugefügt.');
         }
         redirect(url('cycles', ['cycle' => $id]));
@@ -127,12 +136,14 @@ if (is_post()) {
             'UPDATE competition_cycles SET year_label=?, title=?, starts_on=?, ends_on=?, note=? WHERE id=?',
             [$year, $title ?: null, $start ?: null, $end ?: null, $note ?: null, $id]
         );
+        Audit::log('cycle.update', 'Wettbewerbsjahr bearbeitet: ' . $year, 'cycle', $id);
         flash('success', 'Wettbewerbsjahr aktualisiert.');
     } else {
         $id = Database::insert(
             'INSERT INTO competition_cycles (year_label, title, starts_on, ends_on, note) VALUES (?,?,?,?,?)',
             [$year, $title ?: null, $start ?: null, $end ?: null, $note ?: null]
         );
+        Audit::log('cycle.create', 'Wettbewerbsjahr angelegt: ' . $year, 'cycle', $id);
         flash('success', 'Wettbewerbsjahr angelegt.');
     }
     if ($makeActive) {

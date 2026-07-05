@@ -7,6 +7,24 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-07-05
+### Hinzugefügt
+- **Vollständiges Audit-Log – wer hat wann was geändert.** Neuer Menüpunkt „Audit-Log"
+  (nur Verwaltung) mit einer filter- und sortierbaren Tabelle über alle relevanten
+  Vorgänge:
+  - **Anmeldungen und Anmelde-Versuche:** erfolgreicher Login, angeforderte Login-Links
+    und SMS-Codes, ungültige/fehlgeschlagene Versuche sowie Abmeldungen – jeweils mit
+    Zeitpunkt, Akteur und IP-Adresse.
+  - **Änderungen an Stammdaten und Inhalten:** Schulen, Teams & Schüler, Jury & Nutzer,
+    Projektlehrer, Sponsoren (inkl. Beiträge), Wettbewerbsjahre & Meilensteine, Material,
+    Businesspläne (Upload/Löschung/Struktur-Override), Bewertungen, Einstellungen sowie
+    selbst angestoßene Profil-Änderungen (E-Mail/Handynummer/Foto).
+  - **„Ansehen als"** (Start/Ende der Nutzersicht) wird ebenfalls protokolliert.
+  - Filter nach Freitext (Akteur/Beschreibung/Aktion), Bereich und Zeitraum, mit
+    Paginierung (50 pro Seite) und klickbarer Spaltensortierung.
+  - Das Protokollieren ist bewusst „fire and forget": ein Log-Fehler bricht nie den
+    eigentlichen Vorgang ab.
+
 ## [0.38.0] - 2026-07-05
 ### Hinzugefügt
 - **Bewertungsstand: Wer hat welchen Plan noch nicht bewertet?** Unter „Bewertung &

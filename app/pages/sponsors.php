@@ -27,18 +27,23 @@ if (is_post()) {
             Database::run('UPDATE sponsors SET name=?, address=?, contact_name=?, email=?, website=? WHERE id=?',
                 array_merge($fields, [$id]));
             if ($logo) { Database::run('UPDATE sponsors SET logo_path=? WHERE id=?', [$logo, $id]); }
+            Audit::log('sponsor.update', 'Sponsor bearbeitet: ' . $name, 'sponsor', $id);
             flash('success', 'Sponsor gespeichert.');
             redirect(url('sponsors', ['edit' => $id]));
         } else {
             $nid = Database::insert('INSERT INTO sponsors (name, address, contact_name, email, website, logo_path) VALUES (?,?,?,?,?,?)',
                 array_merge($fields, [$logo]));
+            Audit::log('sponsor.create', 'Sponsor angelegt: ' . $name, 'sponsor', $nid);
             flash('success', 'Sponsor angelegt.');
             redirect(url('sponsors', ['edit' => $nid]));
         }
     }
 
     if ($action === 'delete_sponsor') {
-        Database::run('DELETE FROM sponsors WHERE id = ?', [(int) input('id')]);
+        $sid = (int) input('id');
+        $sn = (string) Database::value('SELECT name FROM sponsors WHERE id = ?', [$sid]);
+        Database::run('DELETE FROM sponsors WHERE id = ?', [$sid]);
+        Audit::log('sponsor.delete', 'Sponsor gelöscht: ' . ($sn ?: ('#' . $sid)), 'sponsor', $sid);
         flash('success', 'Sponsor gelöscht.');
         redirect(url('sponsors'));
     }
@@ -53,6 +58,7 @@ if (is_post()) {
         if ($sid && $cycleOk && ($amount !== null || $desc)) {
             Database::run('INSERT INTO sponsor_contributions (sponsor_id, cycle_id, amount, description) VALUES (?,?,?,?)',
                 [$sid, $cycleId, $amount, $desc]);
+            Audit::log('sponsor.contribution_add', 'Sponsorenbeitrag erfasst (' . ($amount !== null ? number_format($amount, 2, ',', '.') . ' €' : $desc) . ')', 'sponsor', $sid);
             flash('success', 'Beitrag hinzugefügt.');
         } else {
             flash('error', 'Wettbewerbsjahr und Betrag oder Sachleistung angeben.');
@@ -62,7 +68,10 @@ if (is_post()) {
 
     if ($action === 'del_contribution') {
         $c = Database::one('SELECT * FROM sponsor_contributions WHERE id = ?', [(int) input('id')]);
-        if ($c) { Database::run('DELETE FROM sponsor_contributions WHERE id = ?', [(int) $c['id']]); }
+        if ($c) {
+            Database::run('DELETE FROM sponsor_contributions WHERE id = ?', [(int) $c['id']]);
+            Audit::log('sponsor.contribution_del', 'Sponsorenbeitrag gelöscht', 'sponsor', (int) $c['sponsor_id']);
+        }
         redirect(url('sponsors', ['edit' => (int) ($c['sponsor_id'] ?? 0)]));
     }
 }

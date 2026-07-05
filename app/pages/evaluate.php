@@ -72,6 +72,7 @@ if (is_post()) {
         exit;
     }
 
+    Audit::log('eval.save', 'Bewertung gespeichert: ' . $team['name'] . ' (' . $bpTotal . '/50' . ($isPitch ? ', Pitch ' . $pitchTotal . '/40' : '') . ')', 'team', $teamId);
     flash('success', 'Bewertung gespeichert (' . $bpTotal . '/50' . ($isPitch ? ', Pitch ' . $pitchTotal . '/40' : '') . ').');
     redirect(url('evaluate', ['team' => $teamId]));
 }

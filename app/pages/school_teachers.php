@@ -25,10 +25,11 @@ if (is_post()) {
         } elseif (Database::value('SELECT id FROM users WHERE email = ?', [$email])) {
             flash('error', 'Diese E-Mail wird bereits verwendet.');
         } else {
-            Database::run(
+            $tid = Database::insert(
                 'INSERT INTO users (role, name, email, phone, school_id, is_active) VALUES (?,?,?,?,?,1)',
                 ['teacher', $name, $email, $mobile ?: null, $schoolId]
             );
+            Audit::log('teacher.create', 'Projektlehrer angelegt: ' . $name . ' (' . $school['name'] . ')', 'user', $tid);
             flash('success', 'Projektlehrer angelegt. Anmeldung per Login-Link an die E-Mail möglich.');
         }
         redirect(url('school_teachers', ['school' => $schoolId]));
@@ -51,6 +52,7 @@ if (is_post()) {
             } else {
                 Database::run('UPDATE users SET name=?, email=?, phone=?, is_active=? WHERE id=?',
                     [$name, $email, $mobile ?: null, $active, $id]);
+                Audit::log('teacher.update', 'Projektlehrer bearbeitet: ' . $name, 'user', $id);
                 flash('success', 'Projektlehrer aktualisiert.');
             }
         }
@@ -59,7 +61,9 @@ if (is_post()) {
 
     if ($action === 'delete_teacher') {
         $id = (int) input('id');
+        $tn = (string) Database::value('SELECT name FROM users WHERE id = ? AND role = "teacher" AND school_id = ?', [$id, $schoolId]);
         Database::run('DELETE FROM users WHERE id = ? AND role = "teacher" AND school_id = ?', [$id, $schoolId]);
+        Audit::log('teacher.delete', 'Projektlehrer entfernt: ' . ($tn ?: ('#' . $id)), 'user', $id);
         flash('success', 'Projektlehrer entfernt.');
         redirect(url('school_teachers', ['school' => $schoolId]));
     }

@@ -53,10 +53,12 @@ final class Auth
         $_SESSION['uid']  = (int) $user['id'];
         $_SESSION['role'] = $user['role'];
         $_SESSION['name'] = $user['name'];
+        Audit::event('login.success', 'Erfolgreich angemeldet', $user);
     }
 
     public static function logout(): void
     {
+        Audit::log('login.logout', 'Abgemeldet');
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {
             $p = session_get_cookie_params();

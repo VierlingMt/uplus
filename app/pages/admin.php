@@ -20,14 +20,17 @@ if (is_post()) {
         Settings::set('ai_min_standard', trim((string) input('ai_min_standard')) ?: Claude::DEFAULT_MIN_STANDARD);
         Settings::set('ai_extra_guidance', trim((string) input('ai_extra_guidance')));
         Settings::set('ai_eval_jurors', input('ai_eval_jurors') ? '1' : '0');
+        Audit::log('settings.ai', 'KI-Einstellungen geändert');
         flash('success', 'KI-Einstellungen gespeichert.');
     } elseif ($section === 'general') {
         Settings::set('pitch_slots', (string) max(1, (int) input('pitch_slots', 7)));
         Settings::set('fallback_slots', (string) max(0, (int) input('fallback_slots', 2)));
         Settings::set('current_phase', (string) input('current_phase', 'evaluation'));
+        Audit::log('settings.general', 'Allgemeine Einstellungen geändert (Phase: ' . (string) input('current_phase', 'evaluation') . ')');
         flash('success', 'Allgemeine Einstellungen gespeichert.');
     } elseif ($section === 'security') {
         Settings::set('require_2fa', input('require_2fa') ? '1' : '0');
+        Audit::log('settings.security', 'Sicherheitseinstellungen geändert (2FA: ' . (input('require_2fa') ? 'an' : 'aus') . ')');
         flash('success', 'Sicherheitseinstellungen gespeichert.');
     } elseif ($section === 'delivery') {
         // E-Mail-Absender (Magic-Link-Login)
@@ -38,6 +41,7 @@ if (is_post()) {
         if ($sevenKey !== '') { Settings::set('seven_api_key', $sevenKey); }
         if (input('clear_seven_key')) { Settings::set('seven_api_key', ''); }
         Settings::set('sms_from', trim((string) input('sms_from')) ?: 'UPlus');
+        Audit::log('settings.delivery', 'Anmeldungs- & Zustellungs-Einstellungen geändert');
         flash('success', 'Anmeldungs- & Zustellungs-Einstellungen gespeichert.');
     } elseif ($section === 'testmail') {
         $to = strtolower(trim((string) input('test_to')));

@@ -31,6 +31,7 @@ if ($token !== '') {
         redirect(url('dashboard'));
     }
     $error = 'Dieser Login-Link ist ungültig oder abgelaufen. Bitte fordere einen neuen an.';
+    Audit::event('login.link_invalid', 'Ungültiger oder abgelaufener Login-Link aufgerufen');
 }
 
 // Eingabe kann E-Mail ODER Handynummer sein.
@@ -56,10 +57,11 @@ if (is_post()) {
         $user = $uid ? SmsCode::verify($uid, $code) : null;
         if ($user) {
             unset($_SESSION['sms_uid']);
-            Auth::login($user);
+            Auth::login($user); // protokolliert login.success
             redirect(url('dashboard'));
         }
         $error = 'Der Code ist ungültig oder abgelaufen. Bitte fordere einen neuen an.';
+        Audit::event('login.sms_failed', 'SMS-Code falsch/abgelaufen', $uid ? Database::one('SELECT id,name,email FROM users WHERE id=?', [$uid]) : null);
         $smsStep = true;
 
     // --- B1) SMS-Code anfordern ----------------------------------------------
@@ -81,6 +83,7 @@ if (is_post()) {
                     $_SESSION['sms_uid'] = (int) $user['id'];
                 }
             }
+            Audit::event('login.sms_requested', 'SMS-Code angefordert' . ($user ? '' : ' (kein Treffer)'), $user ?: null, ['eingabe' => $typedId]);
             $smsStep = true;
         }
 
@@ -121,6 +124,7 @@ if (is_post()) {
                     $devLink = $link;
                 }
             }
+            Audit::event('login.link_requested', 'Login-Link angefordert' . ($user ? '' : ' (kein Treffer)'), $user ?: null, ['eingabe' => $typedId]);
             $sent = true;
         }
     }

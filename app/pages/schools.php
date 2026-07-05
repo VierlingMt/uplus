@@ -8,7 +8,10 @@ if (is_post()) {
     Csrf::check();
     $action = (string) input('action');
     if ($action === 'delete') {
-        Database::run('DELETE FROM schools WHERE id = ?', [(int) input('id')]);
+        $sid = (int) input('id');
+        $sn = (string) Database::value('SELECT name FROM schools WHERE id = ?', [$sid]);
+        Database::run('DELETE FROM schools WHERE id = ?', [$sid]);
+        Audit::log('school.delete', 'Schule gelöscht: ' . ($sn ?: ('#' . $sid)), 'school', $sid);
         flash('success', 'Schule gelöscht.');
     } else {
         $id   = (int) input('id', 0);
@@ -23,10 +26,12 @@ if (is_post()) {
             Database::run('UPDATE schools SET name=?, short_name=?, city=?, note=? WHERE id=?',
                 [$name, $short ?: null, $city ?: null, $note ?: null, $id]);
             if ($logo) { Database::run('UPDATE schools SET logo_path=? WHERE id=?', [$logo, $id]); }
+            Audit::log('school.update', 'Schule bearbeitet: ' . $name, 'school', $id);
             flash('success', 'Schule aktualisiert.');
         } else {
-            Database::run('INSERT INTO schools (name, short_name, city, note, logo_path) VALUES (?,?,?,?,?)',
+            $id = Database::insert('INSERT INTO schools (name, short_name, city, note, logo_path) VALUES (?,?,?,?,?)',
                 [$name, $short ?: null, $city ?: null, $note ?: null, $logo]);
+            Audit::log('school.create', 'Schule angelegt: ' . $name, 'school', $id);
             flash('success', 'Schule angelegt.');
         }
     }
