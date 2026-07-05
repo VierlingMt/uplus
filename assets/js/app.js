@@ -25,13 +25,15 @@
 
     function closeDrawer() {
       app.classList.remove('nav-open');
+      document.body.classList.remove('modal-open'); // Hintergrund-Scroll wieder freigeben
       setExpanded(false);
     }
 
     toggle.addEventListener('click', function () {
       if (mqMobile.matches) {
-        // Mobil: Drawer auf/zu
+        // Mobil: Drawer auf/zu – dabei Hintergrund-Scroll sperren
         var open = app.classList.toggle('nav-open');
+        document.body.classList.toggle('modal-open', open);
         setExpanded(open);
       } else {
         // Desktop: schmale Leiste ein-/ausklappen (gemerkt)

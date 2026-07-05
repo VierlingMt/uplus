@@ -7,6 +7,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.35.4] - 2026-07-05
+### Behoben
+- **Mobiles Menü scrollt jetzt selbst statt des Hintergrunds.** Bei geöffnetem
+  Menü-Drawer wurde die dahinterliegende Seite gescrollt, während die (auf dem Handy
+  längere) Navigation unten auslief – „Sponsoren"/„Admin" waren kaum erreichbar. Jetzt
+  scrollt der Navigationsbereich intern (Logo oben, Fußzeile unten fixiert) und der
+  Hintergrund ist gesperrt, solange das Menü offen ist.
+
 ## [0.35.3] - 2026-07-05
 ### Geändert
 - **KI-Vorbewertung standardmäßig nur für Verwaltung sichtbar.** Die inhaltliche
