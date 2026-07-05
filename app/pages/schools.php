@@ -1,8 +1,8 @@
 <?php
-/** Schulen verwalten (nur Projektleitung). */
+/** Schulen verwalten (Admin & Projektleitung). */
 declare(strict_types=1);
 
-Auth::require('admin');
+Auth::requireManager();
 
 if (is_post()) {
     Csrf::check();

@@ -1,7 +1,12 @@
 <?php
 /**
  * Session-basierte Authentifizierung & Rollen.
- * Rollen: admin (Projektleitung), teacher (Lehrkraft), juror (Jury).
+ * Rollen (Hierarchie):
+ *   admin   – Eigentümer/Super-Admin (dauerhaft, z. B. mv@vimatec.de)
+ *   lead    – Projektleitung (volle Verwaltung, wechselt jährlich)
+ *   teacher – Lehrkraft
+ *   juror   – Jury
+ * „Verwaltung" (Manager) = admin ODER lead.
  */
 
 declare(strict_types=1);
@@ -62,6 +67,24 @@ final class Auth
         return in_array(self::role(), $roles, true);
     }
 
+    /** Eigentümer/Super-Admin. */
+    public static function isAdmin(): bool
+    {
+        return self::role() === 'admin';
+    }
+
+    /** Projektleitung. */
+    public static function isLead(): bool
+    {
+        return self::role() === 'lead';
+    }
+
+    /** Volle Verwaltung: Admin oder Projektleitung. */
+    public static function isManager(): bool
+    {
+        return self::is('admin', 'lead');
+    }
+
     private static ?array $cached = null;
 
     public static function user(): ?array
@@ -86,5 +109,11 @@ final class Auth
             render('error', ['title' => 'Kein Zugriff', 'message' => 'Für diesen Bereich fehlt dir die Berechtigung.']);
             exit;
         }
+    }
+
+    /** Zugriff auf Verwaltungsbereiche erzwingen (Admin oder Projektleitung). */
+    public static function requireManager(): void
+    {
+        self::require('admin', 'lead');
     }
 }

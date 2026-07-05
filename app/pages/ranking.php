@@ -2,8 +2,8 @@
 /** Bewertungsübersicht, Ranking und Nominierung (Admin + Jury). */
 declare(strict_types=1);
 
-Auth::require('admin', 'juror');
-$isAdmin = Auth::is('admin');
+Auth::require('admin', 'lead', 'juror');
+$isAdmin = Auth::isManager(); // Admin oder Projektleitung = volle Verwaltung
 $jurorId = (int) Auth::id();
 
 $pitchSlots = Settings::getInt('pitch_slots', 7);
@@ -68,7 +68,7 @@ if (is_post() && $isAdmin) {
 
 $rows = $loadRows();
 $fmt = fn($n) => $n === null ? '–' : rtrim(rtrim(number_format((float) $n, 1, ',', ''), '0'), ',');
-$totalJurors = (int) Database::value("SELECT COUNT(*) FROM users WHERE role IN ('admin','juror') AND is_active=1");
+$totalJurors = (int) Database::value("SELECT COUNT(*) FROM users WHERE role IN ('admin','lead','juror') AND is_active=1");
 $phaseLabels = ['submitted' => ['eingereicht', 'muted'], 'nominated' => ['Pitch', 'teal'], 'fallback' => ['Nachrücker', 'amber'], 'eliminated' => ['raus', 'muted'], 'draft' => ['Entwurf', 'muted']];
 
 ob_start(); ?>

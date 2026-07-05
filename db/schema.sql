@@ -40,11 +40,12 @@ CREATE TABLE IF NOT EXISTS competition_cycles (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
--- Benutzer (Rollen: admin = Projektleitung, teacher = Lehrkraft, juror = Jury)
+-- Benutzer (Rollen: admin = Eigentuemer/Super-Admin, lead = Projektleitung,
+--          teacher = Lehrkraft, juror = Jury)
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
     id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    role          ENUM('admin','teacher','juror') NOT NULL,
+    role          ENUM('admin','lead','teacher','juror') NOT NULL,
     name          VARCHAR(190) NOT NULL,
     email         VARCHAR(190) NOT NULL,
     password_hash VARCHAR(255) NULL,

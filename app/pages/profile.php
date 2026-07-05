@@ -11,7 +11,7 @@ ob_start(); ?>
     <label>Name</label><p><?= e($u['name']) ?></p>
     <label class="mt">E-Mail</label><p><?= e($u['email']) ?></p>
     <label class="mt">Rolle</label>
-    <p><span class="pill blue"><?= e(['admin'=>'Projektleitung','teacher'=>'Lehrkraft','juror'=>'Jury'][$u['role']] ?? $u['role']) ?></span></p>
+    <p><span class="pill blue"><?= e(['admin'=>'Admin','lead'=>'Projektleitung','teacher'=>'Lehrkraft','juror'=>'Jury'][$u['role']] ?? $u['role']) ?></span></p>
   </div></div>
   <div class="card"><div class="card__body">
     <h3 style="margin-top:0">Anmeldung</h3>

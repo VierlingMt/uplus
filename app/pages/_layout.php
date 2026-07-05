@@ -7,18 +7,18 @@ $role = Auth::role();
 $current = $_GET['r'] ?? 'dashboard';
 
 $nav = [
-    ['dashboard', 'Dashboard', '▦', ['admin', 'teacher', 'juror']],
-    ['plans',     'Businesspläne', '📄', ['admin', 'teacher', 'juror']],
-    ['ranking',   'Bewertung & Ranking', '★', ['admin', 'juror']],
-    ['teams',     'Teams & Schüler', '👥', ['admin', 'teacher']],
-    ['cycles',    'Wettbewerbsjahre', '🏆', ['admin']],
-    ['schools',   'Schulen', '🏫', ['admin']],
-    ['jurors',    'Jury & Nutzer', '⚖', ['admin']],
-    ['sponsors',  'Sponsoren', '🤝', ['admin']],
-    ['materials', 'Material & Vorlagen', '📎', ['admin', 'teacher', 'juror']],
-    ['admin',     'Admin', '⚙', ['admin']],
+    ['dashboard', 'Dashboard', '▦', ['admin', 'lead', 'teacher', 'juror']],
+    ['plans',     'Businesspläne', '📄', ['admin', 'lead', 'teacher', 'juror']],
+    ['ranking',   'Bewertung & Ranking', '★', ['admin', 'lead', 'juror']],
+    ['teams',     'Teams & Schüler', '👥', ['admin', 'lead', 'teacher']],
+    ['cycles',    'Wettbewerbsjahre', '🏆', ['admin', 'lead']],
+    ['schools',   'Schulen', '🏫', ['admin', 'lead']],
+    ['jurors',    'Jury & Nutzer', '⚖', ['admin', 'lead']],
+    ['sponsors',  'Sponsoren', '🤝', ['admin', 'lead']],
+    ['materials', 'Material & Vorlagen', '📎', ['admin', 'lead', 'teacher', 'juror']],
+    ['admin',     'Admin', '⚙', ['admin', 'lead']],
 ];
-$roleLabel = ['admin' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 'Jury'][$role] ?? $role;
+$roleLabel = ['admin' => 'Admin', 'lead' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 'Jury'][$role] ?? $role;
 ?>
 <!doctype html>
 <html lang="de" data-base="<?= e(rtrim(cfg('base_path', ''), '/')) ?>">

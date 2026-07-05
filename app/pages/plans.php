@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 Auth::require();
 $me = Auth::user();
-$isAdmin = Auth::is('admin');
+$isAdmin = Auth::isManager(); // Admin oder Projektleitung = volle Verwaltung
 $isTeacher = Auth::is('teacher');
 $mySchool = $me['school_id'] ? (int) $me['school_id'] : null;
 
@@ -20,7 +20,7 @@ if (is_post()) {
 
     // --- JSON-Endpunkte für die schrittweise Bulk-Verarbeitung (Fortschrittsbalken) ---
     if ($action === 'bulk_list' || $action === 'process_one') {
-        Auth::require('admin');
+        Auth::requireManager();
         // Session sofort freigeben, damit langsame KI-Calls die App nicht blockieren
         // (PHP sperrt sonst die Session-Datei für die Dauer des Requests).
         session_write_close();
@@ -98,7 +98,7 @@ if (is_post()) {
     }
 
     if ($action === 'run_ai') {
-        Auth::require('admin');
+        Auth::requireManager();
         $bpId = (int) input('bp_id');
         $bp = Database::one('SELECT * FROM business_plans WHERE id = ?', [$bpId]);
         if ($bp) {
@@ -117,7 +117,7 @@ if (is_post()) {
     // JSON-Endpunkte bulk_list/process_one (Fortschrittsbalken, Session freigegeben).
 
     if ($action === 'run_structure') {
-        Auth::require('admin');
+        Auth::requireManager();
         $bpId = (int) input('bp_id');
         $bp = Database::one('SELECT * FROM business_plans WHERE id = ?', [$bpId]);
         if ($bp) {
@@ -131,7 +131,7 @@ if (is_post()) {
     }
 
     if ($action === 'delete_plan') {
-        Auth::require('admin');
+        Auth::requireManager();
         $bp = Database::one('SELECT * FROM business_plans WHERE id = ?', [(int) input('bp_id')]);
         if ($bp) {
             @unlink(UPLOAD_PATH . '/plans/' . basename((string) $bp['stored_name']));

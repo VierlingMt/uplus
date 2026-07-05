@@ -1,10 +1,15 @@
 <?php
-/** Nutzer verwalten: Projektleitung, Lehrkräfte, Jury (nur Projektleitung). */
+/** Nutzer verwalten: Admin, Projektleitung, Lehrkräfte, Jury (Admin & Projektleitung). */
 declare(strict_types=1);
 
-Auth::require('admin');
+Auth::requireManager();
 
-$roles = ['admin' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 'Jury'];
+$roles = ['admin' => 'Admin', 'lead' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 'Jury'];
+
+// Nur der Eigentümer/Super-Admin darf Admin-Konten vergeben, ändern oder löschen.
+$isOwner = Auth::isAdmin();
+// Dauerhaftes Eigentümer-Konto – vor Löschen/Herabstufen geschützt.
+const PERMANENT_OWNER = 'mv@vimatec.de';
 
 if (is_post()) {
     Csrf::check();
@@ -12,8 +17,13 @@ if (is_post()) {
     $id = (int) input('id', 0);
 
     if ($action === 'delete') {
+        $target = Database::one('SELECT role, email FROM users WHERE id = ?', [$id]);
         if ($id === Auth::id()) {
             flash('error', 'Du kannst dich nicht selbst löschen.');
+        } elseif ($target && strtolower((string) $target['email']) === PERMANENT_OWNER) {
+            flash('error', 'Das dauerhafte Admin-Konto kann nicht gelöscht werden.');
+        } elseif ($target && $target['role'] === 'admin' && !$isOwner) {
+            flash('error', 'Nur ein Admin kann Admin-Konten löschen.');
         } else {
             Database::run('DELETE FROM users WHERE id = ?', [$id]);
             flash('success', 'Nutzer gelöscht.');
@@ -39,6 +49,18 @@ if (is_post()) {
     $dup = Database::value('SELECT id FROM users WHERE email = ? AND id <> ?', [$email, $id]);
     if ($dup) {
         flash('error', 'Diese E-Mail wird bereits verwendet.');
+        redirect(url('jurors', $id ? ['edit' => $id] : []));
+    }
+
+    // Rollen-Hierarchie absichern: nur der Eigentümer/Admin darf die Admin-Rolle
+    // vergeben oder Admin-Konten bearbeiten; das dauerhafte Eigentümer-Konto
+    // bleibt immer Admin.
+    $target = $id > 0 ? Database::one('SELECT role, email FROM users WHERE id = ?', [$id]) : null;
+    if ($target && strtolower((string) $target['email']) === PERMANENT_OWNER) {
+        $role = 'admin';
+    }
+    if (!$isOwner && ($role === 'admin' || ($target && $target['role'] === 'admin'))) {
+        flash('error', 'Nur ein Admin kann Admin-Konten anlegen oder bearbeiten.');
         redirect(url('jurors', $id ? ['edit' => $id] : []));
     }
 
@@ -70,7 +92,7 @@ if ($eid = (int) input('edit', 0)) {
 $schools = Database::all('SELECT id, name FROM schools ORDER BY name');
 $users = Database::all(
     'SELECT u.*, s.name AS school_name FROM users u LEFT JOIN schools s ON s.id = u.school_id
-     ORDER BY FIELD(u.role,"admin","juror","teacher"), u.name'
+     ORDER BY FIELD(u.role,"admin","lead","juror","teacher"), u.name'
 );
 
 // Wettbewerbsjahre (Zyklen) für die Zuordnung im Formular und die Übersicht
@@ -97,6 +119,7 @@ ob_start(); ?>
         <div class="field"><label>Rolle *</label>
           <select name="role" id="roleSel">
             <?php foreach ($roles as $rk => $rl): ?>
+              <?php if ($rk === 'admin' && !$isOwner) { continue; } // Admin-Rolle nur für Eigentümer ?>
               <option value="<?= $rk ?>" <?= ($edit['role'] ?? 'juror') === $rk ? 'selected' : '' ?>><?= e($rl) ?></option>
             <?php endforeach; ?>
           </select>
@@ -147,11 +170,17 @@ ob_start(); ?>
             <td><strong><?= e($u['name']) ?></strong><br><span class="muted" style="font-size:13px"><?= e($u['email']) ?></span>
               <?php if ($u['school_name']): ?><br><span class="pill muted"><?= e($u['school_name']) ?></span><?php endif; ?>
               <?php if (!empty($userCycles[(int) $u['id']])): ?><br><span class="pill blue" title="Wettbewerbsjahre"><?= e(implode(', ', $userCycles[(int) $u['id']])) ?></span><?php endif; ?></td>
-            <td><span class="pill <?= $u['role']==='admin'?'blue':($u['role']==='juror'?'teal':'amber') ?>"><?= e($roles[$u['role']] ?? $u['role']) ?></span></td>
+            <td><span class="pill <?= ['admin'=>'blue','lead'=>'blue','juror'=>'teal','teacher'=>'amber'][$u['role']] ?? 'muted' ?>"><?= e($roles[$u['role']] ?? $u['role']) ?></span></td>
             <td><?php if (!$u['is_active']): ?><span class="pill muted">inaktiv</span><?php else: ?><span class="pill teal">aktiv</span><?php endif; ?></td>
             <td style="white-space:nowrap;text-align:right">
-              <a href="<?= url('jurors', ['edit' => $u['id']]) ?>" class="btn btn--ghost btn--sm">Bearbeiten</a>
-              <?php if ($u['id'] !== Auth::id()): ?>
+              <?php
+                $isPermOwner = strtolower((string) $u['email']) === PERMANENT_OWNER;
+                $canManageRow = $isOwner || $u['role'] !== 'admin'; // Admin-Konten nur durch Eigentümer
+              ?>
+              <?php if ($canManageRow): ?>
+                <a href="<?= url('jurors', ['edit' => $u['id']]) ?>" class="btn btn--ghost btn--sm">Bearbeiten</a>
+              <?php endif; ?>
+              <?php if ($u['id'] !== Auth::id() && !$isPermOwner && $canManageRow): ?>
                 <form method="post" action="<?= url('jurors') ?>" style="display:inline" data-confirm="„<?= e($u['name']) ?>“ löschen?">
                   <?= Csrf::field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int) $u['id'] ?>">
                   <button class="btn btn--danger btn--sm">×</button>

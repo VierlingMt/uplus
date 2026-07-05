@@ -12,7 +12,7 @@ if (!$m || !$m['stored_name']) {
 
 // Sichtbarkeit prüfen
 $role = Auth::role();
-if (!Auth::is('admin') && !in_array($m['visibility'], ['all', $role], true)) {
+if (!Auth::isManager() && !in_array($m['visibility'], ['all', $role], true)) {
     http_response_code(403);
     exit('Kein Zugriff.');
 }

@@ -7,6 +7,25 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-07-05
+### Hinzugefügt
+- **Eigene Admin-Rolle** (Eigentümer/Super-Admin) getrennt von der
+  **Projektleitung**: Bisher waren beide dieselbe Rolle `admin` (nur mit dem
+  Label „Projektleitung"). Ab jetzt gibt es vier Rollen —
+  **Admin** (dauerhafter Eigentümer, `mv@vimatec.de`),
+  **Projektleitung** (`lead`, wechselt jährlich, volle Verwaltung),
+  Lehrkraft, Jury.
+- Nur ein **Admin** kann die Admin-Rolle vergeben/entziehen sowie Admin-Konten
+  bearbeiten oder löschen. Das dauerhafte Eigentümer-Konto `mv@vimatec.de` ist
+  vor Löschen/Herabstufen geschützt.
+- **„Ansehen als" (View-as):** Ein Admin kann die App aus Sicht eines beliebigen
+  Nutzers (Projektleitung, Lehrkraft, Jury) betrachten – Nur-Lese-Ansicht mit
+  Hinweisbanner und „Sicht beenden". Start über das 👁-Symbol in „Jury & Nutzer".
+### Geändert
+- Migration `2026_07_13_admin_role_tier`: erweitert das Rollen-ENUM um `lead`
+  und stuft bestehende `admin`-Konten (außer dem Eigentümer) automatisch zur
+  Projektleitung (`lead`) herab – bestehende Berechtigungen bleiben voll erhalten.
+
 ## [0.15.0] - 2026-07-05
 ### Hinzugefügt
 - **SMS-Login als alternative Anmeldemethode (seven.io):** Auf der Login-Seite kann

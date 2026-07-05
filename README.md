@@ -25,8 +25,11 @@ besten 7 (+2 Nachrücker) für den Pitch-Day nominieren und dort final bewerten.
 
 **Rollen**
 
-- **Projektleitung (admin)** – volle Verwaltung; wechselt jährlich. Das dauerhafte
-  Eigentümer-Konto ist `mv@vimatec.de`.
+- **Admin (admin)** – dauerhafter Eigentümer/Super-Admin der App
+  (`mv@vimatec.de`). Volle Verwaltung wie die Projektleitung, zusätzlich:
+  vergibt/entzieht die Admin-Rolle, kann nicht gelöscht oder herabgestuft
+  werden. Bleibt unabhängig von der jährlich wechselnden Projektleitung.
+- **Projektleitung (lead)** – volle Verwaltung; wechselt jährlich.
 - **Lehrkraft (teacher)** – verwaltet Teams/Schüler der eigenen Schule, lädt
   Businesspläne hoch, sieht Material.
 - **Jury (juror)** – sieht Businesspläne + KI-Vorbewertung, bewertet, sieht Ranking.

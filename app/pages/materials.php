@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 Auth::require();
-$isAdmin = Auth::is('admin');
+$isAdmin = Auth::isManager(); // Admin oder Projektleitung = volle Verwaltung
 
 if (is_post()) {
-    Auth::require('admin');
+    Auth::requireManager();
     Csrf::check();
     $action = (string) input('action');
 
@@ -131,7 +131,7 @@ if ($video): ?>
             <option value="all">Alle</option>
             <option value="teacher">Lehrkräfte</option>
             <option value="juror">Jury</option>
-            <option value="admin">Nur Projektleitung</option>
+            <option value="admin">Nur Leitung (Admin &amp; Projektleitung)</option>
           </select>
         </div>
         <button class="btn btn--primary">Hinzufügen</button>

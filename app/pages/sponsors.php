@@ -1,8 +1,8 @@
 <?php
-/** Sponsoren verwalten (nur Projektleitung/Admin): Stammdaten, Logo, Beiträge je Jahr. */
+/** Sponsoren verwalten (Admin & Projektleitung): Stammdaten, Logo, Beiträge je Jahr. */
 declare(strict_types=1);
 
-Auth::require('admin');
+Auth::requireManager();
 
 $curYear = Settings::getInt('competition_year', 2026);
 

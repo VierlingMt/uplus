@@ -2,9 +2,9 @@
 /** Teams & Schüler verwalten (Projektleitung: alle; Lehrkraft: eigene Schule). */
 declare(strict_types=1);
 
-Auth::require('admin', 'teacher');
+Auth::require('admin', 'lead', 'teacher');
 $me = Auth::user();
-$isAdmin = Auth::is('admin');
+$isAdmin = Auth::isManager(); // Admin oder Projektleitung = volle Verwaltung
 $mySchool = $me['school_id'] ? (int) $me['school_id'] : null;
 
 /** Zugriff auf ein Team pruefen (Lehrkraft nur eigene Schule). */

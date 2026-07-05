@@ -1,8 +1,8 @@
 <?php
-/** Admin-Bereich: zentrale Einstellungen (nur Projektleitung/Admin). */
+/** Admin-Bereich: zentrale Einstellungen (Admin & Projektleitung). */
 declare(strict_types=1);
 
-Auth::require('admin');
+Auth::requireManager();
 
 if (is_post()) {
     Csrf::check();

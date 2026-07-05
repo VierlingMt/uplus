@@ -1,8 +1,8 @@
 <?php
-/** Jury-Bewertung eines Teams durch die/den angemeldete:n Juror:in (Admin/Jury). */
+/** Jury-Bewertung eines Teams durch die/den angemeldete:n Juror:in (Leitung/Jury). */
 declare(strict_types=1);
 
-Auth::require('admin', 'juror');
+Auth::require('admin', 'lead', 'juror');
 $jurorId = (int) Auth::id();
 
 $teamId = (int) input('team');

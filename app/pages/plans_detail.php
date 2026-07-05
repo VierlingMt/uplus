@@ -167,7 +167,7 @@ ob_start(); ?>
 </div>
 <?php
 // Jury-Bewertungen (nur für Admin/Jury sichtbar)
-if (Auth::is('admin', 'juror')):
+if (Auth::is('admin', 'lead', 'juror')):
     $evals = Database::all(
         'SELECT e.*, u.name AS juror_name FROM evaluations e JOIN users u ON u.id=e.juror_id
          WHERE e.team_id=? AND e.bp_submitted=1 ORDER BY u.name',

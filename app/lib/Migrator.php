@@ -196,7 +196,45 @@ final class Migrator
                         REFERENCES users(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             ],
+            [
+                'version' => '2026_07_13_admin_role_tier',
+                'name'    => 'Eigene Admin-Rolle (Eigentümer) über der Projektleitung (lead)',
+                'up'      => [self::class, 'adminRoleTier'],
+            ],
         ];
+    }
+
+    /**
+     * Führt die getrennte Admin-/Projektleitungs-Rolle ein.
+     * Bisher waren Eigentümer und Projektleitung beide „admin". Ab jetzt:
+     *   admin = dauerhafter Eigentümer (mv@vimatec.de + ggf. konfigurierter Seed-Admin)
+     *   lead  = Projektleitung (wechselt jährlich)
+     * Bestehende „admin"-Konten, die nicht der Eigentümer sind, werden zu „lead".
+     */
+    public static function adminRoleTier(PDO $pdo): void
+    {
+        // ENUM erweitern (idempotent – MODIFY ist unkritisch für vorhandene Daten).
+        $pdo->exec(
+            "ALTER TABLE users MODIFY COLUMN role
+             ENUM('admin','lead','teacher','juror') NOT NULL"
+        );
+
+        // Eigentümer-Konten: der dauerhafte App-Admin und ein evtl. konfigurierter Seed-Admin.
+        $owners = array_values(array_unique(array_filter([
+            'mv@vimatec.de',
+            strtolower((string) cfg('seed_admin_email', 'mv@vimatec.de')),
+        ])));
+        $ph = implode(',', array_fill(0, count($owners), '?'));
+
+        // Alle bisherigen Admins außer den Eigentümern werden Projektleitung (lead).
+        $pdo->prepare(
+            "UPDATE users SET role = 'lead' WHERE role = 'admin' AND email NOT IN ($ph)"
+        )->execute($owners);
+
+        // Eigentümer-Konten sicher auf admin.
+        $pdo->prepare(
+            "UPDATE users SET role = 'admin' WHERE email IN ($ph)"
+        )->execute($owners);
     }
 
     /** Sponsoren-Tabellen anlegen + bekannte Sponsoren mit Beitrag fürs aktuelle Jahr seeden. */
@@ -329,8 +367,9 @@ final class Migrator
         $mIns = $pdo->prepare(
             'INSERT IGNORE INTO cycle_members (cycle_id, user_id, role_in_cycle, specialty) VALUES (?,?,?,?)'
         );
-        foreach ($pdo->query("SELECT id, role, specialty FROM users WHERE role IN ('admin','juror')")->fetchAll() as $u) {
-            $roleInCycle = $u['role'] === 'admin' ? 'project_lead' : 'juror';
+        // Admin & Projektleitung (lead) zählen als Projektleitung im Zyklus, Jury als Jury.
+        foreach ($pdo->query("SELECT id, role, specialty FROM users WHERE role IN ('admin','lead','juror')")->fetchAll() as $u) {
+            $roleInCycle = $u['role'] === 'juror' ? 'juror' : 'project_lead';
             $mIns->execute([$cycleId, (int) $u['id'], $roleInCycle, $u['specialty'] ?: null]);
         }
 
@@ -358,8 +397,9 @@ final class Migrator
             $sIns->execute($s);
         }
 
-        // --- Benutzer (Projektleitung + Jury) ---
-        // Projektleitung = admin. Weitere Juror:innen = juror.
+        // --- Benutzer (Admin + Projektleitung + Jury) ---
+        // admin = dauerhafter Eigentümer (mv@vimatec.de). lead = Projektleitung
+        // (wechselt jährlich). Weitere Juror:innen = juror.
         // Für Konten ohne bekannte E-Mail wird eine Platzhalter-Adresse gesetzt
         // (in "Jury & Nutzer" später korrigierbar). Passwörter setzt die
         // Projektleitung im Nutzer-Modul; nur das Start-Admin-Konto hat eins.
@@ -368,7 +408,7 @@ final class Migrator
 
         $users = [
             ['admin', 'Martin Vierling',  $adminEmail,               password_hash($adminPass, PASSWORD_DEFAULT), 'Unternehmer & Gründer'],
-            ['admin', 'Anton Schreiber',  'anton@wirduzen.de',       null, 'Unternehmer'],
+            ['lead',  'Anton Schreiber',  'anton@wirduzen.de',       null, 'Unternehmer'],
             ['juror', 'Jehona Ahmeti',    'jehona.ahmeti@juror.uplus.local',   null, null],
             ['juror', 'Yannick Reinlein', 'yannick.reinlein@juror.uplus.local', null, null],
             ['juror', 'Anna Niegel',      'anna.niegel@juror.uplus.local',     null, null],

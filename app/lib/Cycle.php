@@ -19,7 +19,7 @@ final class Cycle
     public static function roleFor(string $userRole): ?string
     {
         return match ($userRole) {
-            'admin' => 'project_lead',
+            'admin', 'lead' => 'project_lead',
             'juror' => 'juror',
             default => null,
         };
