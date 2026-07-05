@@ -121,7 +121,7 @@ ob_start(); ?>
 <div class="card">
   <div class="card__head"><?= count($users) ?> Nutzer</div>
   <div class="table-wrap">
-    <table class="data">
+    <table class="data data--cards">
       <thead><tr><th>Name</th><th>Rolle</th><th>Login</th><th></th></tr></thead>
       <tbody>
       <?php foreach ($users as $u): ?>
@@ -139,15 +139,15 @@ ob_start(); ?>
                 </div>
               </div>
             </td>
-            <td><span class="pill <?= ['admin'=>'blue','lead'=>'blue','juror'=>'teal','teacher'=>'amber'][$u['role']] ?? 'muted' ?>"><?= e($roles[$u['role']] ?? $u['role']) ?></span></td>
-            <td><?php if (!$u['is_active']): ?><span class="pill muted">inaktiv</span><?php else: ?><span class="pill teal">aktiv</span><?php endif; ?></td>
-            <td style="white-space:nowrap;text-align:right">
+            <td data-label="Rolle"><span class="pill <?= ['admin'=>'blue','lead'=>'blue','juror'=>'teal','teacher'=>'amber'][$u['role']] ?? 'muted' ?>"><?= e($roles[$u['role']] ?? $u['role']) ?></span></td>
+            <td data-label="Login"><?php if (!$u['is_active']): ?><span class="pill muted">inaktiv</span><?php else: ?><span class="pill teal">aktiv</span><?php endif; ?></td>
+            <td class="row-actions" style="white-space:nowrap;text-align:right">
               <?php
                 $isPermOwner = strtolower((string) $u['email']) === PERMANENT_OWNER;
                 $canManageRow = $isOwner || $u['role'] !== 'admin'; // Admin-Konten nur durch Eigentümer
               ?>
               <?php if ($isOwner && $u['id'] !== Auth::id()): ?>
-                <a href="<?= url('viewas', ['user' => $u['id']]) ?>" class="btn btn--ghost btn--sm" title="App aus Sicht dieses Nutzers ansehen (nur Lesen)">👁</a>
+                <a href="<?= url('viewas', ['user' => $u['id']]) ?>" class="btn btn--ghost btn--sm btn--icon" title="App aus Sicht dieses Nutzers ansehen (nur Lesen)">👁</a>
               <?php endif; ?>
               <?php if ($canManageRow): ?>
                 <button type="button" class="btn btn--ghost btn--sm" data-modal-open="userModal" data-fill="<?= $fill($u) ?>"<?= $imgs($u) ? ' data-images="' . $imgs($u) . '"' : '' ?>>Bearbeiten</button>
@@ -155,7 +155,7 @@ ob_start(); ?>
               <?php if ($u['id'] !== Auth::id() && !$isPermOwner && $canManageRow): ?>
                 <form method="post" action="<?= url('jurors') ?>" style="display:inline" data-confirm="„<?= e($u['name']) ?>“ löschen?">
                   <?= Csrf::field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int) $u['id'] ?>">
-                  <button class="btn btn--danger btn--sm">×</button>
+                  <button class="btn btn--danger btn--sm">Löschen</button>
                 </form>
               <?php endif; ?>
             </td>

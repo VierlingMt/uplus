@@ -139,20 +139,20 @@ ob_start(); ?>
 <div class="card">
   <div class="card__head"><?= count($cycles) ?> Wettbewerbsjahre</div>
   <div class="table-wrap">
-    <table class="data">
+    <table class="data data--cards">
       <thead><tr><th>Jahr</th><th>Jury</th><th>Leitung</th><th>Schulen</th><th></th></tr></thead>
       <tbody>
       <?php foreach ($cycles as $c): $cid = (int) $c['id']; ?>
         <tr<?= $cid === $selId ? ' style="background:var(--bg-soft,#f4f7fc)"' : '' ?>>
-          <td>
+          <td data-label="Jahr">
             <strong><?= e($c['year_label']) ?></strong>
             <?php if ($c['is_active']): ?><span class="pill teal">aktiv</span><?php endif; ?>
             <?php if ($c['title']): ?><br><span class="muted" style="font-size:13px"><?= e($c['title']) ?></span><?php endif; ?>
           </td>
-          <td><?= (int) ($memberCountsJ[$cid] ?? 0) ?></td>
-          <td><?= (int) ($memberCountsL[$cid] ?? 0) ?></td>
-          <td><?= (int) ($schoolCounts[$cid] ?? 0) ?></td>
-          <td style="white-space:nowrap;text-align:right">
+          <td data-label="Jury"><?= (int) ($memberCountsJ[$cid] ?? 0) ?></td>
+          <td data-label="Leitung"><?= (int) ($memberCountsL[$cid] ?? 0) ?></td>
+          <td data-label="Schulen"><?= (int) ($schoolCounts[$cid] ?? 0) ?></td>
+          <td class="row-actions" style="white-space:nowrap;text-align:right">
             <a href="<?= url('cycles', ['cycle' => $cid]) ?>" class="btn btn--ghost btn--sm">Zuordnen</a>
             <button type="button" class="btn btn--ghost btn--sm" data-modal-open="cycleModal" data-fill="<?= $fill($c) ?>">Bearbeiten</button>
             <?php if (!$c['is_active']): ?>
@@ -162,7 +162,7 @@ ob_start(); ?>
               </form>
               <form method="post" action="<?= url('cycles') ?>" style="display:inline" data-confirm="Wettbewerbsjahr „<?= e($c['year_label']) ?>“ und alle Zuordnungen löschen?">
                 <?= Csrf::field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $cid ?>">
-                <button class="btn btn--danger btn--sm">×</button>
+                <button class="btn btn--danger btn--sm">Löschen</button>
               </form>
             <?php endif; ?>
           </td>

@@ -422,3 +422,72 @@ body.modal-open { overflow: hidden; }
 .modal--confirm h3 { display: flex; align-items: center; gap: 10px; }
 .modal--confirm p { margin: 0 0 22px; color: #3a4655; }
 .modal--confirm .modal__foot { border: 0; padding: 0; margin: 0; }
+
+/* =====================================================================
+   Mobile-First-Politur: Listen als Karten + Dialoge als Bottom-Sheet
+   ===================================================================== */
+
+/* Stammdaten-Listen (table.data--cards) werden auf schmalen Screens zu
+   gestapelten Karten – kein horizontales Scrollen, Aktionen als volle
+   Touch-Buttons, Spaltennamen als Labels (data-label). */
+@media (max-width: 680px) {
+  .data--cards { min-width: 0; }
+  .data--cards thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .data--cards, .data--cards tbody, .data--cards tr, .data--cards td { display: block; width: auto; }
+  .data--cards tr { border: 1px solid var(--line); border-radius: var(--radius); margin: 0 0 12px; padding: 4px 0; background: #fff; }
+  .data--cards tr:hover td { background: transparent; }
+  /* Äußere Card flach, damit nur die Zeilen-Karten wirken (kein Rahmen im Rahmen) */
+  .card:has(.data--cards) { border: 0; box-shadow: none; background: transparent; }
+  .card:has(.data--cards) > .card__head { padding: 2px 2px 12px; border: 0; color: var(--muted); font-family: "Chivo",sans-serif; font-weight: 700; font-size: 14px; }
+  .card:has(.data--cards) .table-wrap { overflow: visible; }
+  .data--cards td { border: 0; padding: 7px 16px; text-align: left; white-space: normal; }
+  .data--cards td[data-label]::before {
+    content: attr(data-label); display: block;
+    font-family: "Chivo", sans-serif; font-weight: 700; font-size: 11px;
+    text-transform: uppercase; letter-spacing: .3px; color: var(--muted); margin-bottom: 2px;
+  }
+  /* Leere Führungszelle (Logo) ohne Bild nicht als leerer Block zeigen */
+  .data--cards td.cell-media:empty { display: none; }
+  .data--cards td.cell-media { padding-top: 12px; }
+  /* Aktionszelle: Buttons als volle, gut tippbare Reihe */
+  .data--cards td.row-actions {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-top: 4px; padding: 12px 14px; border-top: 1px solid var(--line);
+    text-align: left;
+  }
+  .data--cards td.row-actions > .btn,
+  .data--cards td.row-actions > form { flex: 1 1 auto; }
+  .data--cards td.row-actions form { display: flex !important; }
+  .data--cards td.row-actions form .btn { flex: 1 1 auto; }
+  .data--cards td.row-actions .btn { justify-content: center; min-height: 42px; }
+  /* Reine Icon-Buttons (×, 👁) bleiben schmal statt volle Breite */
+  .data--cards td.row-actions > .btn--icon { flex: 0 0 auto; min-width: 46px; }
+  .data--cards td[colspan] { text-align: center; }
+  /* Suchleiste über Karten-Listen volle Breite */
+  .table-toolbar { flex-wrap: wrap; }
+  .table-search { max-width: none; flex: 1 1 100%; }
+}
+
+/* Formular-/Bestätigungs-Dialoge als Bottom-Sheet auf dem Handy. */
+@media (max-width: 600px) {
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal--form {
+    max-width: none; width: 100%; max-height: 92vh;
+    border-radius: 18px 18px 0 0; animation: sheet-up .26s cubic-bezier(.16,.84,.44,1);
+  }
+  @keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+  .modal__head { position: sticky; top: 0; background: #fff; z-index: 1; }
+  .modal--form .modal__foot {
+    position: sticky; bottom: 0; background: #fff;
+    padding: 14px 22px calc(14px + env(safe-area-inset-bottom, 0px));
+    margin: 0 -22px -20px; border-top: 1px solid var(--line);
+  }
+  .modal--form .modal__foot .btn { flex: 1 1 auto; justify-content: center; min-height: 46px; }
+  .modal--confirm {
+    max-width: none; width: 100%;
+    border-radius: 18px 18px 0 0; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    animation: sheet-up .26s cubic-bezier(.16,.84,.44,1);
+  }
+  .modal--confirm .modal__foot { flex-wrap: wrap; }
+  .modal--confirm .modal__foot .btn { flex: 1 1 auto; justify-content: center; min-height: 46px; }
+}

@@ -7,6 +7,21 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-07-05
+### Geändert
+- **Mobile-First-Politur der Stammdaten-Listen:** Auf schmalen Bildschirmen
+  werden die Übersichtstabellen (Schulen, Jury & Nutzer, Wettbewerbsjahre,
+  Teams, Sponsoren) zu **gestapelten Karten** – kein horizontales Scrollen mehr,
+  jede Spalte mit Beschriftung, und die Aktionen (Bearbeiten/Löschen/Öffnen)
+  als **volle, gut tippbare Buttons**. Reine Icon-Schaltflächen (z. B. „Ansehen
+  als") bleiben kompakt.
+- **Formular- und Bestätigungs-Dialoge als Bottom-Sheet** auf dem Handy: sie
+  fahren von unten ein, füllen die Breite, haben einen **klebrigen Kopf und Fuß**
+  (Titel bzw. Aktionsknöpfe immer sichtbar) und berücksichtigen die
+  Safe-Area am unteren Rand.
+- Löschen-Schaltflächen sind jetzt durchgängig mit „Löschen" beschriftet (statt
+  eines bloßen „×"), was besonders auf dem Handy eindeutiger ist.
+
 ## [0.24.1] - 2026-07-05
 ### Behoben
 - **Lehrkräfte sehen keine Bewertungen mehr:** Struktur-Check- und KI-Vorbewertungs-

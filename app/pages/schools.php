@@ -57,16 +57,16 @@ ob_start(); ?>
 <div class="card">
   <div class="card__head"><?= count($schools) ?> Schulen</div>
   <div class="table-wrap">
-    <table class="data">
+    <table class="data data--cards">
       <thead><tr><th></th><th>Schule</th><th>Ort</th><th>Teams</th><th></th></tr></thead>
       <tbody>
       <?php foreach ($schools as $s): ?>
         <tr>
-          <td style="width:52px"><?php if ($s['logo_path']): ?><img src="<?= asset($s['logo_path']) ?>" alt="" style="width:40px;height:40px;object-fit:contain"><?php endif; ?></td>
-          <td><strong><?= e($s['name']) ?></strong><?php if ($s['short_name']): ?> <span class="pill muted"><?= e($s['short_name']) ?></span><?php endif; ?></td>
-          <td><?= e($s['city'] ?? '—') ?></td>
-          <td><?= (int) $s['teams'] ?></td>
-          <td style="white-space:nowrap;text-align:right">
+          <td class="cell-media" style="width:52px"><?php if ($s['logo_path']): ?><img src="<?= asset($s['logo_path']) ?>" alt="" style="width:40px;height:40px;object-fit:contain"><?php endif; ?></td>
+          <td data-label="Schule"><strong><?= e($s['name']) ?></strong><?php if ($s['short_name']): ?> <span class="pill muted"><?= e($s['short_name']) ?></span><?php endif; ?></td>
+          <td data-label="Ort"><?= e($s['city'] ?? '—') ?></td>
+          <td data-label="Teams"><?= (int) $s['teams'] ?></td>
+          <td class="row-actions" style="white-space:nowrap;text-align:right">
             <a href="<?= url('school_teachers', ['school' => $s['id']]) ?>" class="btn btn--ghost btn--sm">👩‍🏫 Projektlehrer (<?= (int) $s['teachers'] ?>)</a>
             <button type="button" class="btn btn--ghost btn--sm" data-modal-open="schoolModal" data-fill="<?= $fill($s) ?>"<?= $imgs($s) ? ' data-images="' . $imgs($s) . '"' : '' ?>>Bearbeiten</button>
             <form method="post" action="<?= url('schools') ?>" style="display:inline" data-confirm="Schule „<?= e($s['name']) ?>“ inkl. Teams wirklich löschen?">

@@ -160,23 +160,23 @@ ob_start(); ?>
 <?php else: ?>
   <div class="card">
     <div class="table-wrap">
-      <table class="data">
+      <table class="data data--cards">
         <thead><tr><th></th><th>Sponsor</th><th>Ansprechpartner</th><th>E-Mail</th><th><?= e($activeLabel) ?> aktiv</th><th>Beiträge</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($sponsors as $s): ?>
           <tr>
-            <td style="width:52px"><?php if ($s['logo_path']): ?><img src="<?= asset($s['logo_path']) ?>" alt="" style="width:44px;height:36px;object-fit:contain"><?php endif; ?></td>
-            <td><strong><?= e($s['name']) ?></strong></td>
-            <td><?= e($s['contact_name'] ?? '—') ?></td>
-            <td><?= $s['email'] ? '<a href="mailto:' . e($s['email']) . '">' . e($s['email']) . '</a>' : '—' ?></td>
-            <td><?= $s['active_now'] ? '<span class="pill teal">ja</span>' : '<span class="pill muted">nein</span>' ?></td>
-            <td><?= (int) $s['n_contrib'] ?></td>
-            <td style="white-space:nowrap;text-align:right">
+            <td class="cell-media" style="width:52px"><?php if ($s['logo_path']): ?><img src="<?= asset($s['logo_path']) ?>" alt="" style="width:44px;height:36px;object-fit:contain"><?php endif; ?></td>
+            <td data-label="Sponsor"><strong><?= e($s['name']) ?></strong></td>
+            <td data-label="Ansprechpartner"><?= e($s['contact_name'] ?? '—') ?></td>
+            <td data-label="E-Mail"><?= $s['email'] ? '<a href="mailto:' . e($s['email']) . '">' . e($s['email']) . '</a>' : '—' ?></td>
+            <td data-label="<?= e($activeLabel) ?> aktiv"><?= $s['active_now'] ? '<span class="pill teal">ja</span>' : '<span class="pill muted">nein</span>' ?></td>
+            <td data-label="Beiträge"><?= (int) $s['n_contrib'] ?></td>
+            <td class="row-actions" style="white-space:nowrap;text-align:right">
               <a href="<?= url('sponsors', ['edit' => $s['id']]) ?>" class="btn btn--ghost btn--sm" title="Sponsor öffnen: Beiträge verwalten">💶 Beiträge</a>
               <button type="button" class="btn btn--ghost btn--sm" data-modal-open="sponsorModal" data-fill="<?= $fill($s) ?>"<?= $imgs($s) ? ' data-images="' . $imgs($s) . '"' : '' ?>>Bearbeiten</button>
               <form method="post" action="<?= url('sponsors') ?>" style="display:inline" data-confirm="Sponsor „<?= e($s['name']) ?>“ löschen?">
                 <?= Csrf::field() ?><input type="hidden" name="action" value="delete_sponsor"><input type="hidden" name="id" value="<?= (int) $s['id'] ?>">
-                <button class="btn btn--danger btn--sm">×</button>
+                <button class="btn btn--danger btn--sm">Löschen</button>
               </form>
             </td>
           </tr>

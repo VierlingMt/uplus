@@ -153,22 +153,22 @@ ob_start(); ?>
 <?php else: ?>
   <div class="card">
     <div class="table-wrap">
-      <table class="data">
+      <table class="data data--cards">
         <thead><tr><th>Team</th><?php if ($isAdmin): ?><th>Schule</th><?php endif; ?><th>Mitglieder</th><th>Businessplan</th><th>Status</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($teams as $t): [$sl,$sc] = status_label($t['status']); ?>
           <tr>
-            <td><strong><?= e($t['name']) ?></strong><?php if ($t['idea_name']): ?><br><span class="muted" style="font-size:13px"><?= e($t['idea_name']) ?></span><?php endif; ?></td>
-            <?php if ($isAdmin): ?><td><?= e($t['school_name']) ?></td><?php endif; ?>
-            <td><?= (int) $t['members'] ?></td>
-            <td><?= $t['has_plan'] ? '<span class="pill teal">vorhanden</span>' : '<span class="pill muted">—</span>' ?></td>
-            <td><span class="pill <?= $sc ?>"><?= e($sl) ?></span></td>
-            <td style="white-space:nowrap;text-align:right">
+            <td data-label="Team"><strong><?= e($t['name']) ?></strong><?php if ($t['idea_name']): ?><br><span class="muted" style="font-size:13px"><?= e($t['idea_name']) ?></span><?php endif; ?></td>
+            <?php if ($isAdmin): ?><td data-label="Schule"><?= e($t['school_name']) ?></td><?php endif; ?>
+            <td data-label="Mitglieder"><?= (int) $t['members'] ?></td>
+            <td data-label="Businessplan"><?= $t['has_plan'] ? '<span class="pill teal">vorhanden</span>' : '<span class="pill muted">—</span>' ?></td>
+            <td data-label="Status"><span class="pill <?= $sc ?>"><?= e($sl) ?></span></td>
+            <td class="row-actions" style="white-space:nowrap;text-align:right">
               <a href="<?= url('teams', ['edit' => $t['id']]) ?>" class="btn btn--ghost btn--sm" title="Team öffnen: Mitglieder verwalten">👥 Mitglieder</a>
               <button type="button" class="btn btn--ghost btn--sm" data-modal-open="teamModal" data-fill="<?= $teamFill($t) ?>">Bearbeiten</button>
               <form method="post" action="<?= url('teams') ?>" style="display:inline" data-confirm="Team „<?= e($t['name']) ?>“ inkl. Mitglieder wirklich löschen?">
                 <?= Csrf::field() ?><input type="hidden" name="action" value="delete_team"><input type="hidden" name="id" value="<?= (int) $t['id'] ?>">
-                <button class="btn btn--danger btn--sm">×</button>
+                <button class="btn btn--danger btn--sm">Löschen</button>
               </form>
             </td>
           </tr>

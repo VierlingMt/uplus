@@ -76,22 +76,22 @@ ob_start(); ?>
   <div class="card">
     <div class="card__head"><?= count($teachers) ?> Projektlehrer</div>
     <div class="table-wrap">
-      <table class="data">
+      <table class="data data--cards">
         <thead><tr><th>Name</th><th>E-Mail</th><th>Mobil</th><th>Login</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($teachers as $t): ?>
           <tr>
-            <td><strong><?= e($t['name']) ?></strong></td>
-            <td><a href="mailto:<?= e($t['email']) ?>"><?= e($t['email']) ?></a></td>
-            <td><?= e($t['phone'] ?: '—') ?></td>
-            <td><?= $t['is_active'] ? '<span class="pill teal">aktiv</span>' : '<span class="pill muted">inaktiv</span>' ?></td>
-            <td style="white-space:nowrap;text-align:right">
+            <td data-label="Name"><strong><?= e($t['name']) ?></strong></td>
+            <td data-label="E-Mail"><a href="mailto:<?= e($t['email']) ?>"><?= e($t['email']) ?></a></td>
+            <td data-label="Mobil"><?= e($t['phone'] ?: '—') ?></td>
+            <td data-label="Login"><?= $t['is_active'] ? '<span class="pill teal">aktiv</span>' : '<span class="pill muted">inaktiv</span>' ?></td>
+            <td class="row-actions" style="white-space:nowrap;text-align:right">
               <button type="button" class="btn btn--ghost btn--sm"
                       data-modal-open="teacherModal"
                       data-fill='<?= e(json_encode(['id' => (int) $t['id'], 'name' => $t['name'], 'email' => $t['email'], 'mobile' => $t['phone'], 'is_active' => (int) $t['is_active']], JSON_UNESCAPED_UNICODE)) ?>'>Bearbeiten</button>
               <form method="post" action="<?= url('school_teachers', ['school' => $schoolId]) ?>" style="display:inline" data-confirm="„<?= e($t['name']) ?>“ entfernen?">
                 <?= Csrf::field() ?><input type="hidden" name="action" value="delete_teacher"><input type="hidden" name="id" value="<?= (int) $t['id'] ?>">
-                <button class="btn btn--danger btn--sm">×</button>
+                <button class="btn btn--danger btn--sm">Entfernen</button>
               </form>
             </td>
           </tr>
