@@ -160,7 +160,8 @@ $teams = Database::all(
     "SELECT t.*, s.name AS school_name, s.short_name,
             bp.id AS bp_id, bp.version, bp.created_at AS uploaded_at,
             ai.total_score AS ai_score, ai.status AS ai_status,
-            sc.meets_minimum AS sc_min, sc.status AS sc_status, sc.completeness_score AS sc_score
+            sc.meets_minimum AS sc_min, sc.status AS sc_status, sc.completeness_score AS sc_score,
+            (SELECT COUNT(*) FROM evaluations e WHERE e.team_id = t.id AND e.juror_id = ? AND e.bp_submitted = 1) AS my_eval
      FROM teams t
      JOIN schools s ON s.id = t.school_id
      LEFT JOIN business_plans bp ON bp.team_id = t.id AND bp.is_current = 1
@@ -169,7 +170,8 @@ $teams = Database::all(
      LEFT JOIN structure_checks sc ON sc.id = (
         SELECT id FROM structure_checks WHERE business_plan_id = bp.id ORDER BY id DESC LIMIT 1)
      $where
-     ORDER BY (bp.id IS NULL), s.name, t.name"
+     ORDER BY (bp.id IS NULL), s.name, t.name",
+    [(int) Auth::id()]
 );
 
 $fmt = fn($n) => $n === null ? '—' : rtrim(rtrim(number_format((float) $n, 1, ',', ''), '0'), ',');
@@ -207,14 +209,17 @@ ob_start(); ?>
       </div>
     </div>
   <?php endif; ?>
+  <?php if (!$isTeacher): ?>
+    <label class="toggle-eval"><input type="checkbox" id="hideEvaluatedToggle" checked> Bereits bewertete Pläne ausblenden</label>
+  <?php endif; ?>
 </div>
 <div class="card">
   <div class="table-wrap">
-    <table class="data data--cards">
+    <table class="data data--cards hide-evaluated" id="plansTable">
       <thead><tr><th>Team</th><th>Schule</th><th>Businessplan</th><?php if (!$isTeacher): ?><th>Struktur-Check</th><th>KI-Vorbewertung</th><?php endif; ?><th></th></tr></thead>
       <tbody>
       <?php foreach ($teams as $t): ?>
-        <tr>
+        <tr data-evaluated="<?= (!$isTeacher && (int) $t['my_eval'] > 0) ? 1 : 0 ?>">
           <td data-label="Team">
             <?php if ($t['bp_id']): ?>
               <a class="pdf-link" href="<?= url('bp_download', ['id' => $t['bp_id']]) ?>"
@@ -256,6 +261,20 @@ ob_start(); ?>
     </table>
   </div>
 </div>
+<script>
+(function () {
+  var t = document.getElementById('hideEvaluatedToggle'), tbl = document.getElementById('plansTable');
+  if (!t || !tbl) return;
+  var KEY = 'uplus_hide_evaluated';
+  var saved = null; try { saved = localStorage.getItem(KEY); } catch (e) {}
+  var on = saved === null ? true : saved === '1';           // Standard: an
+  t.checked = on; tbl.classList.toggle('hide-evaluated', on);
+  t.addEventListener('change', function () {
+    try { localStorage.setItem(KEY, t.checked ? '1' : '0'); } catch (e) {}
+    tbl.classList.toggle('hide-evaluated', t.checked);
+  });
+})();
+</script>
 <?php
 $content = ob_get_clean();
 $title = 'Businesspläne';

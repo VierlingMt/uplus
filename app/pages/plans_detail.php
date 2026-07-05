@@ -71,17 +71,60 @@ ob_start(); ?>
   </div>
 </div>
 
-<?php if (!$isTeacher): /* Lehrkräfte sehen keine Bewertungen (KI/Struktur) */ ?>
-<div class="card mt">
-  <div class="card__head" style="display:flex;justify-content:space-between;align-items:center">
-    <span>Struktur-Check <span class="muted" style="font-weight:400;font-size:13px">(Vollständigkeit gegen die Vorlage · günstiges Modell)</span></span>
+<?php if (!$isTeacher): /* Lehrkräfte sehen keine Bewertungen (Jury/KI/Struktur) */ ?>
+
+<?php
+// Jury-Bewertung – Kopfzahlen (Karte ganz oben, eingeklappt)
+$evals = Database::all(
+    'SELECT e.*, u.name AS juror_name FROM evaluations e JOIN users u ON u.id=e.juror_id
+     WHERE e.team_id=? AND e.bp_submitted=1 ORDER BY u.name',
+    [$tid]
+);
+$avgBp = $evals ? array_sum(array_map(fn($e) => (float) $e['bp_total'], $evals)) / count($evals) : null;
+?>
+<details class="card mt collapse">
+  <summary class="collapse__head">
+    <span class="collapse__title"><span class="collapse__chev" aria-hidden="true">▸</span> Jury-Bewertung
+      <span class="collapse__info"><?= count($evals) ?> abgegeben<?= $avgBp !== null ? ' · Ø ' . $fmt($avgBp) . '/50' : '' ?></span></span>
+    <a class="btn btn--teal btn--sm" href="<?= url('evaluate', ['team' => $tid]) ?>" onclick="event.stopPropagation()">Selbst bewerten</a>
+  </summary>
+  <div class="card__body">
+    <?php if (!$evals): ?>
+      <p class="muted">Noch keine Jury-Bewertung abgegeben.</p>
+    <?php else: ?>
+      <table class="data data--cards">
+        <thead><tr><th>Juror:in</th><th>Businessplan /50</th><th>Pitch /40</th><th>Gesamt /140</th></tr></thead>
+        <tbody>
+        <?php foreach ($evals as $ev): ?>
+          <tr>
+            <td data-label="Juror:in"><?= e($ev['juror_name']) ?></td>
+            <td data-label="Businessplan /50"><strong><?= $fmt($ev['bp_total']) ?></strong></td>
+            <td data-label="Pitch /40"><?= $ev['pitch_submitted'] ? $fmt($ev['pitch_total']) : '–' ?></td>
+            <td data-label="Gesamt /140"><strong style="color:var(--wj-blue)"><?= $fmt($ev['grand_total']) ?></strong></td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    <?php endif; ?>
+  </div>
+</details>
+
+<details class="card mt collapse">
+  <summary class="collapse__head">
+    <span class="collapse__title"><span class="collapse__chev" aria-hidden="true">▸</span> Struktur-Check
+      <span class="collapse__info"><?php
+        if (!$plan || !$sc) { echo 'offen · Vollständigkeit gegen die Vorlage';
+        } elseif ($sc['status'] === 'error') { echo 'Fehler';
+        } elseif ($sc['status'] !== 'done') { echo 'läuft …';
+        } else { echo ($sc['completeness_score'] !== null ? (int) $sc['completeness_score'] : '–') . '/10 · '
+            . ((int) $sc['meets_minimum'] === 0 ? '⚠ unter Standard' : '✓ ok'); } ?></span></span>
     <?php if ($plan && $isAdmin): ?>
-      <form method="post" action="<?= url('plans') ?>">
+      <form method="post" action="<?= url('plans') ?>" onclick="event.stopPropagation()">
         <?= Csrf::field() ?><input type="hidden" name="action" value="run_structure"><input type="hidden" name="bp_id" value="<?= (int) $plan['id'] ?>">
         <button class="btn btn--ghost btn--sm" data-loading="Prüfe …"><?= $sc ? 'Neu prüfen' : 'Struktur-Check starten' ?></button>
       </form>
     <?php endif; ?>
-  </div>
+  </summary>
   <div class="card__body">
     <?php if (!$plan): ?>
       <p class="muted">Zuerst einen Businessplan hochladen.</p>
@@ -118,18 +161,23 @@ ob_start(); ?>
       <p class="muted mt" style="font-size:12px">Modell: <?= e((string) $sc['model']) ?> · reiner Vollständigkeits-Check, keine inhaltliche Note.</p>
     <?php endif; ?>
   </div>
-</div>
+</details>
 
-<div class="card mt">
-  <div class="card__head" style="display:flex;justify-content:space-between;align-items:center">
-    <span>KI-Vorbewertung <span class="muted" style="font-weight:400;font-size:13px">(Businessplan, max 50)</span></span>
+<details class="card mt collapse">
+  <summary class="collapse__head">
+    <span class="collapse__title"><span class="collapse__chev" aria-hidden="true">▸</span> KI-Vorbewertung
+      <span class="collapse__info"><?php
+        if (!$plan || !$ai) { echo 'offen · inhaltliche Note (max 50)';
+        } elseif ($ai['status'] === 'error') { echo 'Fehler';
+        } elseif ($ai['status'] !== 'done') { echo 'läuft …';
+        } else { echo $fmt($ai['total_score']) . '/50'; } ?></span></span>
     <?php if ($plan && $isAdmin): ?>
-      <form method="post" action="<?= url('plans') ?>">
+      <form method="post" action="<?= url('plans') ?>" onclick="event.stopPropagation()">
         <?= Csrf::field() ?><input type="hidden" name="action" value="run_ai"><input type="hidden" name="bp_id" value="<?= (int) $plan['id'] ?>">
         <button class="btn btn--teal btn--sm" data-loading="KI bewertet …"><?= $ai ? 'Neu bewerten' : 'KI-Vorbewertung starten' ?></button>
       </form>
     <?php endif; ?>
-  </div>
+  </summary>
   <div class="card__body">
     <?php if (!$plan): ?>
       <p class="muted">Zuerst einen Businessplan hochladen.</p>
@@ -168,44 +216,8 @@ ob_start(); ?>
       <p class="muted mt" style="font-size:12px">Hinweis: KI-generierte Vorbewertung als Orientierung – die finale Bewertung erfolgt durch die Jury.</p>
     <?php endif; ?>
   </div>
-</div>
-<?php endif; /* Ende KI/Struktur nur für Nicht-Lehrkräfte */ ?>
-<?php
-// Jury-Bewertungen (nur für Admin/Jury/Projektleitung sichtbar)
-if (Auth::is('admin', 'lead', 'juror')):
-    $evals = Database::all(
-        'SELECT e.*, u.name AS juror_name FROM evaluations e JOIN users u ON u.id=e.juror_id
-         WHERE e.team_id=? AND e.bp_submitted=1 ORDER BY u.name',
-        [$tid]
-    );
-    $avgBp = $evals ? array_sum(array_map(fn($e) => (float) $e['bp_total'], $evals)) / count($evals) : null;
-    ?>
-    <div class="card mt">
-      <div class="card__head" style="display:flex;justify-content:space-between;align-items:center">
-        <span>Jury-Bewertung <span class="muted" style="font-weight:400;font-size:13px">(<?= count($evals) ?> abgegeben<?= $avgBp !== null ? ', Ø ' . $fmt($avgBp) . '/50' : '' ?>)</span></span>
-        <a class="btn btn--teal btn--sm" href="<?= url('evaluate', ['team' => $tid]) ?>">Selbst bewerten</a>
-      </div>
-      <div class="card__body">
-        <?php if (!$evals): ?>
-          <p class="muted">Noch keine Jury-Bewertung abgegeben.</p>
-        <?php else: ?>
-          <table class="data data--cards">
-            <thead><tr><th>Juror:in</th><th>Businessplan /50</th><th>Pitch /40</th><th>Gesamt /140</th></tr></thead>
-            <tbody>
-            <?php foreach ($evals as $ev): ?>
-              <tr>
-                <td data-label="Juror:in"><?= e($ev['juror_name']) ?></td>
-                <td data-label="Businessplan /50"><strong><?= $fmt($ev['bp_total']) ?></strong></td>
-                <td data-label="Pitch /40"><?= $ev['pitch_submitted'] ? $fmt($ev['pitch_total']) : '–' ?></td>
-                <td data-label="Gesamt /140"><strong style="color:var(--wj-blue)"><?= $fmt($ev['grand_total']) ?></strong></td>
-              </tr>
-            <?php endforeach; ?>
-            </tbody>
-          </table>
-        <?php endif; ?>
-      </div>
-    </div>
-<?php endif; ?>
+</details>
+<?php endif; /* Ende Bewertungs-Karten (nur für Nicht-Lehrkräfte) */ ?>
 <?php
 $content = ob_get_clean();
 $title = $team['name'];

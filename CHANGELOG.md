@@ -7,6 +7,17 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.29.1] - 2026-07-05
+### Geändert
+- Businessplan-Detail: Jury-Bewertung, Struktur-Check und KI-Vorbewertung als
+  standardmäßig **eingeklappte** Karten (Kurzinfo neben der Überschrift). Jury-Bewertung
+  steht **oben**; „Selbst bewerten" ist auch eingeklappt immer sichtbar.
+
+### Hinzugefügt
+- Businesspläne-Liste: Kopf-Schalter **„Bereits bewertete Pläne ausblenden"** (standardmäßig
+  an) – blendet Pläne aus, die der/die angemeldete Bewertende bereits bewertet hat
+  (pro Gerät gemerkt).
+
 ## [0.29.0] - 2026-07-05
 ### Hinzugefügt
 - **Material & Vorlagen: Einträge bearbeitbar.** Downloads & Links lassen sich jetzt über
