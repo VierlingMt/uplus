@@ -11,7 +11,7 @@ require __DIR__ . '/app/bootstrap.php';
 $route = (string) ($_GET['r'] ?? 'dashboard');
 
 // Oeffentliche Routen (ohne Login)
-$public = ['login'];
+$public = ['login', 'confirm_email'];
 
 try {
     if (!in_array($route, $public, true)) {
@@ -28,6 +28,10 @@ try {
     switch ($route) {
         case 'login':
             require APP_PATH . '/pages/auth.php';
+            break;
+
+        case 'confirm_email':
+            require APP_PATH . '/pages/confirm_email.php';
             break;
 
         case 'logout':

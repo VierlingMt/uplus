@@ -7,6 +7,17 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-07-05
+### Hinzugefügt
+- **Eigene E-Mail-Adresse und Handynummer selbst ändern – immer mit Bestätigung.**
+  Unter „Mein Profil" können Nutzer:innen ihre Anmeldedaten jetzt selbst pflegen:
+  - **E-Mail:** Ein Bestätigungslink geht an die **neue** Adresse; erst nach dem Klick
+    wird sie übernommen. Die bisherige Adresse erhält zusätzlich eine Sicherheits-Info.
+  - **Handynummer:** Ein 6-stelliger Code geht per SMS an die **neue** Nummer und wird
+    im Profil bestätigt; gespeichert wird international (+49…).
+  Beides prüft auf Eindeutigkeit (Adresse/Nummer nicht bereits vergeben). Token bzw.
+  Code liegen nur als Hash in der DB, sind zeitlich begrenzt und einmalig nutzbar.
+
 ## [0.36.0] - 2026-07-05
 ### Hinzugefügt
 - **Login per E-Mail oder Handynummer.** Auf der Anmeldeseite kann jetzt wahlweise die

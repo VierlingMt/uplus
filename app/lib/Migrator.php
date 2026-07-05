@@ -247,6 +247,28 @@ final class Migrator
                 'name'    => 'Bestehende Handynummern ins internationale Format (+49…) normalisieren',
                 'up'      => [self::class, 'phoneNormalize'],
             ],
+            [
+                'version' => '2026_07_23_contact_changes',
+                'name'    => 'Selbstverwaltete E-Mail-/Handynummer-Änderung mit Bestätigung',
+                'up'      => "CREATE TABLE IF NOT EXISTS contact_changes (
+                    id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    user_id      INT UNSIGNED NOT NULL,
+                    kind         ENUM('email','phone') NOT NULL,
+                    new_value    VARCHAR(190) NOT NULL,
+                    secret_hash  CHAR(64) NOT NULL,
+                    attempts     TINYINT UNSIGNED NOT NULL DEFAULT 0,
+                    expires_at   DATETIME NOT NULL,
+                    used_at      DATETIME NULL,
+                    requested_ip VARCHAR(45) NULL,
+                    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (id),
+                    KEY idx_contact_changes_user (user_id),
+                    KEY idx_contact_changes_secret (secret_hash),
+                    KEY idx_contact_changes_expires (expires_at),
+                    CONSTRAINT fk_contact_changes_user FOREIGN KEY (user_id)
+                        REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ],
         ];
     }
 
