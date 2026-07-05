@@ -7,6 +7,21 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-05
+### Hinzugefügt
+- Mindeststandard-Gate der KI-Vorbewertung: die KI beurteilt zusätzlich, ob ein Plan
+  den Mindeststandard eines ernsthaft bemühten Schülerteams erfüllt; „nicht erfüllt"
+  wird deutlich markiert (Liste + Detailseite), damit solche Pläne ohne weitere
+  Sichtung aussortiert werden können
+- In der App editierbare KI-Leitlinie (Admin → KI-Integration): Definition des
+  Mindeststandards und zusätzliche Bewertungshinweise
+- Lade-Spinner an Buttons mit Aktivität (z. B. KI-Vorbewertung), inkl. Schutz gegen
+  Doppel-Absenden
+
+### Geändert
+- KI-Prompt liegt in `app/lib/Claude.php`; Mindeststandard und Zusatzhinweise sind
+  nun über das Admin-Menü konfigurierbar
+
 ## [0.5.0] - 2026-07-05
 ### Hinzugefügt
 - Jury-Bewertung: je Juror:in und Team die 5 Businessplan-Kriterien (0–10 mit
@@ -68,7 +83,8 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Login, Dashboard mit Kennzahlen und Projekt-Timeline, Profil
 - GitHub-Actions-Deploy: `config.local.php` aus Secrets + FTP-Upload
 
-[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.6.0
 [0.5.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.5.0
 [0.4.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.4.0
 [0.3.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.3.0

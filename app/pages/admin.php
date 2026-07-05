@@ -13,6 +13,8 @@ if (is_post()) {
         if ($key !== '') { Settings::set('anthropic_api_key', $key); }
         if (input('clear_key')) { Settings::set('anthropic_api_key', ''); }
         Settings::set('anthropic_model', trim((string) input('anthropic_model')) ?: 'claude-sonnet-5');
+        Settings::set('ai_min_standard', trim((string) input('ai_min_standard')) ?: Claude::DEFAULT_MIN_STANDARD);
+        Settings::set('ai_extra_guidance', trim((string) input('ai_extra_guidance')));
         flash('success', 'KI-Einstellungen gespeichert.');
     } elseif ($section === 'general') {
         Settings::set('pitch_slots', (string) max(1, (int) input('pitch_slots', 7)));
@@ -66,6 +68,15 @@ ob_start(); ?>
               <option value="<?= e($mk) ?>" <?= $model === $mk ? 'selected' : '' ?>><?= e($ml) ?></option>
             <?php endforeach; ?>
           </select>
+        </div>
+        <div class="field">
+          <label>Mindeststandard-Gate (Definition für die KI)</label>
+          <textarea name="ai_min_standard" rows="6"><?= e((string) Settings::get('ai_min_standard', Claude::DEFAULT_MIN_STANDARD)) ?></textarea>
+          <div class="help">Woran erkennt die KI, dass ein Plan den Mindeststandard <em>nicht</em> erfüllt (→ kann ohne weitere Sichtung aussortiert werden)?</div>
+        </div>
+        <div class="field">
+          <label>Zusätzliche Bewertungshinweise (optional)</label>
+          <textarea name="ai_extra_guidance" rows="3" placeholder="z. B. besonderer Fokus, Tonalität, Gewichtung …"><?= e((string) Settings::get('ai_extra_guidance', '')) ?></textarea>
         </div>
         <?php if ($storedKey !== ''): ?>
           <label style="font-weight:400;font-size:13px"><input type="checkbox" name="clear_key" value="1"> gespeicherten Key entfernen</label>

@@ -117,6 +117,13 @@ final class Migrator
                 'name'    => 'Admin-Konto mv@vimatec.de normalisieren',
                 'up'      => [self::class, 'normalizeOwnerAdmin'],
             ],
+            [
+                'version' => '2026_07_06_ai_min_standard',
+                'name'    => 'Mindeststandard-Gate für KI-Vorbewertung',
+                'up'      => 'ALTER TABLE ai_evaluations
+                    ADD COLUMN IF NOT EXISTS meets_minimum TINYINT(1) NULL AFTER total_score,
+                    ADD COLUMN IF NOT EXISTS min_reason TEXT NULL AFTER meets_minimum',
+            ],
         ];
     }
 

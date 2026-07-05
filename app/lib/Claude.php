@@ -14,6 +14,15 @@ final class Claude
     private const API_URL = 'https://api.anthropic.com/v1/messages';
     private const VERSION = '2023-06-01';
 
+    /** Standard-Definition des Mindeststandards (in Admin -> KI-Integration änderbar). */
+    public const DEFAULT_MIN_STANDARD =
+        "Der Mindeststandard ist NICHT erfüllt, wenn z. B.:\n" .
+        "- der Plan überwiegend leer ist oder nur die Vorlage/Platzhalter enthält,\n" .
+        "- mehrere der fünf Kernbereiche gar nicht bearbeitet wurden,\n" .
+        "- der Inhalt unverständlich, off-topic oder erkennbar ohne Mühe erstellt ist,\n" .
+        "- der Plan extrem kurz/oberflächlich ist (bloße Stichworte ohne Ausarbeitung).\n" .
+        "Erfüllt ist er, wenn erkennbar ernsthaft gearbeitet wurde – auch mit Schwächen.";
+
     /**
      * Businessplan bewerten.
      * @return array{ok:bool, model:string, scores:array, summary:?string,
@@ -44,6 +53,11 @@ final class Claude
             $scaleText .= "{$p} = {$desc}\n";
         }
 
+        // In der App editierbare Leitlinien (Admin -> KI-Integration).
+        $minStd = (string) Settings::get('ai_min_standard', self::DEFAULT_MIN_STANDARD);
+        $extra  = trim((string) Settings::get('ai_extra_guidance', ''));
+        $extraBlock = $extra !== '' ? "\nZusätzliche Hinweise der Projektleitung:\n{$extra}\n" : '';
+
         $prompt = <<<TXT
 Du bist erfahrenes Jurymitglied des Schüler-Businessplanwettbewerbs "Unternehmen Plus"
 der Wirtschaftsjunioren Forchheim (Teilnehmende: Gymnasiast:innen der 10. Klasse).
@@ -55,6 +69,14 @@ Berücksichtige das Altersniveau (Schüler:innen, kein Profi-Startup). KI-Nutzun
 erlaubt. Bewertungskriterien:
 {$rubric}
 
+MINDESTSTANDARD-GATE:
+Beurteile zusätzlich, ob der Plan den Mindeststandard erfüllt, den man von einem
+Schülerteam mit ernsthaftem Bemühen erwarten kann. Maßstab:
+{$minStd}
+Setze meets_minimum_standard = true, wenn erkennbar ernsthaft gearbeitet wurde (auch
+mit Schwächen). Setze false nur bei klarem Nicht-Bemühen und begründe das konkret,
+damit ein solcher Plan ohne weitere Sichtung aussortiert werden kann.
+{$extraBlock}
 Gib pro Kriterium eine kurze, konkrete Begründung (2-4 Sätze, deutsch) und nenne
 Stärken sowie Verbesserungspotenzial. Nutze ausschließlich das Tool "submit_evaluation".
 TXT;
@@ -67,12 +89,14 @@ TXT;
                 'properties' => array_merge(
                     self::criteriaSchema(),
                     [
+                        'meets_minimum_standard'  => ['type' => 'boolean', 'description' => 'Erfüllt der Plan den Mindeststandard eines ernsthaft bemühten Schülerteams?'],
+                        'minimum_standard_reason' => ['type' => 'string', 'description' => 'Kurze Begründung zum Mindeststandard-Urteil.'],
                         'summary'    => ['type' => 'string', 'description' => 'Gesamteinschätzung (3-5 Sätze).'],
                         'strengths'  => ['type' => 'string', 'description' => 'Wichtigste Stärken (Stichpunkte).'],
                         'weaknesses' => ['type' => 'string', 'description' => 'Wichtigstes Verbesserungspotenzial (Stichpunkte).'],
                     ]
                 ),
-                'required'   => array_merge(array_keys(Criteria::BUSINESSPLAN), ['summary']),
+                'required'   => array_merge(array_keys(Criteria::BUSINESSPLAN), ['meets_minimum_standard', 'minimum_standard_reason', 'summary']),
             ],
         ];
 
@@ -122,15 +146,17 @@ TXT;
         }
 
         return [
-            'ok'         => true,
-            'model'      => $model,
-            'scores'     => $scores,
-            'summary'    => $toolInput['summary'] ?? null,
-            'strengths'  => $toolInput['strengths'] ?? null,
-            'weaknesses' => $toolInput['weaknesses'] ?? null,
-            'total'      => $total,
-            'raw'        => $body,
-            'error'      => null,
+            'ok'            => true,
+            'model'         => $model,
+            'scores'        => $scores,
+            'meets_minimum' => isset($toolInput['meets_minimum_standard']) ? (int) (bool) $toolInput['meets_minimum_standard'] : null,
+            'min_reason'    => $toolInput['minimum_standard_reason'] ?? null,
+            'summary'       => $toolInput['summary'] ?? null,
+            'strengths'     => $toolInput['strengths'] ?? null,
+            'weaknesses'    => $toolInput['weaknesses'] ?? null,
+            'total'         => $total,
+            'raw'           => $body,
+            'error'         => null,
         ];
     }
 
@@ -176,9 +202,9 @@ TXT;
     private static function fail(string $msg, string $model = ''): array
     {
         return [
-            'ok' => false, 'model' => $model, 'scores' => [], 'summary' => null,
-            'strengths' => null, 'weaknesses' => null, 'total' => null,
-            'raw' => null, 'error' => $msg,
+            'ok' => false, 'model' => $model, 'scores' => [], 'meets_minimum' => null,
+            'min_reason' => null, 'summary' => null, 'strengths' => null,
+            'weaknesses' => null, 'total' => null, 'raw' => null, 'error' => $msg,
         ];
     }
 }

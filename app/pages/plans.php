@@ -103,7 +103,7 @@ $where = $isTeacher ? 'WHERE t.school_id = ' . (int) $mySchool : '';
 $teams = Database::all(
     "SELECT t.*, s.name AS school_name, s.short_name,
             bp.id AS bp_id, bp.version, bp.created_at AS uploaded_at,
-            ai.total_score AS ai_score, ai.status AS ai_status
+            ai.total_score AS ai_score, ai.status AS ai_status, ai.meets_minimum AS ai_min
      FROM teams t
      JOIN schools s ON s.id = t.school_id
      LEFT JOIN business_plans bp ON bp.team_id = t.id AND bp.is_current = 1
@@ -133,7 +133,9 @@ ob_start(); ?>
           </td>
           <td>
             <?php if (!$t['bp_id']): ?>—
-            <?php elseif ($t['ai_status'] === 'done'): ?><strong><?= $fmt($t['ai_score']) ?></strong> / 50
+            <?php elseif ($t['ai_status'] === 'done'): ?>
+              <strong><?= $fmt($t['ai_score']) ?></strong> / 50
+              <?php if ($t['ai_min'] !== null && (int) $t['ai_min'] === 0): ?><br><span class="pill red" title="Mindeststandard nicht erfüllt">⚠ unter Standard</span><?php endif; ?>
             <?php elseif ($t['ai_status'] === 'error'): ?><span class="pill red">Fehler</span>
             <?php else: ?><span class="pill muted">offen</span><?php endif; ?>
           </td>

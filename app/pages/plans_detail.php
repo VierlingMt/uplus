@@ -73,7 +73,7 @@ ob_start(); ?>
     <?php if ($plan && $isAdmin): ?>
       <form method="post" action="<?= url('plans') ?>">
         <?= Csrf::field() ?><input type="hidden" name="action" value="run_ai"><input type="hidden" name="bp_id" value="<?= (int) $plan['id'] ?>">
-        <button class="btn btn--teal btn--sm"><?= $ai ? 'Neu bewerten' : 'KI-Vorbewertung starten' ?></button>
+        <button class="btn btn--teal btn--sm" data-loading="KI bewertet …"><?= $ai ? 'Neu bewerten' : 'KI-Vorbewertung starten' ?></button>
       </form>
     <?php endif; ?>
   </div>
@@ -87,6 +87,16 @@ ob_start(); ?>
     <?php elseif ($ai['status'] !== 'done'): ?>
       <p class="muted">Bewertung läuft …</p>
     <?php else: ?>
+      <?php if (array_key_exists('meets_minimum', $ai) && $ai['meets_minimum'] !== null): ?>
+        <?php if ((int) $ai['meets_minimum'] === 0): ?>
+          <div class="flash error" style="margin-bottom:14px">
+            <strong>⚠ Mindeststandard nicht erfüllt.</strong> Dieser Plan kann ohne weitere Sichtung aussortiert werden.
+            <?php if ($ai['min_reason']): ?><br><span style="font-size:13px"><?= nl2br(e($ai['min_reason'])) ?></span><?php endif; ?>
+          </div>
+        <?php else: ?>
+          <div class="flash success" style="margin-bottom:14px"><strong>✓ Mindeststandard erfüllt.</strong></div>
+        <?php endif; ?>
+      <?php endif; ?>
       <p><strong style="font-size:22px;color:var(--wj-blue)"><?= $fmt($ai['total_score']) ?></strong> / 50
          <span class="muted">· Modell <?= e($ai['model']) ?></span></p>
       <?php if ($ai['summary']): ?><p><?= nl2br(e($ai['summary'])) ?></p><?php endif; ?>

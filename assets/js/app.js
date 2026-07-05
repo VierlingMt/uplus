@@ -2,13 +2,21 @@
 (function () {
   'use strict';
 
-  // Bestaetigung vor Loeschaktionen
+  // Bestaetigung vor Aktionen + Lade-Spinner am Submit-Button
   document.addEventListener('submit', function (e) {
     var f = e.target;
-    if (f.matches('[data-confirm]')) {
-      if (!window.confirm(f.getAttribute('data-confirm'))) {
-        e.preventDefault();
-      }
+    if (f.matches('[data-confirm]') && !window.confirm(f.getAttribute('data-confirm'))) {
+      e.preventDefault();
+      return;
+    }
+    var btn = e.submitter || f.querySelector('button[type="submit"], button:not([type])');
+    if (btn && !btn.classList.contains('no-spinner') && !btn.disabled) {
+      var loadingLabel = btn.getAttribute('data-loading') || btn.textContent.trim();
+      btn.dataset.orig = btn.innerHTML;
+      btn.innerHTML = '<span class="spinner"></span> ' + loadingLabel;
+      btn.classList.add('is-loading');
+      // erst nach dem Absenden deaktivieren, damit der Button-Wert mitgesendet wird
+      setTimeout(function () { btn.disabled = true; }, 0);
     }
   });
 

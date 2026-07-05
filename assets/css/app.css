@@ -97,6 +97,14 @@ img { max-width: 100%; }
 .btn--ghost:hover { border-color: var(--wj-blue); }
 .btn--danger { background: var(--wj-red); color: #fff; }
 .btn--sm { padding: 6px 12px; font-size: 13px; }
+.btn.is-loading { cursor: progress; opacity: .92; }
+.btn:disabled { cursor: progress; }
+.spinner {
+  display: inline-block; width: 14px; height: 14px;
+  border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%;
+  animation: uplus-spin .7s linear infinite; vertical-align: -2px;
+}
+@keyframes uplus-spin { to { transform: rotate(360deg); } }
 
 /* ---------- Forms ---------- */
 label { display: block; font-family: "Chivo",sans-serif; font-weight: 700; font-size: 13px; margin-bottom: 6px; color: #33404e; }

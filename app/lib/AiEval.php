@@ -31,8 +31,8 @@ final class AiEval
         }
 
         Database::run(
-            'UPDATE ai_evaluations SET status=?, model=?, total_score=?, summary=?, strengths=?, weaknesses=?, raw_json=? WHERE id=?',
-            ['done', $res['model'], $res['total'], $res['summary'], $res['strengths'], $res['weaknesses'], $res['raw'], $evalId]
+            'UPDATE ai_evaluations SET status=?, model=?, total_score=?, meets_minimum=?, min_reason=?, summary=?, strengths=?, weaknesses=?, raw_json=? WHERE id=?',
+            ['done', $res['model'], $res['total'], $res['meets_minimum'], $res['min_reason'], $res['summary'], $res['strengths'], $res['weaknesses'], $res['raw'], $evalId]
         );
         foreach ($res['scores'] as $key => $s) {
             Database::run(

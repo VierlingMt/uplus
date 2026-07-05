@@ -108,6 +108,8 @@ CREATE TABLE IF NOT EXISTS ai_evaluations (
     model            VARCHAR(80) NULL,
     status           ENUM('pending','running','done','error') NOT NULL DEFAULT 'pending',
     total_score      DECIMAL(5,1) NULL,            -- Summe der 5 BP-Kriterien (max 50)
+    meets_minimum    TINYINT(1) NULL,              -- Mindeststandard-Gate (1=erfuellt, 0=nicht)
+    min_reason       TEXT NULL,                    -- Begruendung zum Gate
     summary          TEXT NULL,                    -- Gesamteinschaetzung
     strengths        TEXT NULL,
     weaknesses       TEXT NULL,
