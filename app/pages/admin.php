@@ -15,6 +15,8 @@ if (is_post()) {
         Settings::set('anthropic_model', trim((string) input('anthropic_model')) ?: 'claude-sonnet-5');
         Settings::set('ai_gate_model', trim((string) input('ai_gate_model')) ?: 'claude-haiku-4-5-20251001');
         Settings::set('ai_min_score', (string) max(0, min(10, (int) input('ai_min_score', 6))));
+        Settings::set('ai_min_words', (string) max(0, (int) input('ai_min_words', 200)));
+        Settings::set('ai_min_core', (string) max(0, min(5, (int) input('ai_min_core', 2))));
         Settings::set('ai_min_standard', trim((string) input('ai_min_standard')) ?: Claude::DEFAULT_MIN_STANDARD);
         Settings::set('ai_extra_guidance', trim((string) input('ai_extra_guidance')));
         flash('success', 'KI-Einstellungen gespeichert.');
@@ -125,6 +127,19 @@ ob_start(); ?>
           <input type="number" name="ai_min_score" min="0" max="10" value="<?= (int) Settings::getInt('ai_min_score', 6) ?>" style="width:90px">
           <div class="help">Summe der Bearbeitungstiefe über die 5 Kernabschnitte (behandelt=2, oberflächlich=1, fehlt=0).
             Pläne <strong>unter</strong> diesem Wert gelten als „unter Mindeststandard". Höher = strenger (mehr Pläne werden aussortiert).</div>
+        </div>
+        <div class="field">
+          <label>Mindest-Eigentext (Wörter)</label>
+          <input type="number" name="ai_min_words" min="0" value="<?= (int) Settings::getInt('ai_min_words', 200) ?>" style="width:110px">
+          <div class="help">Geschätzte Anzahl <strong>selbst geschriebener</strong> Wörter (ohne Überschriften, Leitfragen,
+            Platzhalter, Deckblatt). Liegt ein Plan darunter, gilt er unabhängig vom Score als „unter Mindeststandard" –
+            fängt Pläne, die nur aus der Vorlage + Stichpunkten bestehen. 0 = Regel aus.</div>
+        </div>
+        <div class="field">
+          <label>Mindestzahl wirklich ausgearbeiteter Kernabschnitte</label>
+          <input type="number" name="ai_min_core" min="0" max="5" value="<?= (int) Settings::getInt('ai_min_core', 2) ?>" style="width:90px">
+          <div class="help">So viele der 5 Kernabschnitte müssen den Status „behandelt" (mehrere konkrete Sätze) haben.
+            Sonst gilt der Plan als „unter Mindeststandard". 0 = Regel aus.</div>
         </div>
         <div class="field">
           <label>Mindeststandard-Gate (Definition für die KI)</label>

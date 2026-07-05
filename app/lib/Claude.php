@@ -171,16 +171,18 @@ TXT;
         $required = [];
         foreach ($sections as $s) {
             $opt = $s['required'] ? '' : ' (optional)';
-            $listText .= "\n### {$s['title']}{$opt} (Schlüssel: {$s['key']})\n- " . implode("\n- ", $s['aspects']) . "\n";
+            $listText .= "\n### {$s['title']}{$opt} (Schlüssel: {$s['key']})\nVorgegebene Leitfragen (zählen NICHT als Inhalt):\n- " . implode("\n- ", $s['aspects']) . "\n";
             $props[$s['key']] = [
                 'type' => 'object',
                 'description' => $s['title'],
                 'properties' => [
                     'status' => ['type' => 'string', 'enum' => ['behandelt', 'oberflaechlich', 'fehlt'],
-                                 'description' => 'behandelt = inhaltlich ausgearbeitet; oberflaechlich = nur Stichworte/sehr dünn; fehlt = gar nicht vorhanden'],
+                                 'description' => 'behandelt = mehrere zusammenhängende, konkrete Sätze der Schüler:innen; oberflaechlich = nur Stichpunkte/ein, zwei Sätze/Floskeln; fehlt = kein eigener Text (nur Überschrift/Leitfrage/Platzhalter oder gar nichts)'],
+                    'own_sentences' => ['type' => 'integer', 'minimum' => 0,
+                                 'description' => 'Geschätzte Anzahl EIGENER, inhaltstragender Sätze der Schüler:innen unter dieser Überschrift – Überschrift, Leitfrage und Platzhalter NICHT mitzählen.'],
                     'note'   => ['type' => 'string'],
                 ],
-                'required' => ['status'],
+                'required' => ['status', 'own_sentences'],
             ];
             $required[] = $s['key'];
         }
@@ -188,36 +190,49 @@ TXT;
         $prompt = <<<TXT
 Du bist erfahrenes Jurymitglied und machst eine schnelle Triage von Schüler-
 Businessplänen (10. Klasse, PDF). Ziel: erkennen, welche Pläne so wenig
-Bearbeitungstiefe haben, dass man sie beim ersten Durchsehen aussortieren würde.
-Es geht NICHT um die inhaltliche Note, sondern um die tatsächliche Ausarbeitungstiefe
-je Kernabschnitt.
+EIGENE Bearbeitung haben, dass man sie beim ersten Durchsehen aussortieren würde.
+Es geht NICHT um die inhaltliche Note, sondern um die tatsächliche Ausarbeitungstiefe.
 
-Vergib je Abschnitt EINEN Status – sei dabei streng wie beim schnellen Durchscrollen:
-- "behandelt": echte Ausarbeitung – zusammenhängende Sätze, die den Aspekt konkret
-  erklären (nicht nur benennen). Mehrere Aussagen mit Substanz.
+ENTSCHEIDEND – bitte genau lesen:
+- Die Überschriften und Leitfragen (z. B. „Vertrieb & Kommunikation – Wie machst du
+  auf dich aufmerksam?") sind von den VERANSTALTERN VORGEGEBEN. Sie sind KEIN Inhalt
+  und dürfen NIE als Bearbeitung gewertet werden. Bewerte ausschließlich den Text,
+  den die Schüler:innen SELBST darunter geschrieben haben.
+- Zähle Deckblätter, Bilder, Logos, Inhaltsverzeichnis, Vorlagen-Platzhalter und
+  wiederholte Leitfragen NICHT als Inhalt. Ein Plan kann optisch „voll" wirken (Bilder,
+  Deckblatt) und trotzdem kaum Eigentext enthalten.
+- Miss Substanz, nicht Seitenzahl. Ein Deckblatt mit Bild + je zwei Wörter pro
+  Überschrift ist NICHT bearbeitet.
+
+Vergib je Abschnitt EINEN Status – streng:
+- "behandelt": echte Ausarbeitung – mehrere zusammenhängende, konkrete Sätze, die den
+  Punkt erklären (nicht nur benennen).
 - "oberflaechlich": nur angerissen – Stichpunkte, ein, zwei Halbsätze, Floskeln oder
   bloßes Benennen ohne echte Ausführung.
-- "fehlt": Abschnitt gar nicht vorhanden oder praktisch leer.
+- "fehlt": kein eigener Text – nur Überschrift/Leitfrage/Platzhalter oder gar nichts.
+
+Schätze zusätzlich je Abschnitt "own_sentences" (Anzahl eigener, inhaltstragender
+Sätze der Schüler:innen) und am Ende "own_words_total": die grobe Gesamtzahl der
+SELBST geschriebenen Wörter im ganzen Plan – OHNE Überschriften, Leitfragen,
+Platzhalter, Deckblatt und Bildunterschriften.
 
 Bewertet werden die fünf KERN-Abschnitte (Geschäftsidee, Vertrieb & Wettbewerb,
 Team & Partner, Dein Unternehmen, Finanzen). Zusammenfassung und Anhang sind OPTIONAL
-und dürfen NICHT gegen den Plan zählen (fehlende Zusammenfassung ist kein Mangel).
+und dürfen NICHT gegen den Plan zählen.
 
 Abschnitte:
 {$listText}
 
-Wichtig: Ein Plan mit vollständiger Gliederung, aber überall nur Stichpunkten/
-Ein-Satz-Antworten ist NICHT ausreichend bearbeitet. Ein Plan mit ausformulierten,
-konkreten Abschnitten ist ausreichend – auch ohne Zusammenfassung.
-
-Gib in "reason" 1-2 Sätze, die den Gesamteindruck der Bearbeitungstiefe begründen.
-Das Feld meets_minimum_standard darfst du nach eigenem Eindruck setzen; die endgültige
-Aussortier-Entscheidung trifft aber das System anhand der Abschnitts-Tiefe.
-Nutze ausschließlich das Tool "submit_structure_check".
+Gib in "reason" 1-2 Sätze zum Gesamteindruck der EIGEN-Bearbeitungstiefe.
+Die endgültige Aussortier-Entscheidung trifft das System anhand von Abschnitts-Tiefe
+UND geschätzter Eigentext-Menge. Nutze ausschließlich das Tool "submit_structure_check".
 TXT;
 
+        $props['own_words_total'] = ['type' => 'integer', 'minimum' => 0,
+            'description' => 'Grobe Gesamtzahl selbst geschriebener Wörter im ganzen Plan (ohne Überschriften/Leitfragen/Platzhalter/Deckblatt/Bildunterschriften).'];
         $props['meets_minimum_standard'] = ['type' => 'boolean'];
         $props['reason'] = ['type' => 'string'];
+        $required[] = 'own_words_total';
         $required[] = 'meets_minimum_standard';
         $required[] = 'reason';
 
@@ -257,6 +272,7 @@ TXT;
             $secOut[$s['key']] = [
                 'title'  => $s['title'],
                 'status' => $in[$s['key']]['status'] ?? 'fehlt',
+                'own_sentences' => isset($in[$s['key']]['own_sentences']) ? max(0, (int) $in[$s['key']]['own_sentences']) : null,
                 'note'   => $in[$s['key']]['note'] ?? '',
                 'required' => $s['required'],
             ];
@@ -266,6 +282,7 @@ TXT;
             'ok'            => true,
             'model'         => $model,
             'meets_minimum' => isset($in['meets_minimum_standard']) ? (int) (bool) $in['meets_minimum_standard'] : null,
+            'own_words'     => isset($in['own_words_total']) ? max(0, (int) $in['own_words_total']) : null,
             'reason'        => $in['reason'] ?? null,
             'sections'      => $secOut,
             'raw'           => $body,

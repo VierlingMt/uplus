@@ -132,6 +132,29 @@ if (is_post()) {
         redirect(url('plans'));
     }
 
+    if ($action === 'override_structure') {
+        Auth::requireManager();
+        $bpId = (int) input('bp_id');
+        $bp = Database::one('SELECT * FROM business_plans WHERE id = ?', [$bpId]);
+        if ($bp) {
+            $mode = (string) input('override'); // 'pass', 'fail' oder 'clear'
+            if ($mode === 'clear') {
+                Database::run('UPDATE business_plans SET sc_override=NULL, sc_override_by=NULL, sc_override_reason=NULL, sc_override_at=NULL WHERE id=?', [$bpId]);
+                flash('success', 'Override aufgehoben – es gilt wieder das automatische Ergebnis.');
+            } else {
+                $val = $mode === 'pass' ? 1 : 0;
+                $reason = trim((string) input('override_reason'));
+                Database::run(
+                    'UPDATE business_plans SET sc_override=?, sc_override_by=?, sc_override_reason=?, sc_override_at=NOW() WHERE id=?',
+                    [$val, Auth::id(), $reason !== '' ? mb_substr($reason, 0, 255) : null, $bpId]
+                );
+                flash('success', $val === 1 ? 'Override gesetzt: Plan gilt als bestanden.' : 'Override gesetzt: Plan gilt als aussortiert.');
+            }
+            redirect(url('plans', ['team' => (int) $bp['team_id']]));
+        }
+        redirect(url('plans'));
+    }
+
     if ($action === 'delete_plan') {
         Auth::requireManager();
         $bp = Database::one('SELECT * FROM business_plans WHERE id = ?', [(int) input('bp_id')]);
@@ -158,7 +181,7 @@ if ($tid = (int) input('team', 0)) {
 $where = $isTeacher ? 'WHERE t.school_id = ' . (int) $mySchool : '';
 $teams = Database::all(
     "SELECT t.*, s.name AS school_name, s.short_name,
-            bp.id AS bp_id, bp.version, bp.created_at AS uploaded_at,
+            bp.id AS bp_id, bp.version, bp.created_at AS uploaded_at, bp.sc_override,
             ai.total_score AS ai_score, ai.status AS ai_status,
             sc.meets_minimum AS sc_min, sc.status AS sc_status, sc.completeness_score AS sc_score,
             (SELECT COUNT(*) FROM evaluations e WHERE e.team_id = t.id AND e.juror_id = ? AND e.bp_submitted = 1) AS my_eval
@@ -240,9 +263,12 @@ ob_start(); ?>
           <?php if (!$isTeacher): ?>
           <td data-label="Struktur-Check">
             <?php if (!$t['bp_id']): ?>—
-            <?php elseif ($t['sc_status'] === 'done'): ?>
+            <?php elseif ($t['sc_status'] === 'done'):
+                $ovr = $t['sc_override'] === null ? null : (int) $t['sc_override'];
+                $eff = $ovr !== null ? $ovr : (int) $t['sc_min']; ?>
               <strong><?= $t['sc_score'] !== null ? (int) $t['sc_score'] : '–' ?></strong>/10
-              <?php if ((int) $t['sc_min'] === 0): ?><br><span class="pill red" title="unter Mindeststandard">⚠ unter Standard</span><?php endif; ?>
+              <?php if ($eff === 0): ?><br><span class="pill red" title="unter Mindeststandard">⚠ unter Standard</span><?php endif; ?>
+              <?php if ($ovr !== null): ?><br><span class="pill amber" title="manuell durch die Projektleitung gesetzt">✋ Override</span><?php endif; ?>
             <?php elseif ($t['sc_status'] === 'error'): ?><span class="pill red">Fehler</span>
             <?php else: ?><span class="pill muted">offen</span><?php endif; ?>
           </td>

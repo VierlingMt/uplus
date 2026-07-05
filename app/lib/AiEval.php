@@ -66,19 +66,30 @@ final class AiEval
         $depth = ['behandelt' => 2, 'oberflaechlich' => 1, 'fehlt' => 0];
         $core = ['idea', 'sales', 'team', 'company', 'finance'];
         $score = 0;
+        $behandelt = 0;
         foreach ($core as $k) {
             $st = $res['sections'][$k]['status'] ?? 'fehlt';
             $score += $depth[$st] ?? 0;
+            if ($st === 'behandelt') { $behandelt++; }
         }
-        // Gate anhand des im Admin einstellbaren Schwellwerts (Default 6 von 10)
+
+        // Gate: Score allein reicht nicht – Überschriften/Struktur täuschen Vollständigkeit
+        // vor. Zusätzlich harte Ausschlüsse auf Basis der geschätzten EIGENTEXT-Menge und
+        // der Zahl wirklich ausgearbeiteter Kernabschnitte (fängt "1 Seite"/"nur Stichpunkte").
         $threshold = Settings::getInt('ai_min_score', 6);
+        $minWords  = Settings::getInt('ai_min_words', 200);
+        $minCore   = Settings::getInt('ai_min_core', 2); // min. Kernabschnitte mit echter Ausarbeitung
+        $ownWords  = $res['own_words']; // kann null sein, wenn Modell nichts liefert
+
         $meets = $score >= $threshold ? 1 : 0;
+        if ($ownWords !== null && $ownWords < $minWords) { $meets = 0; }
+        if ($behandelt < $minCore) { $meets = 0; }
 
         Database::run(
-            'UPDATE structure_checks SET status=?, model=?, meets_minimum=?, completeness_score=?, reason=?, sections_json=? WHERE id=?',
-            ['done', $res['model'], $meets, $score, $res['reason'], json_encode($res['sections'], JSON_UNESCAPED_UNICODE), $id]
+            'UPDATE structure_checks SET status=?, model=?, meets_minimum=?, completeness_score=?, own_words=?, reason=?, sections_json=? WHERE id=?',
+            ['done', $res['model'], $meets, $score, $ownWords, $res['reason'], json_encode($res['sections'], JSON_UNESCAPED_UNICODE), $id]
         );
-        return ['ok' => true, 'meets_minimum' => $meets, 'score' => $score];
+        return ['ok' => true, 'meets_minimum' => $meets, 'score' => $score, 'own_words' => $ownWords];
     }
 
     /** Neuesten Struktur-Check zu einem Businessplan laden. */

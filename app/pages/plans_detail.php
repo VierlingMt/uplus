@@ -116,15 +116,22 @@ $avgBp = $evals ? array_sum(array_map(fn($e) => (float) $e['bp_total'], $evals))
   </div>
 </details>
 
+<?php
+// Effektives Ergebnis: manueller Override der Projektleitung schlägt das automatische Gate.
+$scOverride = ($plan && $plan['sc_override'] !== null) ? (int) $plan['sc_override'] : null;
+$scAuto     = $sc ? (int) $sc['meets_minimum'] : null;
+$scEff      = $scOverride !== null ? $scOverride : $scAuto;
+?>
 <details class="card mt collapse">
   <summary class="collapse__head">
     <span class="collapse__title"><span class="collapse__chev" aria-hidden="true">▸</span> Struktur-Check
       <span class="collapse__info"><?php
-        if (!$plan || !$sc) { echo 'offen · Vollständigkeit gegen die Vorlage';
+        if (!$plan || !$sc) { echo 'offen · Eigentext-Tiefe gegen die Vorlage';
         } elseif ($sc['status'] === 'error') { echo 'Fehler';
         } elseif ($sc['status'] !== 'done') { echo 'läuft …';
         } else { echo ($sc['completeness_score'] !== null ? (int) $sc['completeness_score'] : '–') . '/10 · '
-            . ((int) $sc['meets_minimum'] === 0 ? '⚠ unter Standard' : '✓ ok'); } ?></span></span>
+            . ($scEff === 0 ? '⚠ unter Standard' : '✓ ok')
+            . ($scOverride !== null ? ' · ✋ Override' : ''); } ?></span></span>
     <?php if ($plan && $isAdmin): ?>
       <form method="post" action="<?= url('plans') ?>" onclick="event.stopPropagation()">
         <?= Csrf::field() ?><input type="hidden" name="action" value="run_structure"><input type="hidden" name="bp_id" value="<?= (int) $plan['id'] ?>">
@@ -141,17 +148,36 @@ $avgBp = $evals ? array_sum(array_map(fn($e) => (float) $e['bp_total'], $evals))
       <div class="flash error">Fehler: <?= e($sc['error_message'] ?: 'unbekannt') ?></div>
     <?php elseif ($sc['status'] !== 'done'): ?>
       <p class="muted">Prüfung läuft …</p>
-    <?php else: $thr = Settings::getInt('ai_min_score', 6); ?>
+    <?php else:
+        $thr = Settings::getInt('ai_min_score', 6);
+        $minWords = Settings::getInt('ai_min_words', 200);
+        $ownWords = $sc['own_words'] !== null ? (int) $sc['own_words'] : null; ?>
       <p><strong style="font-size:22px;color:var(--wj-blue)"><?= $sc['completeness_score'] !== null ? (int) $sc['completeness_score'] : '–' ?></strong> / 10
-         <span class="muted">Substanz-Score (Kernabschnitte) · Schwelle <?= $thr ?></span></p>
-      <?php if ((int) $sc['meets_minimum'] === 0): ?>
+         <span class="muted">Substanz-Score (Kernabschnitte) · Schwelle <?= $thr ?></span>
+         <?php if ($ownWords !== null): ?>
+           &nbsp;·&nbsp; <strong style="font-size:18px"><?= $ownWords ?></strong> <span class="muted">geschätzte Eigentext-Wörter · Mindestwert <?= $minWords ?></span>
+         <?php endif; ?></p>
+
+      <?php if ($scEff === 0): ?>
         <div class="flash error"><strong>⚠ Mindeststandard nicht erfüllt</strong> – kann ohne weitere Sichtung aussortiert werden.
-          <?php if ($sc['reason']): ?><br><span style="font-size:13px"><?= nl2br(e($sc['reason'])) ?></span><?php endif; ?></div>
+          <?php if ($scOverride === null && $sc['reason']): ?><br><span style="font-size:13px"><?= nl2br(e($sc['reason'])) ?></span><?php endif; ?></div>
       <?php else: ?>
-        <div class="flash success"><strong>✓ Mindeststandard erfüllt</strong><?= $sc['reason'] ? ' – <span style="font-weight:400">' . e($sc['reason']) . '</span>' : '' ?></div>
+        <div class="flash success"><strong>✓ Mindeststandard erfüllt</strong><?= ($scOverride === null && $sc['reason']) ? ' – <span style="font-weight:400">' . e($sc['reason']) . '</span>' : '' ?></div>
       <?php endif; ?>
+
+      <?php if ($scOverride !== null):
+          $ovrBy = $plan['sc_override_by'] ? Database::value('SELECT name FROM users WHERE id=?', [(int) $plan['sc_override_by']]) : null; ?>
+        <div class="flash" style="background:var(--amber-bg,#fff7e6);border-color:#e0a800">
+          <strong>✋ Manueller Override der Projektleitung</strong> – gilt als
+          <strong><?= $scOverride === 1 ? 'bestanden' : 'aussortiert' ?></strong>
+          <?php if ($sc['completeness_score'] !== null): ?><span class="muted">(automatisch wäre: <?= $scAuto === 0 ? 'unter Standard' : 'ok' ?>)</span><?php endif; ?>
+          <?php if ($plan['sc_override_reason']): ?><br><span style="font-size:13px"><?= e($plan['sc_override_reason']) ?></span><?php endif; ?>
+          <?php if ($ovrBy || $plan['sc_override_at']): ?><br><span class="muted" style="font-size:12px"><?= $ovrBy ? e((string) $ovrBy) : '' ?><?= $plan['sc_override_at'] ? ' · ' . e(date('d.m.Y H:i', strtotime((string) $plan['sc_override_at']))) : '' ?></span><?php endif; ?>
+        </div>
+      <?php endif; ?>
+
       <table class="data mt">
-        <thead><tr><th>Abschnitt der Vorlage</th><th style="width:140px">Status</th><th>Hinweis</th></tr></thead>
+        <thead><tr><th>Abschnitt der Vorlage</th><th style="width:140px">Status</th><th style="width:80px">Eigene Sätze</th><th>Hinweis</th></tr></thead>
         <tbody>
         <?php foreach (($sc['sections'] ?? []) as $sec):
             $st = $sec['status'] ?? 'fehlt';
@@ -160,12 +186,32 @@ $avgBp = $evals ? array_sum(array_map(fn($e) => (float) $e['bp_total'], $evals))
           <tr>
             <td><?= e($sec['title'] ?? '') ?><?= empty($sec['required']) ? ' <span class="muted" style="font-size:12px">(optional)</span>' : '' ?></td>
             <td><span class="pill <?= $cls ?>"><?= e($lbl) ?></span></td>
+            <td><?= isset($sec['own_sentences']) && $sec['own_sentences'] !== null ? (int) $sec['own_sentences'] : '–' ?></td>
             <td class="muted" style="font-size:13px"><?= e($sec['note'] ?? '') ?></td>
           </tr>
         <?php endforeach; ?>
         </tbody>
       </table>
-      <p class="muted mt" style="font-size:12px">Modell: <?= e((string) $sc['model']) ?> · reiner Vollständigkeits-Check, keine inhaltliche Note.</p>
+      <p class="muted mt" style="font-size:12px">Modell: <?= e((string) $sc['model']) ?> · Überschriften/Leitfragen der Vorlage zählen nicht als Inhalt – gemessen wird der Eigentext der Schüler:innen.</p>
+
+      <?php if ($isAdmin): ?>
+        <hr style="margin:14px 0;border:none;border-top:1px solid var(--line)">
+        <details>
+          <summary style="cursor:pointer;font-weight:600">✋ Ergebnis manuell überschreiben (Projektleitung)</summary>
+          <form method="post" action="<?= url('plans') ?>" class="mt">
+            <?= Csrf::field() ?><input type="hidden" name="action" value="override_structure"><input type="hidden" name="bp_id" value="<?= (int) $plan['id'] ?>">
+            <label>Begründung (optional)</label>
+            <input type="text" name="override_reason" maxlength="255" placeholder="z. B. von Hand geprüft – Plan ist ausreichend" value="<?= e((string) ($plan['sc_override_reason'] ?? '')) ?>" style="width:100%;margin:6px 0">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn--teal btn--sm" name="override" value="pass">Als bestanden markieren</button>
+              <button class="btn btn--danger btn--sm" name="override" value="fail">Als aussortiert markieren</button>
+              <?php if ($scOverride !== null): ?>
+                <button class="btn btn--ghost btn--sm" name="override" value="clear">Override aufheben</button>
+              <?php endif; ?>
+            </div>
+          </form>
+        </details>
+      <?php endif; ?>
     <?php endif; ?>
   </div>
 </details>

@@ -222,6 +222,21 @@ final class Migrator
                 'name'    => 'Teammitglieder aus den Businessplänen als Schüler:innen importieren',
                 'up'      => [self::class, 'seedTeamMembers'],
             ],
+            [
+                'version' => '2026_07_18_structure_substance',
+                'name'    => 'Struktur-Check: Eigentext-Wortzahl + manueller Override der Projektleitung',
+                'up'      => "ALTER TABLE structure_checks
+                    ADD COLUMN IF NOT EXISTS own_words INT NULL AFTER completeness_score",
+            ],
+            [
+                'version' => '2026_07_19_structure_override',
+                'name'    => 'Manueller Override des Struktur-Checks (am Plan gespeichert)',
+                'up'      => 'ALTER TABLE business_plans
+                    ADD COLUMN IF NOT EXISTS sc_override TINYINT NULL,
+                    ADD COLUMN IF NOT EXISTS sc_override_by INT UNSIGNED NULL,
+                    ADD COLUMN IF NOT EXISTS sc_override_reason VARCHAR(255) NULL,
+                    ADD COLUMN IF NOT EXISTS sc_override_at DATETIME NULL',
+            ],
         ];
     }
 

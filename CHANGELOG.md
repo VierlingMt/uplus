@@ -7,6 +7,28 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-07-05
+### Geändert
+- **Struktur-Check misst jetzt Eigentext statt Struktur.** Der Check hat Pläne
+  fälschlich durchgewinkt, weil er die von uns vorgegebenen Überschriften/Leitfragen
+  („Vertrieb & Kommunikation – Wie machst du auf dich aufmerksam?") als bearbeiteten
+  Inhalt gewertet hat. Jetzt wird die Vorlage explizit abgezogen: gemessen wird nur der
+  **selbst geschriebene Text** der Schüler:innen. Das Modell schätzt zusätzlich die
+  eigenen Sätze je Abschnitt und die Gesamt-Eigentext-Wortzahl (ohne Überschriften,
+  Leitfragen, Platzhalter, Deckblatt, Bildunterschriften).
+- **Härtere Ausschlusskriterien.** Ein Plan gilt unabhängig vom Substanz-Score als
+  „unter Mindeststandard", wenn der geschätzte Eigentext unter dem Mindestwert liegt
+  (neu, Default 200 Wörter) oder weniger als N Kernabschnitte wirklich ausgearbeitet
+  sind (neu, Default 2). Fängt „1-Seiten"-Pläne und reine Stichpunktlisten zuverlässig.
+### Hinzugefügt
+- **Manueller Override für die Projektleitung.** Verwaltung (Admin/Lead) kann das
+  Struktur-Check-Ergebnis je Plan von Hand auf „bestanden" oder „aussortiert" setzen
+  (mit Begründung) oder den Override wieder aufheben. Der Override wird am Plan
+  gespeichert, übersteht ein erneutes „alle neu prüfen" und ist in Übersicht und Detail
+  als „✋ Override" gekennzeichnet.
+- Zwei neue Admin-Einstellungen unter KI-Integration: Mindest-Eigentext (Wörter) und
+  Mindestzahl wirklich ausgearbeiteter Kernabschnitte (jeweils mit 0 = Regel aus).
+
 ## [0.31.0] - 2026-07-05
 ### Hinzugefügt
 - **Teams und Businesspläne wechselseitig verlinkt:** In der Team-Verwaltung öffnet

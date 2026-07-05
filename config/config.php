@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 // Anwendungsversion (bei relevanten Änderungen zusammen mit CHANGELOG.md pflegen).
 if (!defined('APP_VERSION')) {
-    define('APP_VERSION', '0.31.0');
+    define('APP_VERSION', '0.32.0');
 }
 
 $defaults = [
