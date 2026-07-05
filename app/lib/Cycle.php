@@ -164,4 +164,86 @@ final class Cycle
         }
         return $out;
     }
+
+    // --- Meilensteine (Projektablauf) ------------------------------------
+
+    /** Erlaubte Status-Werte eines Meilensteins. */
+    public const MILESTONE_STATUS = ['auto', 'done', 'active', 'upcoming'];
+
+    /** Meilensteine eines Zyklus in Anzeigereihenfolge. */
+    public static function milestones(int $cycleId): array
+    {
+        return Database::all(
+            'SELECT * FROM cycle_milestones
+             WHERE cycle_id = ?
+             ORDER BY sort_order, COALESCE(date_from, "9999-12-31"), id',
+            [$cycleId]
+        );
+    }
+
+    public static function findMilestone(int $id): ?array
+    {
+        return Database::one('SELECT * FROM cycle_milestones WHERE id = ?', [$id]);
+    }
+
+    /**
+     * Meilensteine für die Dashboard-Zeitleiste aufbereiten.
+     * @return array<int,array{0:string,1:string,2:string}> [Name, Zeitpunkt/-raum, Status]
+     */
+    public static function milestoneTimeline(int $cycleId, ?string $today = null): array
+    {
+        $out = [];
+        foreach (self::milestones($cycleId) as $m) {
+            $out[] = [
+                (string) $m['label'],
+                self::milestoneDateLabel($m),
+                self::milestoneState($m, $today),
+            ];
+        }
+        return $out;
+    }
+
+    /** Anzeige-Text für Zeitpunkt bzw. Zeitraum eines Meilensteins. */
+    public static function milestoneDateLabel(array $m): string
+    {
+        $period = trim((string) ($m['period_label'] ?? ''));
+        if ($period !== '') {
+            return $period;
+        }
+        $from = $m['date_from'] ?? null;
+        $to   = $m['date_to'] ?? null;
+        $fmt  = static fn($d) => date('d.m.', (int) strtotime((string) $d));
+        if ($from && $to && $from !== $to) {
+            return $fmt($from) . '–' . $fmt($to);
+        }
+        if ($from) {
+            return $fmt($from);
+        }
+        return '';
+    }
+
+    /**
+     * Zustand (done/active/upcoming) eines Meilensteins. Bei Status „auto"
+     * wird er aus den Datumsangaben relativ zu heute abgeleitet.
+     */
+    public static function milestoneState(array $m, ?string $today = null): string
+    {
+        $status = (string) ($m['status'] ?? 'auto');
+        if ($status !== '' && $status !== 'auto') {
+            return $status;
+        }
+        $today = $today ?? date('Y-m-d');
+        $from  = $m['date_from'] ?? null;
+        $to    = ($m['date_to'] ?? null) ?: $from;
+        if (!$from) {
+            return 'upcoming';
+        }
+        if ($to < $today) {
+            return 'done';
+        }
+        if ($from <= $today && $today <= $to) {
+            return 'active';
+        }
+        return 'upcoming';
+    }
 }

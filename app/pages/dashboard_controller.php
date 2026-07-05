@@ -10,21 +10,10 @@ $stats = [
     'jurors'  => (int) Database::value("SELECT COUNT(*) FROM users WHERE role = 'juror'"),
 ];
 
-$timeline = [
-    ['Kick-Off', 'Ende Feb', 'done'],
-    ['Teambuilding', 'Ende Mrz', 'done'],
-    ['Ideenfindung', 'ab April', 'done'],
-    ['Juryfeedback', 'KW21/Mai', 'done'],
-    ['Businessplan-Erstellung', '8 Wochen', 'done'],
-    ['Einsendeschluss', '01.07', 'active'],
-    ['Jury-Bewertung', 'Jul', 'active'],
-    ['Pitch Day', '15.07', 'upcoming'],
-    ['Project Closing', '22.07', 'upcoming'],
-];
-
-// Sponsoren, die im aktiven Wettbewerbsjahr (Zyklus) eine Leistung erbringen → Auto-Anzeige
+// Projektablauf: konfigurierbare Meilensteine des aktiven Wettbewerbsjahres.
 $activeCycle = Cycle::active();
 $year = (string) ($activeCycle['year_label'] ?? '');
+$timeline = $activeCycle ? Cycle::milestoneTimeline((int) $activeCycle['id']) : [];
 $sponsors = $activeCycle ? Database::all(
     'SELECT DISTINCT s.name, s.logo_path
      FROM sponsors s JOIN sponsor_contributions c ON c.sponsor_id = s.id

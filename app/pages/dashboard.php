@@ -22,17 +22,26 @@
 </div>
 
 <div class="card mb">
-  <div class="card__head">Projektablauf 2025/2026</div>
+  <div class="card__head">Projektablauf<?= $year !== '' ? ' ' . e($year) : '' ?></div>
   <div class="card__body">
-    <div class="timeline">
-      <?php foreach ($timeline as [$phase, $date, $state]): ?>
-        <div class="tl-step <?= e($state) ?>">
-          <?php if ($state === 'done'): ?><span class="tick">✓</span><?php endif; ?>
-          <div class="ph"><?= e($phase) ?></div>
-          <div class="dt"><?= e($date) ?></div>
-        </div>
-      <?php endforeach; ?>
-    </div>
+    <?php if (!empty($timeline)): ?>
+      <div class="timeline">
+        <?php foreach ($timeline as [$phase, $date, $state]): ?>
+          <div class="tl-step <?= e($state) ?>">
+            <?php if ($state === 'done'): ?><span class="tick">✓</span><?php endif; ?>
+            <div class="ph"><?= e($phase) ?></div>
+            <div class="dt"><?= e($date) ?></div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    <?php else: ?>
+      <p class="muted">
+        Für dieses Wettbewerbsjahr sind noch keine Meilensteine hinterlegt.
+        <?php if (Auth::isManager()): ?>
+          Unter <a href="<?= url('cycles') ?>">Wettbewerbsjahre</a> lassen sich Meilensteine mit Datum oder Zeitraum eintragen.
+        <?php endif; ?>
+      </p>
+    <?php endif; ?>
   </div>
 </div>
 

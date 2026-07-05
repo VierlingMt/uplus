@@ -212,7 +212,68 @@ final class Migrator
                 'up'      => 'ALTER TABLE users
                     ADD COLUMN IF NOT EXISTS photo_path VARCHAR(255) NULL AFTER phone',
             ],
+            [
+                'version' => '2026_07_16_cycle_milestones',
+                'name'    => 'Konfigurierbare Meilensteine (Projektablauf) je Wettbewerbsjahr',
+                'up'      => [self::class, 'cycleMilestones'],
+            ],
         ];
+    }
+
+    /** Vorbelegung des Projektablaufs (bisher hartkodiert im Dashboard). */
+    public const SEED_MILESTONES = [
+        ['Kick-Off', 'Ende Feb', 'done'],
+        ['Teambuilding', 'Ende Mrz', 'done'],
+        ['Ideenfindung', 'ab April', 'done'],
+        ['Juryfeedback', 'KW21/Mai', 'done'],
+        ['Businessplan-Erstellung', '8 Wochen', 'done'],
+        ['Einsendeschluss', '01.07', 'active'],
+        ['Jury-Bewertung', 'Jul', 'active'],
+        ['Pitch Day', '15.07', 'upcoming'],
+        ['Project Closing', '22.07', 'upcoming'],
+    ];
+
+    /**
+     * Konfigurierbare Meilensteine (Projektablauf) je Wettbewerbsjahr einführen.
+     * Legt die Tabelle an und übernimmt die bislang im Dashboard hartkodierte
+     * Zeitleiste in den aktiven Zyklus, damit die Anzeige unverändert bleibt.
+     */
+    public static function cycleMilestones(PDO $pdo): void
+    {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS cycle_milestones (
+                id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                cycle_id     INT UNSIGNED NOT NULL,
+                label        VARCHAR(190) NOT NULL,
+                date_from    DATE NULL,
+                date_to      DATE NULL,
+                period_label VARCHAR(120) NULL,
+                status       ENUM('auto','done','active','upcoming') NOT NULL DEFAULT 'auto',
+                sort_order   INT NOT NULL DEFAULT 0,
+                created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_ms_cycle (cycle_id),
+                CONSTRAINT fk_ms_cycle FOREIGN KEY (cycle_id)
+                    REFERENCES competition_cycles(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+        // Bestehende Zeitleiste in den aktiven Zyklus überführen (nur, solange
+        // dort noch keine Meilensteine gepflegt sind).
+        $active = (int) ($pdo->query('SELECT id FROM competition_cycles WHERE is_active = 1 ORDER BY id DESC LIMIT 1')->fetchColumn() ?: 0);
+        if (!$active) {
+            return;
+        }
+        $has = (int) $pdo->query("SELECT COUNT(*) FROM cycle_milestones WHERE cycle_id = $active")->fetchColumn();
+        if ($has > 0) {
+            return;
+        }
+        $ins = $pdo->prepare(
+            'INSERT INTO cycle_milestones (cycle_id, label, period_label, status, sort_order) VALUES (?,?,?,?,?)'
+        );
+        foreach (self::SEED_MILESTONES as $i => [$label, $period, $state]) {
+            $ins->execute([$active, $label, $period, $state, ($i + 1) * 10]);
+        }
     }
 
     /**

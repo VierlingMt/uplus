@@ -61,6 +61,49 @@ if (is_post()) {
         redirect(url('cycles', ['cycle' => $id]));
     }
 
+    if ($action === 'milestone_delete') {
+        Database::run('DELETE FROM cycle_milestones WHERE id = ? AND cycle_id = ?', [(int) input('milestone_id', 0), $id]);
+        flash('success', 'Meilenstein gelöscht.');
+        redirect(url('cycles', ['cycle' => $id]));
+    }
+
+    if ($action === 'milestone_save') {
+        if (!Cycle::find($id)) {
+            flash('error', 'Wettbewerbsjahr nicht gefunden.');
+            redirect(url('cycles'));
+        }
+        $mid    = (int) input('milestone_id', 0);
+        $label  = trim((string) input('label'));
+        $from   = trim((string) input('date_from'));
+        $to     = trim((string) input('date_to'));
+        $period = trim((string) input('period_label'));
+        $status = (string) input('status', 'auto');
+        $sort   = (int) input('sort_order', 0);
+        if (!in_array($status, Cycle::MILESTONE_STATUS, true)) {
+            $status = 'auto';
+        }
+        if ($label === '') {
+            flash('error', 'Bitte einen Namen für den Meilenstein angeben.');
+            redirect(url('cycles', ['cycle' => $id]));
+        }
+        if ($mid > 0) {
+            Database::run(
+                'UPDATE cycle_milestones SET label=?, date_from=?, date_to=?, period_label=?, status=?, sort_order=?
+                 WHERE id=? AND cycle_id=?',
+                [$label, $from ?: null, $to ?: null, $period ?: null, $status, $sort, $mid, $id]
+            );
+            flash('success', 'Meilenstein aktualisiert.');
+        } else {
+            Database::insert(
+                'INSERT INTO cycle_milestones (cycle_id, label, date_from, date_to, period_label, status, sort_order)
+                 VALUES (?,?,?,?,?,?,?)',
+                [$id, $label, $from ?: null, $to ?: null, $period ?: null, $status, $sort]
+            );
+            flash('success', 'Meilenstein hinzugefügt.');
+        }
+        redirect(url('cycles', ['cycle' => $id]));
+    }
+
     // Anlegen / Bearbeiten eines Zyklus
     $year  = trim((string) input('year_label'));
     $title = trim((string) input('title'));
@@ -119,7 +162,20 @@ if ($sel) {
         $memberRole[(int) $r['user_id']] = $r['role_in_cycle'];
     }
     $selSchools = Cycle::schoolIds((int) $sel['id']);
+    $milestones = Cycle::milestones((int) $sel['id']);
 }
+
+$statusLabels = ['auto' => 'automatisch', 'done' => 'erledigt', 'active' => 'läuft', 'upcoming' => 'geplant'];
+
+$fillM = fn(array $m) => e(json_encode([
+    'milestone_id' => (int) $m['id'],
+    'label'        => $m['label'],
+    'date_from'    => $m['date_from'],
+    'date_to'      => $m['date_to'],
+    'period_label' => $m['period_label'],
+    'status'       => $m['status'],
+    'sort_order'   => (int) $m['sort_order'],
+], JSON_UNESCAPED_UNICODE));
 
 $fill = fn(array $c) => e(json_encode([
     'id' => (int) $c['id'], 'year_label' => $c['year_label'], 'title' => $c['title'],
@@ -242,6 +298,87 @@ ob_start(); ?>
         </div>
       </div>
       <div class="mt"><button class="btn btn--primary">Zuordnung speichern</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card__head" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+    <span>Projektablauf / Meilensteine für <strong><?= e($sel['year_label']) ?></strong></span>
+    <button type="button" class="btn btn--teal btn--sm" data-modal-open="milestoneModal">+ Meilenstein</button>
+  </div>
+  <div class="card__body">
+    <p class="muted" style="font-size:13px;margin-top:0">
+      Diese Meilensteine erscheinen als Zeitleiste „Projektablauf" auf dem Dashboard. Jeder Meilenstein
+      hat entweder ein konkretes Datum bzw. einen Zeitraum oder eine freie Zeitangabe (z. B. „8 Wochen").
+      Bei Status <em>automatisch</em> wird erledigt/läuft/geplant aus dem Datum abgeleitet.
+    </p>
+    <div class="table-wrap">
+      <table class="data data--cards">
+        <thead><tr><th>Reihenfolge</th><th>Meilenstein</th><th>Zeitpunkt / Zeitraum</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        <?php foreach ($milestones as $m): $miid = (int) $m['id']; ?>
+          <tr>
+            <td data-label="Reihenfolge"><?= (int) $m['sort_order'] ?></td>
+            <td data-label="Meilenstein"><strong><?= e($m['label']) ?></strong></td>
+            <td data-label="Zeitpunkt / Zeitraum"><?= e(Cycle::milestoneDateLabel($m)) ?: '<span class="muted">–</span>' ?></td>
+            <td data-label="Status"><?= e($statusLabels[$m['status']] ?? $m['status']) ?></td>
+            <td class="row-actions" style="white-space:nowrap;text-align:right">
+              <button type="button" class="btn btn--ghost btn--sm" data-modal-open="milestoneModal" data-edit data-fill="<?= $fillM($m) ?>">Bearbeiten</button>
+              <form method="post" action="<?= url('cycles') ?>" style="display:inline" data-confirm="Meilenstein „<?= e($m['label']) ?>“ löschen?">
+                <?= Csrf::field() ?>
+                <input type="hidden" name="action" value="milestone_delete">
+                <input type="hidden" name="id" value="<?= (int) $sel['id'] ?>">
+                <input type="hidden" name="milestone_id" value="<?= $miid ?>">
+                <button class="btn btn--danger btn--sm">Löschen</button>
+              </form>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+        <?php if (!$milestones): ?><tr><td colspan="5" class="muted">Noch keine Meilensteine – über „+ Meilenstein" hinzufügen.</td></tr><?php endif; ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="milestoneModal" hidden>
+  <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="milestoneModalTitle">
+    <div class="modal__head">
+      <h3 id="milestoneModalTitle" data-modal-title data-title-new="Neuer Meilenstein" data-title-edit="Meilenstein bearbeiten">Neuer Meilenstein</h3>
+      <button type="button" class="modal__close" data-modal-close aria-label="Schließen">&times;</button>
+    </div>
+    <form method="post" action="<?= url('cycles') ?>" class="modal__body" data-modal-form>
+      <?= Csrf::field() ?>
+      <input type="hidden" name="action" value="milestone_save">
+      <input type="hidden" name="id" value="<?= (int) $sel['id'] ?>">
+      <input type="hidden" name="milestone_id" value="0">
+      <div class="field"><label>Meilenstein *</label><input type="text" name="label" required placeholder="z. B. Einsendeschluss"></div>
+      <div class="grid cols-2">
+        <div class="field"><label>Von (Datum)</label><input type="date" name="date_from"></div>
+        <div class="field"><label>Bis (Datum, optional)</label><input type="date" name="date_to"></div>
+      </div>
+      <div class="field">
+        <label>Freie Zeitangabe (statt Datum)</label>
+        <input type="text" name="period_label" placeholder="z. B. „8 Wochen", „ab April", „KW21/Mai">
+        <span class="muted" style="font-size:12px">Wenn gesetzt, wird diese Angabe statt des Datums angezeigt.</span>
+      </div>
+      <div class="grid cols-2">
+        <div class="field">
+          <label>Status</label>
+          <select name="status">
+            <option value="auto">automatisch (aus Datum)</option>
+            <option value="done">erledigt</option>
+            <option value="active">läuft gerade</option>
+            <option value="upcoming">geplant</option>
+          </select>
+        </div>
+        <div class="field"><label>Reihenfolge</label><input type="number" name="sort_order" value="0" step="10"></div>
+      </div>
+      <div class="modal__foot">
+        <button type="button" class="btn btn--ghost" data-modal-close>Abbrechen</button>
+        <button class="btn btn--primary" data-label-new="Hinzufügen" data-label-edit="Speichern">Hinzufügen</button>
+      </div>
     </form>
   </div>
 </div>

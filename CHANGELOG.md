@@ -7,6 +7,23 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-07-05
+### Hinzugefügt
+- **Konfigurierbare Meilensteine (Projektablauf) je Wettbewerbsjahr:** Der bisher
+  fest hinterlegte Projektablauf auf dem Dashboard lässt sich nun unter
+  **Wettbewerbsjahre → (Jahr wählen)** frei pflegen. Je Meilenstein können ein
+  Name, ein **konkretes Datum oder ein Zeitraum** (Von/Bis) oder alternativ eine
+  **freie Zeitangabe** (z. B. „8 Wochen", „ab April") sowie die Reihenfolge
+  hinterlegt werden.
+- Der **Status** (erledigt / läuft / geplant) je Meilenstein kann fest gesetzt
+  oder auf **automatisch** gestellt werden – dann leitet ihn die App aus dem
+  Datum relativ zum heutigen Tag ab.
+
+### Geändert
+- Die Dashboard-Zeitleiste „Projektablauf" zeigt jetzt die Meilensteine des
+  **aktiven** Wettbewerbsjahres samt dessen Jahresbezeichnung; sind für ein Jahr
+  noch keine Meilensteine hinterlegt, erscheint ein Hinweis mit Link zur Pflege.
+
 ## [0.26.0] - 2026-07-05
 ### Geändert
 - **Mobile-First auch für die restlichen Tabellen:** „Bewertung & Ranking" und
