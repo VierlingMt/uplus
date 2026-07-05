@@ -7,6 +7,15 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-07-05
+### Behoben
+- **Bild-Zuschnitt: „Übernehmen" blieb wirkungslos.** Der Zoom-Slider wurde beim
+  Öffnen des Dialogs zu früh (vor dem `ready` des Croppers) angesteuert, was einen
+  Fehler auslöste und den Ergebnis-Handler nicht mehr registrieren ließ. Der Handler
+  wird jetzt vor der Cropper-Initialisierung gesetzt, der Zoom-Slider erst im
+  `ready`-Callback sinnvoll konfiguriert. „Zuschneiden/Zoomen/Drehen → Übernehmen"
+  speichert das Bild nun zuverlässig (real im Browser verifiziert).
+
 ## [0.22.0] - 2026-07-05
 ### Hinzugefügt
 - **PDF-Businesspläne im Modal ansehen**: Der Businessplan öffnet sich jetzt als

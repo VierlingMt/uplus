@@ -514,6 +514,10 @@
     modal.zoom.addEventListener('input', function () {
       if (modal.cropper) modal.cropper.zoomTo(parseFloat(modal.zoom.value));
     });
+    // Zoom über Buttons/Mausrad hält den Slider synchron.
+    modal.img.addEventListener('zoom', function (e) {
+      if (e && e.detail && typeof e.detail.ratio === 'number') modal.zoom.value = e.detail.ratio;
+    });
     q('cancel').addEventListener('click', closeModal);
     q('apply').addEventListener('click', function () {
       if (modal.onApply) modal.onApply();
@@ -536,27 +540,15 @@
 
   function openCropper(dataUrl, aspect, format, apply) {
     var m = buildModal();
-    m.onApply = null;
     m.el.hidden = false;
     document.body.classList.add('modal-open');
     m.img.src = dataUrl;
     if (m.cropper) { m.cropper.destroy(); m.cropper = null; }
-    m.cropper = new window.Cropper(m.img, {
-      viewMode: 1,
-      dragMode: 'move',
-      aspectRatio: aspect || NaN,
-      autoCropArea: 1,
-      background: false,
-      responsive: true,
-      zoomable: true,
-      ready: function () {
-        var d = m.cropper.getData();
-        m.zoom.value = 0; // Startwert; feinjustiert wird über zoom()
-      }
-    });
-    m.cropper.zoom(0); // Zoom-Slider synchron halten
-    m.zoom.oninput = function () { m.cropper.zoomTo(parseFloat(m.zoom.value)); };
+
+    // Ergebnis-Handler VOR dem Cropper festlegen – falls die Initialisierung
+    // ausnahmsweise scheitert, bleibt „Übernehmen" trotzdem funktionsfähig.
     m.onApply = function () {
+      if (!m.cropper) { closeModal(); return; }
       var canvas = m.cropper.getCroppedCanvas({
         maxWidth: 1400, maxHeight: 1400, imageSmoothingEnabled: true, imageSmoothingQuality: 'high'
       });
@@ -566,6 +558,25 @@
       apply(out);
       closeModal();
     };
+
+    m.cropper = new window.Cropper(m.img, {
+      viewMode: 1,
+      dragMode: 'move',
+      aspectRatio: aspect || NaN,
+      autoCropArea: 1,
+      background: false,
+      responsive: true,
+      zoomable: true,
+      // Zoom-Slider erst hier initialisieren – der Cropper ist jetzt bereit.
+      ready: function () {
+        var d = m.cropper.getImageData();
+        var base = d && d.naturalWidth ? d.width / d.naturalWidth : 1;
+        m.zoom.min = (base * 0.5).toFixed(4);
+        m.zoom.max = (base * 3).toFixed(4);
+        m.zoom.step = (base / 50 || 0.01).toFixed(4);
+        m.zoom.value = base;
+      }
+    });
   }
 
   function wire(drop) {
