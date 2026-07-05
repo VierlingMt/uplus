@@ -7,6 +7,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-07-05
+### Hinzugefügt
+- **Material & Vorlagen: Einträge bearbeitbar.** Downloads & Links lassen sich jetzt über
+  ein Modal **bearbeiten** (Titel, Beschreibung, Link, Sichtbarkeit) – nicht mehr nur
+  anlegen und löschen. Eine hinterlegte Datei kann ersetzt oder entfernt werden; ohne
+  neue Datei bleibt die bestehende erhalten. Anlegen und Bearbeiten laufen über dasselbe
+  Formular-Fenster (wie bei Schulen, Teams etc.).
+
 ## [0.28.0] - 2026-07-05
 ### Hinzugefügt
 - **Material & Vorlagen: editierbarer Eingangstext (Markdown).** Über der Download-Liste

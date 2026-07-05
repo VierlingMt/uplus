@@ -49,10 +49,13 @@ if (is_post()) {
         redirect(url('materials'));
     }
 
+    // Anlegen oder Bearbeiten (id > 0 = Bearbeiten).
+    $id    = (int) input('id', 0);
     $title = trim((string) input('title'));
     $desc  = trim((string) input('description'));
     $link  = trim((string) input('link_url'));
     $vis   = (string) input('visibility', 'all');
+    $removeFile = (bool) input('remove_file');
     if (!in_array($vis, ['all','teacher','juror','admin'], true)) { $vis = 'all'; }
     if ($title === '') { flash('error', 'Titel erforderlich.'); redirect(url('materials')); }
 
@@ -70,6 +73,28 @@ if (is_post()) {
             flash('error', 'Upload fehlgeschlagen.'); redirect(url('materials'));
         }
         $origName = $f['name'];
+    }
+
+    if ($id > 0) {
+        $m = Database::one('SELECT * FROM materials WHERE id = ?', [$id]);
+        if (!$m) { flash('error', 'Material nicht gefunden.'); redirect(url('materials')); }
+
+        // Dateizustand bestimmen: neue Datei ersetzt die alte; „entfernen" löscht sie.
+        $keepStored = $m['stored_name']; $keepOrig = $m['original_name'];
+        if ($storedName) {
+            if ($m['stored_name']) { @unlink(UPLOAD_PATH . '/materials/' . $m['stored_name']); }
+            $keepStored = $storedName; $keepOrig = $origName;
+        } elseif ($removeFile && $m['stored_name']) {
+            @unlink(UPLOAD_PATH . '/materials/' . $m['stored_name']);
+            $keepStored = null; $keepOrig = null;
+        }
+
+        Database::run(
+            'UPDATE materials SET title=?, description=?, original_name=?, stored_name=?, link_url=?, visibility=? WHERE id=?',
+            [$title, $desc ?: null, $keepOrig, $keepStored, $link ?: null, $vis, $id]
+        );
+        flash('success', 'Material aktualisiert.');
+        redirect(url('materials'));
     }
 
     Database::run(
@@ -95,8 +120,20 @@ $ytId = function (?string $u): ?string {
 
 $intro = (string) Settings::get('materials_intro', '');
 
+// Daten zum Vorbefüllen des Bearbeiten-Modals.
+$fill = fn(array $m) => e(json_encode([
+    'id'          => (int) $m['id'],
+    'title'       => $m['title'],
+    'description' => $m['description'],
+    'link_url'    => $m['link_url'],
+    'visibility'  => $m['visibility'],
+], JSON_UNESCAPED_UNICODE));
+
 ob_start(); ?>
-<div class="page-head"><h1>Material &amp; Vorlagen</h1></div>
+<div class="page-head">
+  <h1>Material &amp; Vorlagen</h1>
+  <?php if ($isAdmin): ?><button type="button" class="btn btn--teal" data-modal-open="materialModal">+ Neu</button><?php endif; ?>
+</div>
 
 <?php if (trim($intro) !== ''): ?>
   <div class="card mb"><div class="card__body materials-intro"><?= render_markdown($intro) ?></div></div>
@@ -146,7 +183,7 @@ if ($video): ?>
   </div>
 <?php endif; ?>
 
-<div class="grid <?= $isAdmin ? 'cols-2' : 'cols-1' ?>">
+<div class="grid cols-1">
   <div class="card">
     <div class="card__head">Downloads &amp; Links</div>
     <div class="table-wrap">
@@ -176,7 +213,8 @@ if ($video): ?>
                 <a class="btn btn--ghost btn--sm" href="<?= e($m['link_url']) ?>" target="_blank" rel="noopener">Öffnen ↗</a>
               <?php endif; ?>
               <?php if ($isAdmin): ?>
-                <form method="post" action="<?= url('materials') ?>" style="display:inline" data-confirm="Löschen?">
+                <button type="button" class="btn btn--ghost btn--sm" data-modal-open="materialModal" data-fill="<?= $fill($m) ?>" data-file="<?= e((string) ($m['original_name'] ?? '')) ?>">Bearbeiten</button>
+                <form method="post" action="<?= url('materials') ?>" style="display:inline" data-confirm="„<?= e($m['title']) ?>“ wirklich löschen?">
                   <?= Csrf::field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int) $m['id'] ?>">
                   <button class="btn btn--danger btn--sm">Löschen</button>
                 </form>
@@ -190,30 +228,67 @@ if ($video): ?>
     </div>
   </div>
 
-  <?php if ($isAdmin): ?>
-  <div class="card">
-    <div class="card__head">Material hinzufügen</div>
-    <div class="card__body">
-      <form method="post" action="<?= url('materials') ?>" enctype="multipart/form-data">
-        <?= Csrf::field() ?>
-        <div class="field"><label>Titel *</label><input type="text" name="title" required></div>
-        <div class="field"><label>Beschreibung</label><textarea name="description" rows="2"></textarea></div>
-        <div class="field"><label>Datei (PDF/DOCX …)</label><input type="file" name="file"></div>
-        <div class="field"><label>… oder Link (z. B. YouTube)</label><input type="text" name="link_url" placeholder="https://…"></div>
-        <div class="field"><label>Sichtbar für</label>
-          <select name="visibility">
-            <option value="all">Alle</option>
-            <option value="teacher">Lehrkräfte</option>
-            <option value="juror">Jury</option>
-            <option value="admin">Nur Leitung (Admin &amp; Projektleitung)</option>
-          </select>
-        </div>
-        <button class="btn btn--primary">Hinzufügen</button>
-      </form>
-    </div>
-  </div>
-  <?php endif; ?>
 </div>
+
+<?php if ($isAdmin): ?>
+<div class="modal-overlay" id="materialModal" hidden>
+  <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="materialModalTitle">
+    <div class="modal__head">
+      <h3 id="materialModalTitle" data-modal-title data-title-new="Material hinzufügen" data-title-edit="Material bearbeiten">Material hinzufügen</h3>
+      <button type="button" class="modal__close" data-modal-close aria-label="Schließen">&times;</button>
+    </div>
+    <form method="post" action="<?= url('materials') ?>" enctype="multipart/form-data" class="modal__body" data-modal-form>
+      <?= Csrf::field() ?>
+      <input type="hidden" name="id" value="0">
+      <div class="field"><label>Titel *</label><input type="text" name="title" required></div>
+      <div class="field"><label>Beschreibung</label><textarea name="description" rows="2"></textarea></div>
+      <div class="field">
+        <label>Datei (PDF/DOCX …)</label>
+        <input type="file" name="file">
+        <p class="muted" data-material-file-hint hidden style="font-size:13px;margin:6px 0 0">
+          Aktuelle Datei: <strong data-material-file-name></strong> – bleibt erhalten, sofern keine neue gewählt wird.
+          <label style="display:inline-flex;align-items:center;gap:6px;margin-left:8px;font-weight:400">
+            <input type="checkbox" name="remove_file" value="1"> Datei entfernen
+          </label>
+        </p>
+      </div>
+      <div class="field"><label>… oder Link (z. B. YouTube)</label><input type="text" name="link_url" placeholder="https://…"></div>
+      <div class="field"><label>Sichtbar für</label>
+        <select name="visibility">
+          <option value="all">Alle</option>
+          <option value="teacher">Lehrkräfte</option>
+          <option value="juror">Jury</option>
+          <option value="admin">Nur Leitung (Admin &amp; Projektleitung)</option>
+        </select>
+      </div>
+      <div class="modal__foot">
+        <button type="button" class="btn btn--ghost" data-modal-close>Abbrechen</button>
+        <button class="btn btn--primary" data-label-new="Hinzufügen" data-label-edit="Speichern">Hinzufügen</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+// Beim Öffnen des Modals: bei „Bearbeiten" die aktuelle Datei anzeigen, bei „Neu" ausblenden.
+document.addEventListener('click', function (e) {
+  var opener = e.target.closest('[data-modal-open="materialModal"]');
+  if (!opener) return;
+  var modal = document.getElementById('materialModal');
+  var hint = modal.querySelector('[data-material-file-hint]');
+  var nameEl = modal.querySelector('[data-material-file-name]');
+  var file = opener.getAttribute('data-file') || '';
+  var isEdit = opener.hasAttribute('data-fill');
+  if (isEdit && file) {
+    nameEl.textContent = file;
+    hint.hidden = false;
+  } else {
+    hint.hidden = true;
+  }
+  var chk = modal.querySelector('[name="remove_file"]');
+  if (chk) chk.checked = false;
+}, true);
+</script>
+<?php endif; ?>
 <?php
 $content = ob_get_clean();
 $title = 'Material & Vorlagen';
