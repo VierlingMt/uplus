@@ -7,6 +7,15 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-07-05
+### Hinzugefügt
+- **Teams und Businesspläne wechselseitig verlinkt:** In der Team-Verwaltung öffnet
+  der Businessplan-Eintrag (Liste wie Detailansicht) direkt das PDF; die Detailansicht
+  verlinkt zusätzlich per „Zum Businessplan →" auf die Plan-Seite. Umgekehrt führt die
+  Team-Karte des Businessplans über „👥 Team verwalten" zurück in die Team-/Mitglieder-
+  Verwaltung (nur für Verwaltung bzw. Lehrkraft der eigenen Schule – die Jury sieht den
+  Link nicht). Zusätzlich wird dort die Mitgliederzahl angezeigt.
+
 ## [0.30.0] - 2026-07-05
 ### Hinzugefügt
 - **Teammitglieder aus den Businessplänen importiert:** Die in den eingereichten

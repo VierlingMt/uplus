@@ -76,11 +76,14 @@ if (is_post()) {
 }
 
 // Detail-/Bearbeiten-Ansicht
-$edit = null; $students = [];
+$edit = null; $students = []; $editPlan = null;
 if ($eid = (int) input('edit', 0)) {
     $edit = Database::one('SELECT * FROM teams WHERE id = ?', [$eid]);
     if ($edit && !$canAccessTeam($edit)) { $edit = null; }
-    if ($edit) { $students = Database::all('SELECT * FROM students WHERE team_id = ? ORDER BY name', [$eid]); }
+    if ($edit) {
+        $students = Database::all('SELECT * FROM students WHERE team_id = ? ORDER BY name', [$eid]);
+        $editPlan = Database::one('SELECT * FROM business_plans WHERE team_id = ? AND is_current = 1', [$eid]);
+    }
 }
 
 $schools = Database::all('SELECT id, name FROM schools ORDER BY name');
@@ -88,7 +91,7 @@ $where = $isAdmin ? '' : 'WHERE t.school_id = ' . (int) $mySchool;
 $teams = Database::all(
     "SELECT t.*, s.name AS school_name,
             (SELECT COUNT(*) FROM students st WHERE st.team_id = t.id) AS members,
-            (SELECT COUNT(*) FROM business_plans bp WHERE bp.team_id = t.id AND bp.is_current=1) AS has_plan
+            (SELECT bp.id FROM business_plans bp WHERE bp.team_id = t.id AND bp.is_current=1 LIMIT 1) AS bp_id
      FROM teams t JOIN schools s ON s.id = t.school_id $where ORDER BY s.name, t.name"
 );
 $statusList = ['draft'=>'In Arbeit','submitted'=>'Eingereicht','nominated'=>'Pitch nominiert','fallback'=>'Nachrücker','eliminated'=>'Ausgeschieden'];
@@ -119,8 +122,22 @@ ob_start(); ?>
           <?php endif; ?>
         </p>
         <?php if ($edit['idea_name']): ?><div class="field" style="margin-bottom:12px"><label>Geschäftsidee</label><div><?= e($edit['idea_name']) ?></div></div><?php endif; ?>
-        <?php if ($edit['idea_pitch']): ?><div class="field" style="margin:0"><label>Kurzbeschreibung</label><div class="muted"><?= nl2br(e($edit['idea_pitch'])) ?></div></div><?php endif; ?>
-        <?php if (!$edit['idea_name'] && !$edit['idea_pitch']): ?><p class="muted" style="margin:0">Noch keine Geschäftsidee hinterlegt – über „Bearbeiten“ ergänzen.</p><?php endif; ?>
+        <?php if ($edit['idea_pitch']): ?><div class="field" style="margin-bottom:12px"><label>Kurzbeschreibung</label><div class="muted"><?= nl2br(e($edit['idea_pitch'])) ?></div></div><?php endif; ?>
+        <?php if (!$edit['idea_name'] && !$edit['idea_pitch']): ?><p class="muted" style="margin:0 0 12px">Noch keine Geschäftsidee hinterlegt – über „Bearbeiten“ ergänzen.</p><?php endif; ?>
+        <div class="field" style="margin:0">
+          <label>Businessplan</label>
+          <?php if ($editPlan): ?>
+            <div>
+              <a class="pdf-link" href="<?= url('bp_download', ['id' => $editPlan['id']]) ?>"
+                 data-pdf-url="<?= url('bp_download', ['id' => $editPlan['id']]) ?>"
+                 data-pdf-title="<?= e($edit['name'] . ($edit['idea_name'] ? ' – ' . $edit['idea_name'] : '')) ?>"
+                 title="Businessplan-PDF ansehen"><span class="pill teal">Version <?= (int) $editPlan['version'] ?></span> PDF ansehen</a>
+              <a href="<?= url('plans', ['team' => (int) $edit['id']]) ?>" class="btn btn--ghost btn--sm" style="margin-left:6px">Zum Businessplan →</a>
+            </div>
+          <?php else: ?>
+            <div class="muted">Noch kein Businessplan eingereicht. <a href="<?= url('plans', ['team' => (int) $edit['id']]) ?>">Jetzt hochladen →</a></div>
+          <?php endif; ?>
+        </div>
       </div>
     </div>
     <div class="card">
@@ -161,7 +178,14 @@ ob_start(); ?>
             <td data-label="Team"><strong><?= e($t['name']) ?></strong><?php if ($t['idea_name']): ?><br><span class="muted" style="font-size:13px"><?= e($t['idea_name']) ?></span><?php endif; ?></td>
             <?php if ($isAdmin): ?><td data-label="Schule"><?= e($t['school_name']) ?></td><?php endif; ?>
             <td data-label="Mitglieder"><?= (int) $t['members'] ?></td>
-            <td data-label="Businessplan"><?= $t['has_plan'] ? '<span class="pill teal">vorhanden</span>' : '<span class="pill muted">—</span>' ?></td>
+            <td data-label="Businessplan">
+              <?php if ($t['bp_id']): ?>
+                <a class="pdf-link" href="<?= url('bp_download', ['id' => $t['bp_id']]) ?>"
+                   data-pdf-url="<?= url('bp_download', ['id' => $t['bp_id']]) ?>"
+                   data-pdf-title="<?= e($t['name'] . ($t['idea_name'] ? ' – ' . $t['idea_name'] : '')) ?>"
+                   title="Businessplan-PDF ansehen"><span class="pill teal">vorhanden</span></a>
+              <?php else: ?><span class="pill muted">—</span><?php endif; ?>
+            </td>
             <td data-label="Status"><span class="pill <?= $sc ?>"><?= e($sl) ?></span></td>
             <td class="row-actions" style="white-space:nowrap;text-align:right">
               <a href="<?= url('teams', ['edit' => $t['id']]) ?>" class="btn btn--ghost btn--sm" title="Team öffnen: Mitglieder verwalten">👥 Mitglieder</a>

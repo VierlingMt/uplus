@@ -27,12 +27,19 @@ ob_start(); ?>
 
 <div class="grid cols-2">
   <div class="card">
-    <div class="card__head">Team</div>
+    <div class="card__head" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <span>Team</span>
+      <?php $canManageTeam = $isAdmin || ($isTeacher && (int) $team['school_id'] === $mySchool); ?>
+      <?php if ($canManageTeam): ?>
+        <a href="<?= url('teams', ['edit' => (int) $team['id']]) ?>" class="btn btn--ghost btn--sm" title="Team &amp; Mitglieder verwalten">👥 Team verwalten</a>
+      <?php endif; ?>
+    </div>
     <div class="card__body">
       <p><strong>Schule:</strong> <?= e($team['school_name']) ?></p>
       <?php if ($team['idea_name']): ?><p><strong>Idee:</strong> <?= e($team['idea_name']) ?></p><?php endif; ?>
       <?php if ($team['idea_pitch']): ?><p class="muted"><?= nl2br(e($team['idea_pitch'])) ?></p><?php endif; ?>
-      <?php if ($members): ?><p><strong>Mitglieder:</strong> <?= e(implode(', ', array_column($members, 'name'))) ?></p><?php endif; ?>
+      <?php if ($members): ?><p><strong>Mitglieder (<?= count($members) ?>):</strong> <?= e(implode(', ', array_column($members, 'name'))) ?></p>
+      <?php else: ?><p class="muted">Noch keine Teammitglieder hinterlegt.<?= $canManageTeam ? ' <a href="' . url('teams', ['edit' => (int) $team['id']]) . '">Ergänzen →</a>' : '' ?></p><?php endif; ?>
     </div>
   </div>
 
