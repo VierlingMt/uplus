@@ -385,10 +385,11 @@
 
   async function runBulk(btn) {
     var type = btn.dataset.bulk, url = btn.dataset.url, csrf = btn.dataset.csrf;
+    var scope = btn.dataset.scope || 'pending';
     btn.disabled = true;
     var list;
     try {
-      var resp = await post(url, { _csrf: csrf, action: 'bulk_list', type: type });
+      var resp = await post(url, { _csrf: csrf, action: 'bulk_list', type: type, scope: scope });
       list = resp.items || [];
     } catch (e) { alert('Konnte Liste nicht laden.'); btn.disabled = false; return; }
     if (!list.length) { alert('Keine offenen Pläne.'); btn.disabled = false; return; }

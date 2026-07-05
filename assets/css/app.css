@@ -156,8 +156,8 @@ img { max-width: 100%; }
 .btn--ghost:hover { border-color: var(--wj-blue); }
 .btn--danger { background: var(--wj-red); color: #fff; }
 .btn--sm { padding: 6px 12px; font-size: 13px; }
+.btn:disabled { cursor: not-allowed; opacity: .5; }
 .btn.is-loading { cursor: progress; opacity: .92; }
-.btn:disabled { cursor: progress; }
 .spinner {
   display: inline-block; width: 14px; height: 14px;
   border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%;

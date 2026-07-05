@@ -7,6 +7,17 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-07-05
+### Behoben
+- Deaktivierte Buttons zeigten einen „Lade"-Cursor (wirkte wie hängender Spinner);
+  jetzt korrekt „nicht verfügbar". Der Bulk-Button war bei 0 offenen Plänen deaktiviert,
+  sodass sich nach der Kalibrierung nichts neu prüfen ließ.
+
+### Hinzugefügt
+- Je Bulk-Aktion (Struktur-Check, KI-Vorbewertung) nun zwei Optionen: **„offene (N)"**
+  und **„alle neu (Gesamt)"** — Letzteres prüft/bewertet alle Pläne erneut (z. B. nach
+  einer Schwellwert-Kalibrierung). Der Fortschritts-Dialog bleibt über **„Abbrechen"** stoppbar.
+
 ## [0.20.0] - 2026-07-05
 ### Geändert
 - **Zuordnung im Wettbewerbsjahr:** In der Projektleitungs-Auswahl werden nur noch

@@ -31,9 +31,11 @@ if (is_post()) {
             : "NOT EXISTS (SELECT 1 FROM structure_checks x WHERE x.business_plan_id=bp.id AND x.status='done')";
 
         if ($action === 'bulk_list') {
+            // scope=all -> alle aktuellen Pläne (Neu-Prüfung), sonst nur offene
+            $filter = input('scope') === 'all' ? '1=1' : $notExists;
             $rows = Database::all(
                 "SELECT bp.id, t.name FROM business_plans bp JOIN teams t ON t.id=bp.team_id
-                 WHERE bp.is_current=1 AND $notExists ORDER BY t.name"
+                 WHERE bp.is_current=1 AND $filter ORDER BY t.name"
             );
             echo json_encode(['items' => $rows], JSON_UNESCAPED_UNICODE);
             exit;
@@ -178,22 +180,31 @@ $pendStruct = $isAdmin ? (int) Database::value(
 $pendAi = $isAdmin ? (int) Database::value(
     "SELECT COUNT(*) FROM business_plans bp WHERE bp.is_current=1
        AND NOT EXISTS (SELECT 1 FROM ai_evaluations ai WHERE ai.business_plan_id=bp.id AND ai.status='done')") : 0;
+$totalPlans = $isAdmin ? (int) Database::value('SELECT COUNT(*) FROM business_plans WHERE is_current=1') : 0;
 
 ob_start(); ?>
 <div class="page-head">
   <h1>Businesspläne</h1>
   <?php if ($isAdmin): ?>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button type="button" class="btn btn--ghost btn--sm no-spinner" data-bulk="structure"
-              data-url="<?= url('plans') ?>" data-csrf="<?= e(Csrf::token()) ?>"
-              data-title="Struktur-Check" <?= $pendStruct ? '' : 'disabled' ?>>
-        Struktur-Check: alle offenen (<?= $pendStruct ?>)
-      </button>
-      <button type="button" class="btn btn--teal btn--sm no-spinner" data-bulk="ai"
-              data-url="<?= url('plans') ?>" data-csrf="<?= e(Csrf::token()) ?>"
-              data-title="KI-Vorbewertung" <?= $pendAi ? '' : 'disabled' ?>>
-        KI-Vorbewertung: alle offenen (<?= $pendAi ?>)
-      </button>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="muted" style="font-size:13px">Struktur-Check:</span>
+        <button type="button" class="btn btn--ghost btn--sm no-spinner" data-bulk="structure" data-scope="pending"
+                data-url="<?= url('plans') ?>" data-csrf="<?= e(Csrf::token()) ?>" data-title="Struktur-Check (offene)"
+                <?= $pendStruct ? '' : 'disabled' ?>>offene (<?= $pendStruct ?>)</button>
+        <button type="button" class="btn btn--ghost btn--sm no-spinner" data-bulk="structure" data-scope="all"
+                data-url="<?= url('plans') ?>" data-csrf="<?= e(Csrf::token()) ?>" data-title="Struktur-Check (alle neu)"
+                <?= $totalPlans ? '' : 'disabled' ?>>alle neu (<?= $totalPlans ?>)</button>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="muted" style="font-size:13px">KI-Vorbewertung:</span>
+        <button type="button" class="btn btn--teal btn--sm no-spinner" data-bulk="ai" data-scope="pending"
+                data-url="<?= url('plans') ?>" data-csrf="<?= e(Csrf::token()) ?>" data-title="KI-Vorbewertung (offene)"
+                <?= $pendAi ? '' : 'disabled' ?>>offene (<?= $pendAi ?>)</button>
+        <button type="button" class="btn btn--teal btn--sm no-spinner" data-bulk="ai" data-scope="all"
+                data-url="<?= url('plans') ?>" data-csrf="<?= e(Csrf::token()) ?>" data-title="KI-Vorbewertung (alle neu)"
+                <?= $totalPlans ? '' : 'disabled' ?>>alle neu (<?= $totalPlans ?>)</button>
+      </div>
     </div>
   <?php endif; ?>
 </div>
