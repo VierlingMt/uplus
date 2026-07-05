@@ -36,6 +36,29 @@ if (is_post()) {
         if (input('clear_seven_key')) { Settings::set('seven_api_key', ''); }
         Settings::set('sms_from', trim((string) input('sms_from')) ?: 'UPlus');
         flash('success', 'Anmeldungs- & Zustellungs-Einstellungen gespeichert.');
+    } elseif ($section === 'testmail') {
+        $to = strtolower(trim((string) input('test_to')));
+        if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            flash('error', 'Bitte eine gültige Ziel-E-Mail-Adresse angeben.');
+        } else {
+            $when = date('d.m.Y H:i');
+            $text = "Dies ist eine Test-Mail von Unternehmen Plus.\n\n"
+                  . "Wenn du diese Nachricht liest, funktioniert der E-Mail-Versand.\n\n"
+                  . "Gesendet: {$when} Uhr\n";
+            $html = Mailer::brandedHtml(
+                'Test-Mail',
+                'Dies ist eine <strong>Test-Mail</strong> von Unternehmen Plus.<br><br>'
+                . 'Wenn du diese Nachricht siehst, funktioniert der Versand – ideal, um die '
+                . 'Zustellbarkeit (SPF/DKIM/DMARC) z. B. über mail-tester.com zu prüfen.',
+                null,
+                null,
+                'Gesendet am ' . $when . ' Uhr.'
+            );
+            $ok = Mailer::send($to, 'Test-Mail – Unternehmen Plus', $text, $html);
+            flash($ok ? 'success' : 'error', $ok
+                ? 'Test-Mail an ' . $to . ' übergeben. Bitte Postfach (und Spam) prüfen.'
+                : 'Test-Mail konnte nicht gesendet werden – siehe Server-Log.');
+        }
     }
     redirect(url('admin'));
 }
@@ -188,6 +211,20 @@ ob_start(); ?>
           <label style="font-weight:400;font-size:13px"><input type="checkbox" name="clear_seven_key" value="1"> gespeicherten seven.io-Key entfernen</label>
         <?php endif; ?>
         <div class="mt"><button class="btn btn--primary">Speichern</button></div>
+      </form>
+
+      <hr style="margin:18px 0;border:none;border-top:1px solid var(--line)">
+
+      <form method="post" action="<?= url('admin') ?>">
+        <?= Csrf::field() ?><input type="hidden" name="section" value="testmail">
+        <label>Test-Mail senden</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="email" name="test_to" value="<?= e((string) (Auth::user()['email'] ?? '')) ?>"
+                 placeholder="ziel@adresse.de" style="flex:1;min-width:220px">
+          <button class="btn btn--teal">Senden</button>
+        </div>
+        <div class="help">Verschickt eine gestaltete Test-Mail über den aktuellen Absender – praktisch
+          zum Prüfen der Zustellbarkeit (z. B. die Adresse von mail-tester.com eintragen).</div>
       </form>
     </div>
   </div>
