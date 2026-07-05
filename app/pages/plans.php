@@ -18,6 +18,38 @@ if (is_post()) {
     Csrf::check();
     $action = (string) input('action');
 
+    // --- JSON-Endpunkte für die schrittweise Bulk-Verarbeitung (Fortschrittsbalken) ---
+    if ($action === 'bulk_list' || $action === 'process_one') {
+        Auth::require('admin');
+        header('Content-Type: application/json; charset=utf-8');
+        $type = input('type') === 'ai' ? 'ai' : 'structure';
+        $notExists = $type === 'ai'
+            ? "NOT EXISTS (SELECT 1 FROM ai_evaluations x WHERE x.business_plan_id=bp.id AND x.status='done')"
+            : "NOT EXISTS (SELECT 1 FROM structure_checks x WHERE x.business_plan_id=bp.id AND x.status='done')";
+
+        if ($action === 'bulk_list') {
+            $rows = Database::all(
+                "SELECT bp.id, t.name FROM business_plans bp JOIN teams t ON t.id=bp.team_id
+                 WHERE bp.is_current=1 AND $notExists ORDER BY t.name"
+            );
+            echo json_encode(['items' => $rows], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // process_one
+        @set_time_limit(180);
+        $bpId = (int) input('bp_id');
+        $name = Database::value('SELECT t.name FROM business_plans bp JOIN teams t ON t.id=bp.team_id WHERE bp.id=?', [$bpId]);
+        $res = $type === 'ai' ? AiEval::run($bpId) : AiEval::runStructureCheck($bpId);
+        echo json_encode([
+            'ok'    => (bool) $res['ok'],
+            'name'  => $name,
+            'below' => ($type === 'structure' && $res['ok'] && (int) ($res['meets_minimum'] ?? 1) === 0),
+            'error' => $res['ok'] ? null : ($res['error'] ?? 'Fehler'),
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     if ($action === 'upload') {
         $tid = (int) input('team_id');
         $team = Database::one('SELECT * FROM teams WHERE id = ?', [$tid]);
@@ -181,14 +213,16 @@ ob_start(); ?>
   <h1>Businesspläne</h1>
   <?php if ($isAdmin): ?>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <form method="post" action="<?= url('plans') ?>" data-confirm="Struktur-Check für <?= $pendStruct ?> offene Pläne starten? Das kann etwas dauern.">
-        <?= Csrf::field() ?><input type="hidden" name="action" value="bulk_structure">
-        <button class="btn btn--ghost btn--sm" data-loading="Prüfe alle …" <?= $pendStruct ? '' : 'disabled' ?>>Struktur-Check: alle offenen (<?= $pendStruct ?>)</button>
-      </form>
-      <form method="post" action="<?= url('plans') ?>" data-confirm="KI-Vorbewertung für <?= $pendAi ?> offene Pläne starten? Das kann einige Minuten dauern und verursacht API-Kosten.">
-        <?= Csrf::field() ?><input type="hidden" name="action" value="bulk_ai">
-        <button class="btn btn--teal btn--sm" data-loading="Bewerte alle …" <?= $pendAi ? '' : 'disabled' ?>>KI-Vorbewertung: alle offenen (<?= $pendAi ?>)</button>
-      </form>
+      <button type="button" class="btn btn--ghost btn--sm no-spinner" data-bulk="structure"
+              data-url="<?= url('plans') ?>" data-csrf="<?= e(Csrf::token()) ?>"
+              data-title="Struktur-Check" <?= $pendStruct ? '' : 'disabled' ?>>
+        Struktur-Check: alle offenen (<?= $pendStruct ?>)
+      </button>
+      <button type="button" class="btn btn--teal btn--sm no-spinner" data-bulk="ai"
+              data-url="<?= url('plans') ?>" data-csrf="<?= e(Csrf::token()) ?>"
+              data-title="KI-Vorbewertung" <?= $pendAi ? '' : 'disabled' ?>>
+        KI-Vorbewertung: alle offenen (<?= $pendAi ?>)
+      </button>
     </div>
   <?php endif; ?>
 </div>

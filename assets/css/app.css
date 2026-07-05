@@ -106,6 +106,14 @@ img { max-width: 100%; }
 }
 @keyframes uplus-spin { to { transform: rotate(360deg); } }
 
+/* ---------- Modal + Progress ---------- */
+.modal-overlay { position: fixed; inset: 0; background: rgba(4,26,64,.55); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+.modal { background: #fff; border-radius: 14px; box-shadow: var(--shadow-lg); padding: 24px; width: 100%; max-width: 460px; }
+.modal h3 { margin: 0 0 14px; font-family: "Chivo", sans-serif; }
+.progress { height: 12px; background: var(--wj-grey-l); border-radius: 20px; overflow: hidden; }
+.progress__bar { height: 100%; background: var(--wj-teal); width: 0; transition: width .25s ease; }
+.progress__label { margin: 10px 0 0; font-size: 14px; }
+
 /* ---------- Forms ---------- */
 label { display: block; font-family: "Chivo",sans-serif; font-weight: 700; font-size: 13px; margin-bottom: 6px; color: #33404e; }
 input[type=text], input[type=email], input[type=password], input[type=number], select, textarea {

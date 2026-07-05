@@ -165,5 +165,82 @@
   }
 
   document.querySelectorAll('table.data').forEach(enhanceTable);
+
+  // ---------------------------------------------------------------------------
+  // Bulk-Verarbeitung mit Fortschrittsbalken (Struktur-Check / KI-Vorbewertung)
+  // ---------------------------------------------------------------------------
+  function post(url, data) {
+    var body = new URLSearchParams(data);
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      credentials: 'same-origin',
+      body: body.toString()
+    }).then(function (r) { return r.json(); });
+  }
+
+  function progressModal(title) {
+    var ov = document.createElement('div');
+    ov.className = 'modal-overlay';
+    ov.innerHTML =
+      '<div class="modal"><h3>' + title + '</h3>' +
+      '<div class="progress"><div class="progress__bar" style="width:0%"></div></div>' +
+      '<p class="progress__label muted">Starte …</p>' +
+      '<div class="progress__foot" style="display:none"></div>' +
+      '<div style="text-align:right;margin-top:14px"><button class="btn btn--ghost btn--sm" data-close>Abbrechen</button></div></div>';
+    document.body.appendChild(ov);
+    var bar = ov.querySelector('.progress__bar');
+    var label = ov.querySelector('.progress__label');
+    var foot = ov.querySelector('.progress__foot');
+    var closeBtn = ov.querySelector('[data-close]');
+    var cancelled = false;
+    closeBtn.addEventListener('click', function () { cancelled = true; ov.remove(); });
+    return {
+      set: function (done, total, name) {
+        bar.style.width = Math.round((done / total) * 100) + '%';
+        label.textContent = 'Plan ' + done + ' von ' + total + (name ? ': ' + name : '');
+      },
+      finish: function (msg) {
+        bar.style.width = '100%';
+        label.textContent = 'Fertig.';
+        foot.style.display = '';
+        foot.innerHTML = '<div class="flash success">' + msg + '</div>';
+        closeBtn.textContent = 'Schließen & aktualisieren';
+        closeBtn.className = 'btn btn--primary btn--sm';
+        closeBtn.addEventListener('click', function () { location.reload(); });
+      },
+      cancelled: function () { return cancelled; }
+    };
+  }
+
+  async function runBulk(btn) {
+    var type = btn.dataset.bulk, url = btn.dataset.url, csrf = btn.dataset.csrf;
+    btn.disabled = true;
+    var list;
+    try {
+      var resp = await post(url, { _csrf: csrf, action: 'bulk_list', type: type });
+      list = resp.items || [];
+    } catch (e) { alert('Konnte Liste nicht laden.'); btn.disabled = false; return; }
+    if (!list.length) { alert('Keine offenen Pläne.'); btn.disabled = false; return; }
+
+    var m = progressModal(btn.dataset.title || 'Verarbeitung');
+    var below = 0, err = 0, done = 0;
+    for (var i = 0; i < list.length; i++) {
+      if (m.cancelled()) { btn.disabled = false; return; }
+      m.set(i + 1, list.length, list[i].name);
+      try {
+        var r = await post(url, { _csrf: csrf, action: 'process_one', type: type, bp_id: list[i].id });
+        done++;
+        if (r.below) below++;
+        if (!r.ok) err++;
+      } catch (e) { err++; }
+    }
+    m.finish(done + ' verarbeitet' + (below ? ', davon ' + below + ' unter Mindeststandard' : '') + (err ? ', ' + err + ' Fehler' : '') + '.');
+  }
+
+  document.querySelectorAll('[data-bulk]').forEach(function (btn) {
+    btn.addEventListener('click', function () { runBulk(btn); });
+  });
+
   recalc();
 })();

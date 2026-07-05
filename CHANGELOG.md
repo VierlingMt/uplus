@@ -7,6 +7,17 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-07-05
+### Behoben
+- Tabellen-Sortierung und -Suche wurden wegen Browser-Caching des alten JavaScripts
+  nicht angezeigt: CSS/JS (und Assets) erhalten jetzt ein **Versions-Cache-Busting**
+  (`?v=Version`), sodass Updates nach dem Deploy sofort greifen
+
+### Hinzugefügt
+- **Fortschrittsbalken** für Struktur-Check und KI-Vorbewertung im Menü Businesspläne:
+  die Bulk-Verarbeitung läuft jetzt Plan für Plan (ein Request je Plan, kein Timeout)
+  und zeigt live „Plan X von N: <Name>" sowie eine Abschluss-Zusammenfassung
+
 ## [0.7.0] - 2026-07-05
 ### Geändert
 - Mindeststandard-Gate ist jetzt ein eigener **Struktur-Check** gegen die Abschnitte
@@ -103,7 +114,8 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Login, Dashboard mit Kennzahlen und Projekt-Timeline, Profil
 - GitHub-Actions-Deploy: `config.local.php` aus Secrets + FTP-Upload
 
-[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.8.0
 [0.7.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.7.0
 [0.6.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.6.0
 [0.5.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.5.0

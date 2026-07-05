@@ -19,11 +19,16 @@ function url(string $route = 'dashboard', array $params = []): string
     return ($base ?: '') . '/index.php?' . $qs;
 }
 
-/** Asset-URL (CSS/JS/Bilder). */
+/** Asset-URL (CSS/JS/Bilder) mit Versions-Cache-Busting. */
 function asset(string $path): string
 {
     $base = rtrim(cfg('base_path', ''), '/');
-    return ($base ?: '') . '/assets/' . ltrim($path, '/');
+    $url = ($base ?: '') . '/assets/' . ltrim($path, '/');
+    $ver = defined('APP_VERSION') ? APP_VERSION : '';
+    if ($ver !== '') {
+        $url .= (strpos($url, '?') === false ? '?' : '&') . 'v=' . rawurlencode($ver);
+    }
+    return $url;
 }
 
 function redirect(string $to): void
