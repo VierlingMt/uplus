@@ -47,9 +47,18 @@ if (is_post()) {
             [$role, $name, $email, $spec ?: null, $phone ?: null, $school, $active, $id]);
         flash('success', 'Nutzer aktualisiert.');
     } else {
-        Database::run('INSERT INTO users (role,name,email,specialty,phone,school_id,is_active) VALUES (?,?,?,?,?,?,?)',
+        $id = Database::insert('INSERT INTO users (role,name,email,specialty,phone,school_id,is_active) VALUES (?,?,?,?,?,?,?)',
             [$role, $name, $email, $spec ?: null, $phone ?: null, $school, $active]);
         flash('success', 'Nutzer angelegt. Anmeldung erfolgt passwortlos per Login-Link an die E-Mail.');
+    }
+
+    // Wettbewerbsjahre zuordnen (nur Jury & Projektleitung; Lehrkräfte hängen an ihrer Schule).
+    $roleInCycle = Cycle::roleFor($role);
+    if ($roleInCycle !== null) {
+        $cycleIds = array_map('intval', (array) input('cycles', []));
+        Cycle::syncUser($id, $cycleIds, $roleInCycle);
+    } else {
+        Cycle::syncUser($id, [], 'juror'); // Rolle zu Lehrkraft geändert → Zyklen entfernen
     }
     redirect(url('jurors'));
 }
@@ -63,6 +72,18 @@ $users = Database::all(
     'SELECT u.*, s.name AS school_name FROM users u LEFT JOIN schools s ON s.id = u.school_id
      ORDER BY FIELD(u.role,"admin","juror","teacher"), u.name'
 );
+
+// Wettbewerbsjahre (Zyklen) für die Zuordnung im Formular und die Übersicht
+$cycles = Cycle::all();
+$editCycleIds = $edit ? Cycle::forUser((int) $edit['id']) : [Cycle::activeId()];
+$editCycleIds = array_filter($editCycleIds);
+// Jahres-Labels je Nutzer für die Liste
+$userCycles = [];
+foreach (Database::all(
+    'SELECT cm.user_id, c.year_label FROM cycle_members cm
+     JOIN competition_cycles c ON c.id = cm.cycle_id ORDER BY c.year_label DESC') as $r) {
+    $userCycles[(int) $r['user_id']][] = $r['year_label'];
+}
 
 ob_start(); ?>
 <div class="page-head"><h1>Jury &amp; Nutzer</h1></div>
@@ -92,6 +113,21 @@ ob_start(); ?>
         </div>
         <div class="field"><label>Spezialgebiet (Jury)</label><input type="text" name="specialty" value="<?= e($edit['specialty'] ?? '') ?>" placeholder="z. B. Marketing, Finanzen"></div>
         <div class="field"><label>Telefon</label><input type="text" name="phone" value="<?= e($edit['phone'] ?? '') ?>"></div>
+        <div class="field" id="cyclesField"><label>Wettbewerbsjahre (Teilnahme)</label>
+          <?php if (!$cycles): ?>
+            <div class="help">Noch kein Wettbewerbsjahr angelegt – zuerst unter „Wettbewerbsjahre“ eines anlegen.</div>
+          <?php else: ?>
+            <div style="display:flex;flex-wrap:wrap;gap:6px 16px">
+              <?php foreach ($cycles as $c): ?>
+                <label style="font-weight:400;white-space:nowrap">
+                  <input type="checkbox" name="cycles[]" value="<?= (int) $c['id'] ?>" <?= in_array((int) $c['id'], $editCycleIds, true) ? 'checked' : '' ?>>
+                  <?= e($c['year_label']) ?><?= $c['is_active'] ? ' •' : '' ?>
+                </label>
+              <?php endforeach; ?>
+            </div>
+            <div class="help">Mehrfachauswahl möglich – auch mit Lücken zwischen den Jahren. Die Zuordnung bleibt als Historie erhalten.</div>
+          <?php endif; ?>
+        </div>
         <div class="field"><label><input type="checkbox" name="is_active" value="1" <?= ($edit['is_active'] ?? 1) ? 'checked' : '' ?>> Aktiv (Login erlaubt)</label></div>
         <p class="muted" style="font-size:13px;margin:0 0 12px">Anmeldung passwortlos per Login-Link an die E-Mail – kein Passwort nötig.</p>
         <button class="btn btn--primary"><?= $edit ? 'Speichern' : 'Anlegen' ?></button>
@@ -109,7 +145,8 @@ ob_start(); ?>
         <?php foreach ($users as $u): ?>
           <tr>
             <td><strong><?= e($u['name']) ?></strong><br><span class="muted" style="font-size:13px"><?= e($u['email']) ?></span>
-              <?php if ($u['school_name']): ?><br><span class="pill muted"><?= e($u['school_name']) ?></span><?php endif; ?></td>
+              <?php if ($u['school_name']): ?><br><span class="pill muted"><?= e($u['school_name']) ?></span><?php endif; ?>
+              <?php if (!empty($userCycles[(int) $u['id']])): ?><br><span class="pill blue" title="Wettbewerbsjahre"><?= e(implode(', ', $userCycles[(int) $u['id']])) ?></span><?php endif; ?></td>
             <td><span class="pill <?= $u['role']==='admin'?'blue':($u['role']==='juror'?'teal':'amber') ?>"><?= e($roles[$u['role']] ?? $u['role']) ?></span></td>
             <td><?php if (!$u['is_active']): ?><span class="pill muted">inaktiv</span><?php else: ?><span class="pill teal">aktiv</span><?php endif; ?></td>
             <td style="white-space:nowrap;text-align:right">
@@ -130,8 +167,11 @@ ob_start(); ?>
 </div>
 <script>
 (function(){
-  var sel=document.getElementById('roleSel'), sf=document.getElementById('schoolField');
-  function upd(){ sf.style.display = sel.value==='teacher' ? '' : 'none'; }
+  var sel=document.getElementById('roleSel'), sf=document.getElementById('schoolField'), cf=document.getElementById('cyclesField');
+  function upd(){
+    if(sf) sf.style.display = sel.value==='teacher' ? '' : 'none';
+    if(cf) cf.style.display = sel.value==='teacher' ? 'none' : '';
+  }
   if(sel){ sel.addEventListener('change',upd); upd(); }
 })();
 </script>

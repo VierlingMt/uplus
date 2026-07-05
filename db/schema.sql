@@ -21,6 +21,25 @@ CREATE TABLE IF NOT EXISTS schools (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
+-- Wettbewerbszyklen (Wettbewerbsjahre) – zentrales Objekt, an dem Jury,
+-- Projektleitung und Schulen hängen. Genau ein Zyklus ist „aktiv"; die
+-- Historie früherer Jahre bleibt dauerhaft erhalten.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS competition_cycles (
+    id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    year_label  VARCHAR(40)  NOT NULL,              -- z. B. „2025/26"
+    title       VARCHAR(190) NULL,                  -- optionales Motto/Bezeichnung
+    starts_on   DATE NULL,
+    ends_on     DATE NULL,
+    is_active   TINYINT(1) NOT NULL DEFAULT 0,      -- laufendes Wettbewerbsjahr
+    note        TEXT NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_cycles_year (year_label),
+    KEY idx_cycles_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
 -- Benutzer (Rollen: admin = Projektleitung, teacher = Lehrkraft, juror = Jury)
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
@@ -278,4 +297,37 @@ CREATE TABLE IF NOT EXISTS sponsor_contributions (
     KEY idx_contrib_sponsor (sponsor_id),
     KEY idx_contrib_year (year),
     CONSTRAINT fk_contrib_sponsor FOREIGN KEY (sponsor_id) REFERENCES sponsors(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Zyklus-Mitglieder: welche Person (Jury/Projektleitung) war in welchem
+-- Wettbewerbsjahr dabei. Rolle wird je Zyklus festgehalten, damit die Historie
+-- auch bei späterem Rollenwechsel korrekt bleibt.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS cycle_members (
+    id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    cycle_id      INT UNSIGNED NOT NULL,
+    user_id       INT UNSIGNED NOT NULL,
+    role_in_cycle ENUM('juror','project_lead') NOT NULL DEFAULT 'juror',
+    specialty     VARCHAR(190) NULL,               -- Spezialgebiet/Funktion in diesem Jahr
+    note          VARCHAR(255) NULL,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_cycle_member (cycle_id, user_id),
+    KEY idx_cm_cycle (cycle_id),
+    KEY idx_cm_user (user_id),
+    CONSTRAINT fk_cm_cycle FOREIGN KEY (cycle_id) REFERENCES competition_cycles(id) ON DELETE CASCADE,
+    CONSTRAINT fk_cm_user  FOREIGN KEY (user_id)  REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Am Zyklus teilnehmende Schulen (Historie je Wettbewerbsjahr).
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS cycle_schools (
+    cycle_id   INT UNSIGNED NOT NULL,
+    school_id  INT UNSIGNED NOT NULL,
+    PRIMARY KEY (cycle_id, school_id),
+    KEY idx_cs_school (school_id),
+    CONSTRAINT fk_cs_cycle  FOREIGN KEY (cycle_id)  REFERENCES competition_cycles(id) ON DELETE CASCADE,
+    CONSTRAINT fk_cs_school FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

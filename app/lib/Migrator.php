@@ -172,6 +172,11 @@ final class Migrator
                         REFERENCES users(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             ],
+            [
+                'version' => '2026_07_11_competition_cycles',
+                'name'    => 'Wettbewerbszyklen + Zuordnung Jury/Projektleitung/Schulen (mit Historie)',
+                'up'      => [self::class, 'competitionCycles'],
+            ],
         ];
     }
 
@@ -232,6 +237,88 @@ final class Migrator
             if ($sid && !$has) {
                 $insC->execute([$sid, 2026, 'Unterstützung 2025/2026']);
             }
+        }
+    }
+
+    /**
+     * Zentrales Wettbewerbsjahr (Zyklus) einführen. Legt die Tabellen an,
+     * erstellt einen ersten aktiven Zyklus und ordnet alle bestehenden
+     * Juror:innen, Projektleitungen und Schulen diesem Jahr zu, damit die
+     * bisherige Aufstellung als Historie erhalten bleibt.
+     */
+    public static function competitionCycles(PDO $pdo): void
+    {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS competition_cycles (
+                id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                year_label  VARCHAR(40)  NOT NULL,
+                title       VARCHAR(190) NULL,
+                starts_on   DATE NULL,
+                ends_on     DATE NULL,
+                is_active   TINYINT(1) NOT NULL DEFAULT 0,
+                note        TEXT NULL,
+                created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_cycles_year (year_label),
+                KEY idx_cycles_active (is_active)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS cycle_members (
+                id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                cycle_id      INT UNSIGNED NOT NULL,
+                user_id       INT UNSIGNED NOT NULL,
+                role_in_cycle ENUM('juror','project_lead') NOT NULL DEFAULT 'juror',
+                specialty     VARCHAR(190) NULL,
+                note          VARCHAR(255) NULL,
+                created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_cycle_member (cycle_id, user_id),
+                KEY idx_cm_cycle (cycle_id),
+                KEY idx_cm_user (user_id),
+                CONSTRAINT fk_cm_cycle FOREIGN KEY (cycle_id) REFERENCES competition_cycles(id) ON DELETE CASCADE,
+                CONSTRAINT fk_cm_user  FOREIGN KEY (user_id)  REFERENCES users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS cycle_schools (
+                cycle_id   INT UNSIGNED NOT NULL,
+                school_id  INT UNSIGNED NOT NULL,
+                PRIMARY KEY (cycle_id, school_id),
+                KEY idx_cs_school (school_id),
+                CONSTRAINT fk_cs_cycle  FOREIGN KEY (cycle_id)  REFERENCES competition_cycles(id) ON DELETE CASCADE,
+                CONSTRAINT fk_cs_school FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+        // Bereits Zyklen vorhanden? Dann nichts weiter tun.
+        $exists = (int) $pdo->query('SELECT COUNT(*) FROM competition_cycles')->fetchColumn();
+        if ($exists > 0) {
+            return;
+        }
+
+        // Ersten (aktiven) Zyklus für das laufende Wettbewerbsjahr anlegen.
+        $label = (string) cfg('seed_cycle_label', '2025/26');
+        $pdo->prepare(
+            'INSERT INTO competition_cycles (year_label, title, is_active) VALUES (?,?,1)'
+        )->execute([$label, 'Businessplanwettbewerb ' . $label]);
+        $cycleId = (int) $pdo->lastInsertId();
+        $pdo->prepare('INSERT INTO settings (k, v) VALUES ("active_cycle_id", ?) ON DUPLICATE KEY UPDATE v = VALUES(v)')
+            ->execute([(string) $cycleId]);
+
+        // Bestehende Jury & Projektleitung diesem Jahr zuordnen (Historie).
+        $mIns = $pdo->prepare(
+            'INSERT IGNORE INTO cycle_members (cycle_id, user_id, role_in_cycle, specialty) VALUES (?,?,?,?)'
+        );
+        foreach ($pdo->query("SELECT id, role, specialty FROM users WHERE role IN ('admin','juror')")->fetchAll() as $u) {
+            $roleInCycle = $u['role'] === 'admin' ? 'project_lead' : 'juror';
+            $mIns->execute([$cycleId, (int) $u['id'], $roleInCycle, $u['specialty'] ?: null]);
+        }
+
+        // Bestehende Schulen diesem Jahr zuordnen.
+        $sIns = $pdo->prepare('INSERT IGNORE INTO cycle_schools (cycle_id, school_id) VALUES (?,?)');
+        foreach ($pdo->query('SELECT id FROM schools')->fetchAll() as $s) {
+            $sIns->execute([$cycleId, (int) $s['id']]);
         }
     }
 

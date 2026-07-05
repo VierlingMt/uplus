@@ -47,6 +47,7 @@ try {
         // --- Module ---
         case 'schools':
         case 'teams':
+        case 'cycles':
         case 'jurors':
         case 'materials':
         case 'material_download':
