@@ -177,6 +177,25 @@ final class Migrator
                 'name'    => 'Wettbewerbszyklen + Zuordnung Jury/Projektleitung/Schulen (mit Historie)',
                 'up'      => [self::class, 'competitionCycles'],
             ],
+            [
+                'version' => '2026_07_12_login_codes',
+                'name'    => 'Passwortloser Login per SMS-Einmalcode (seven.io)',
+                'up'      => "CREATE TABLE IF NOT EXISTS login_codes (
+                    id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    user_id      INT UNSIGNED NOT NULL,
+                    code_hash    CHAR(64) NOT NULL,
+                    attempts     TINYINT UNSIGNED NOT NULL DEFAULT 0,
+                    expires_at   DATETIME NOT NULL,
+                    used_at      DATETIME NULL,
+                    requested_ip VARCHAR(45) NULL,
+                    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (id),
+                    KEY idx_login_codes_user (user_id),
+                    KEY idx_login_codes_expires (expires_at),
+                    CONSTRAINT fk_login_codes_user FOREIGN KEY (user_id)
+                        REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ],
         ];
     }
 

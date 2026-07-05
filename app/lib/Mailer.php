@@ -14,15 +14,18 @@ final class Mailer
      */
     public static function send(string $to, string $subject, string $body): bool
     {
-        $fromEmail = (string) cfg('mail_from', '');
+        // Absender: bevorzugt aus den App-Einstellungen (Admin), sonst Deploy-Config.
+        $fromEmail = trim((string) Settings::get('mail_from', '')) ?: (string) cfg('mail_from', '');
         if ($fromEmail === '') {
             $host = preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? 'localhost'));
             $fromEmail = 'no-reply@' . $host;
         }
-        $fromName = (string) cfg('mail_from_name', cfg('app_name', 'Unternehmen Plus'));
+        $fromName = trim((string) Settings::get('mail_from_name', ''))
+            ?: (string) cfg('mail_from_name', cfg('app_name', 'Unternehmen Plus'));
 
         $headers = [
             'From: ' . self::encodeHeader($fromName) . ' <' . $fromEmail . '>',
+            'Reply-To: ' . $fromEmail,
             'MIME-Version: 1.0',
             'Content-Type: text/plain; charset=UTF-8',
             'Content-Transfer-Encoding: 8bit',

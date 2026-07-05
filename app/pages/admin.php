@@ -27,6 +27,16 @@ if (is_post()) {
     } elseif ($section === 'security') {
         Settings::set('require_2fa', input('require_2fa') ? '1' : '0');
         flash('success', 'Sicherheitseinstellungen gespeichert.');
+    } elseif ($section === 'delivery') {
+        // E-Mail-Absender (Magic-Link-Login)
+        Settings::set('mail_from', trim((string) input('mail_from')));
+        Settings::set('mail_from_name', trim((string) input('mail_from_name')) ?: 'Unternehmen Plus');
+        // SMS-Login (seven.io)
+        $sevenKey = trim((string) input('seven_api_key'));
+        if ($sevenKey !== '') { Settings::set('seven_api_key', $sevenKey); }
+        if (input('clear_seven_key')) { Settings::set('seven_api_key', ''); }
+        Settings::set('sms_from', trim((string) input('sms_from')) ?: 'UPlus');
+        flash('success', 'Anmeldungs- & Zustellungs-Einstellungen gespeichert.');
     }
     redirect(url('admin'));
 }
@@ -41,6 +51,13 @@ $models    = ['claude-sonnet-5' => 'Sonnet 5 (empfohlen, gute Balance)',
              'claude-haiku-4-5-20251001' => 'Haiku 4.5 (schnell/günstig)'];
 $phase     = (string) Settings::get('current_phase', 'evaluation');
 $phases    = ['preparation' => 'Vorbereitung', 'evaluation' => 'Bewertung', 'pitch' => 'Pitch-Day', 'closed' => 'Abgeschlossen'];
+
+// Zustellung: E-Mail-Absender + SMS (seven.io)
+$mailFrom     = (string) Settings::get('mail_from', cfg('mail_from', ''));
+$mailFromName = (string) Settings::get('mail_from_name', cfg('mail_from_name', 'Unternehmen Plus'));
+$sevenKey     = (string) Settings::get('seven_api_key', '');
+$sevenMasked  = $sevenKey !== '' ? ('••••••••' . substr($sevenKey, -4)) : '';
+$smsFrom      = (string) Settings::get('sms_from', 'UPlus');
 
 ob_start(); ?>
 <div class="page-head"><h1>Admin – Einstellungen</h1></div>
@@ -126,6 +143,50 @@ ob_start(); ?>
           <div class="field"><label>Nachrücker</label><input type="number" name="fallback_slots" min="0" value="<?= (int) Settings::getInt('fallback_slots', 2) ?>"></div>
         </div>
         <button class="btn btn--primary">Speichern</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Anmeldung & Zustellung: E-Mail-Absender + SMS (seven.io) -->
+  <div class="card">
+    <div class="card__head">Anmeldung &amp; Zustellung (E-Mail / SMS)</div>
+    <div class="card__body">
+      <p class="muted" style="font-size:14px">
+        Der Login ist passwortlos: Magic-Link per E-Mail, optional Einmalcode per SMS.
+        <?php if ($sevenKey !== ''): ?><span class="pill teal">SMS aktiv (Key <?= e($sevenMasked) ?>)</span>
+        <?php else: ?><span class="pill muted">SMS inaktiv (kein seven.io-Key)</span><?php endif; ?>
+      </p>
+      <form method="post" action="<?= url('admin') ?>">
+        <?= Csrf::field() ?><input type="hidden" name="section" value="delivery">
+
+        <div class="field">
+          <label>E-Mail-Absender (Login-Mails)</label>
+          <input type="email" name="mail_from" value="<?= e($mailFrom) ?>" placeholder="info@uplus.vimatec.de" autocomplete="off">
+          <div class="help">Muss ein echtes Postfach der eigenen Domain sein. Für gute Zustellbarkeit
+            SPF/DKIM/DMARC dieser Domain setzen (siehe unten).</div>
+        </div>
+        <div class="field">
+          <label>Absender-Name</label>
+          <input type="text" name="mail_from_name" value="<?= e($mailFromName) ?>" placeholder="Unternehmen Plus">
+        </div>
+
+        <hr style="margin:18px 0;border:none;border-top:1px solid var(--line)">
+
+        <div class="field">
+          <label>seven.io API-Key (SMS-Login)</label>
+          <input type="password" name="seven_api_key" autocomplete="off"
+                 placeholder="<?= $sevenKey !== '' ? 'gespeichert – zum Ersetzen neuen Key eingeben' : 'seven.io API-Key' ?>">
+          <div class="help">Wird in der Datenbank gespeichert. Ist ein Key hinterlegt, erscheint auf der
+            Login-Seite zusätzlich „Code per SMS". Empfänger ist die am Nutzer hinterlegte Handynummer.</div>
+        </div>
+        <div class="field">
+          <label>SMS-Absender (max. 11 Zeichen)</label>
+          <input type="text" name="sms_from" value="<?= e($smsFrom) ?>" maxlength="11" placeholder="UPlus" style="width:180px">
+        </div>
+        <?php if ($sevenKey !== ''): ?>
+          <label style="font-weight:400;font-size:13px"><input type="checkbox" name="clear_seven_key" value="1"> gespeicherten seven.io-Key entfernen</label>
+        <?php endif; ?>
+        <div class="mt"><button class="btn btn--primary">Speichern</button></div>
       </form>
     </div>
   </div>

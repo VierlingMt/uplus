@@ -7,6 +7,22 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-07-05
+### Hinzugefügt
+- **SMS-Login als alternative Anmeldemethode (seven.io):** Auf der Login-Seite kann
+  neben dem E-Mail-Magic-Link ein **6-stelliger Einmalcode per SMS** angefordert werden
+  (an die am Nutzer hinterlegte Handynummer). Beide Wege sind gleichwertig und passwortlos.
+  Der Code ist 10 Minuten gültig, wird nur als SHA-256-Hash gespeichert und gegen Erraten
+  geschützt (Versuchszähler). Die SMS-Option erscheint nur, wenn ein seven.io-API-Key
+  hinterlegt ist.
+- **Admin → „Anmeldung & Zustellung":** E-Mail-Absender (Adresse + Name) sowie
+  seven.io-API-Key und SMS-Absender direkt in der App konfigurierbar (in der DB, kein
+  Redeploy nötig). Der `Mailer` bevorzugt diese Einstellungen und fällt sonst auf die
+  Deploy-Config zurück; Login-Mails erhalten zusätzlich einen `Reply-To`-Header.
+
+### Geändert
+- Tabelle `login_codes` (SMS-Einmalcodes) samt automatischer Migration.
+
 ## [0.14.0] - 2026-07-05
 ### Geändert
 - **Eigene Subdomain:** Die App läuft jetzt unter **https://uplus.vimatec.de**
@@ -197,7 +213,8 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Login, Dashboard mit Kennzahlen und Projekt-Timeline, Profil
 - GitHub-Actions-Deploy: `config.local.php` aus Secrets + FTP-Upload
 
-[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.15.0
 [0.14.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.14.0
 [0.13.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.13.0
 [0.12.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.12.0
