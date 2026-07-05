@@ -94,7 +94,15 @@ ob_start(); ?>
       <?php foreach ($rows as $i => $r): [$sl, $sc] = $phaseLabels[$r['status']] ?? [$r['status'], 'muted']; ?>
         <tr>
           <td data-label="Platz"><strong><?= $i + 1 ?></strong><?php if ($r['pitch_order']): ?> <span class="pill teal" title="Pitch-Reihenfolge">P<?= (int) $r['pitch_order'] ?></span><?php endif; ?></td>
-          <td data-label="Team"><strong><?= e($r['name']) ?></strong><?php if ($r['idea_name']): ?><br><span class="muted" style="font-size:12px"><?= e($r['idea_name']) ?></span><?php endif; ?></td>
+          <td data-label="Team">
+            <?php if ($r['bp_id']): ?>
+              <a class="pdf-link" href="<?= url('bp_download', ['id' => $r['bp_id']]) ?>"
+                 data-pdf-url="<?= url('bp_download', ['id' => $r['bp_id']]) ?>"
+                 data-pdf-title="<?= e($r['name'] . ($r['idea_name'] ? ' – ' . $r['idea_name'] : '')) ?>"
+                 title="Businessplan-PDF ansehen"><strong><?= e($r['name']) ?></strong></a>
+            <?php else: ?><strong><?= e($r['name']) ?></strong><?php endif; ?>
+            <?php if ($r['idea_name']): ?><br><span class="muted" style="font-size:12px"><?= e($r['idea_name']) ?></span><?php endif; ?>
+          </td>
           <td data-label="Schule"><?= e($r['short_name'] ?: $r['school_name']) ?></td>
           <td data-label="Jury"><?= (int) $r['n_bp'] ?>/<?= $totalJurors ?><?php if ($r['n_pitch']): ?> <span class="muted">(P:<?= (int) $r['n_pitch'] ?>)</span><?php endif; ?></td>
           <td data-label="Ø BP /50"><strong><?= $fmt($r['avg_bp']) ?></strong></td>

@@ -7,6 +7,12 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-07-05
+### Hinzugefügt
+- **Businessplan direkt aus dem Ranking öffnen:** Unter „Bewertung & Ranking" öffnet ein
+  Klick auf den Team-Namen (sofern ein Plan vorliegt) das Businessplan-PDF im Vorschau-
+  Modal – wie bereits in der Businessplan-Liste.
+
 ## [0.32.0] - 2026-07-05
 ### Geändert
 - **Struktur-Check misst jetzt Eigentext statt Struktur.** Der Check hat Pläne
