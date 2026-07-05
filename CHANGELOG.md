@@ -7,6 +7,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-07-05
+### Hinzugefügt
+- **Kontakt-Seite im Menü (für alle sichtbar):** Neuer Menüpunkt „Kontakt" in der
+  Gruppe „Für alle". Er zeigt die Projektleitung (Admin & Projektleitung) als
+  Karten mit Porträtfoto, Rolle, Spezialgebiet sowie anklickbaren Kontaktdaten
+  (E-Mail per `mailto:`, Telefon per `tel:`). So finden Lehrkräfte und Jury schnell
+  die richtigen Ansprechpartner.
+
 ## [0.33.0] - 2026-07-05
 ### Hinzugefügt
 - **Businessplan direkt aus dem Ranking öffnen:** Unter „Bewertung & Ranking" öffnet ein

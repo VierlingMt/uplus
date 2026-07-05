@@ -73,6 +73,10 @@ try {
             require APP_PATH . '/pages/admin.php';
             break;
 
+        case 'contact':
+            require APP_PATH . '/pages/contact.php';
+            break;
+
         // --- Module ---
         case 'schools':
         case 'school_teachers':
