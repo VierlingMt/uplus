@@ -7,6 +7,18 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-07-05
+### Hinzugefügt
+- **Wettbewerbsjahre (Zyklen)** als zentrales Objekt: eigenes Menü „Wettbewerbsjahre“,
+  in dem ein neues Wettbewerbsjahr angelegt und genau eines als *aktiv* gesetzt wird.
+  Jury, Projektleitung und teilnehmende Schulen werden je Jahr zugeordnet
+- **Jahres-Zuordnung direkt beim Juror**: im Menü „Jury & Nutzer“ lässt sich pro Person
+  auswählen, in welchen Wettbewerbsjahren sie dabei ist – Mehrfachauswahl inklusive
+  Lücken zwischen den Jahren. Die Historie „wer war wann Juror:in / Projektleitung“
+  bleibt dauerhaft erhalten
+- Bestehende Jury, Projektleitung und Schulen werden per Migration automatisch dem
+  ersten (aktiven) Wettbewerbsjahr zugeordnet, sodass keine Zuordnung verloren geht
+
 ## [0.12.0] - 2026-07-05
 ### Hinzugefügt
 - **Progressive Web App (PWA):** Die Anwendung ist jetzt auf Smartphone,

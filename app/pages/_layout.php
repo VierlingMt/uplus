@@ -11,6 +11,7 @@ $nav = [
     ['plans',     'Businesspläne', '📄', ['admin', 'teacher', 'juror']],
     ['ranking',   'Bewertung & Ranking', '★', ['admin', 'juror']],
     ['teams',     'Teams & Schüler', '👥', ['admin', 'teacher']],
+    ['cycles',    'Wettbewerbsjahre', '🏆', ['admin']],
     ['schools',   'Schulen', '🏫', ['admin']],
     ['jurors',    'Jury & Nutzer', '⚖', ['admin']],
     ['sponsors',  'Sponsoren', '🤝', ['admin']],
@@ -48,6 +49,10 @@ $roleLabel = ['admin' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 
       <?php endforeach; ?>
     </nav>
     <div class="sidebar__foot">
+      <?php $__cycle = class_exists('Cycle') ? Cycle::active() : null; ?>
+      <?php if ($__cycle): ?>
+        <div style="margin-bottom:8px;color:#cfe0ff">Wettbewerbsjahr <strong><?= e($__cycle['year_label']) ?></strong></div>
+      <?php endif; ?>
       Businessplanwettbewerb<br>der Wirtschaftsjunioren Forchheim
       <div style="margin-top:8px">
         <a href="<?= url('changelog') ?>" style="color:#9fb2d6;text-decoration:none" title="Changelog anzeigen">Version <?= e(APP_VERSION) ?> ↗</a>
