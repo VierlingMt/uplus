@@ -7,6 +7,13 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.24.1] - 2026-07-05
+### Behoben
+- **Lehrkräfte sehen keine Bewertungen mehr:** Struktur-Check- und KI-Vorbewertungs-
+  Spalten (Businessplan-Liste) sowie die entsprechenden Karten auf der Detailseite
+  werden für die Rolle Lehrkraft ausgeblendet (Jury-Bereich war bereits gesperrt).
+  Upload und Team-/Schülerpflege für die eigene Schule bleiben möglich.
+
 ## [0.24.0] - 2026-07-05
 ### Hinzugefügt
 - **Projektlehrer je Schule:** eigene Ansicht (aus der Schulliste über „Projektlehrer")

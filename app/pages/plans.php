@@ -211,7 +211,7 @@ ob_start(); ?>
 <div class="card">
   <div class="table-wrap">
     <table class="data">
-      <thead><tr><th>Team</th><th>Schule</th><th>Businessplan</th><th>Struktur-Check</th><th>KI-Vorbewertung</th><th></th></tr></thead>
+      <thead><tr><th>Team</th><th>Schule</th><th>Businessplan</th><?php if (!$isTeacher): ?><th>Struktur-Check</th><th>KI-Vorbewertung</th><?php endif; ?><th></th></tr></thead>
       <tbody>
       <?php foreach ($teams as $t): ?>
         <tr>
@@ -232,6 +232,7 @@ ob_start(); ?>
               <span class="pill teal">v<?= (int) $t['version'] ?></span> <span class="muted" style="font-size:12px"><?= e(date('d.m.Y', strtotime((string) $t['uploaded_at']))) ?></span>
             <?php else: ?><span class="pill muted">nicht eingereicht</span><?php endif; ?>
           </td>
+          <?php if (!$isTeacher): ?>
           <td>
             <?php if (!$t['bp_id']): ?>—
             <?php elseif ($t['sc_status'] === 'done'): ?>
@@ -246,10 +247,11 @@ ob_start(); ?>
             <?php elseif ($t['ai_status'] === 'error'): ?><span class="pill red">Fehler</span>
             <?php else: ?><span class="pill muted">offen</span><?php endif; ?>
           </td>
+          <?php endif; ?>
           <td style="text-align:right"><a href="<?= url('plans', ['team' => $t['id']]) ?>" class="btn btn--ghost btn--sm">Öffnen</a></td>
         </tr>
       <?php endforeach; ?>
-      <?php if (!$teams): ?><tr><td colspan="6" class="muted">Noch keine Teams.</td></tr><?php endif; ?>
+      <?php if (!$teams): ?><tr><td colspan="<?= $isTeacher ? 4 : 6 ?>" class="muted">Noch keine Teams.</td></tr><?php endif; ?>
       </tbody>
     </table>
   </div>

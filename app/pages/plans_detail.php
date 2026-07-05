@@ -71,6 +71,7 @@ ob_start(); ?>
   </div>
 </div>
 
+<?php if (!$isTeacher): /* Lehrkräfte sehen keine Bewertungen (KI/Struktur) */ ?>
 <div class="card mt">
   <div class="card__head" style="display:flex;justify-content:space-between;align-items:center">
     <span>Struktur-Check <span class="muted" style="font-weight:400;font-size:13px">(Vollständigkeit gegen die Vorlage · günstiges Modell)</span></span>
@@ -168,8 +169,9 @@ ob_start(); ?>
     <?php endif; ?>
   </div>
 </div>
+<?php endif; /* Ende KI/Struktur nur für Nicht-Lehrkräfte */ ?>
 <?php
-// Jury-Bewertungen (nur für Admin/Jury sichtbar)
+// Jury-Bewertungen (nur für Admin/Jury/Projektleitung sichtbar)
 if (Auth::is('admin', 'lead', 'juror')):
     $evals = Database::all(
         'SELECT e.*, u.name AS juror_name FROM evaluations e JOIN users u ON u.id=e.juror_id
