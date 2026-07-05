@@ -177,6 +177,9 @@ ob_start(); ?>
                 $isPermOwner = strtolower((string) $u['email']) === PERMANENT_OWNER;
                 $canManageRow = $isOwner || $u['role'] !== 'admin'; // Admin-Konten nur durch Eigentümer
               ?>
+              <?php if ($isOwner && $u['id'] !== Auth::id()): ?>
+                <a href="<?= url('viewas', ['user' => $u['id']]) ?>" class="btn btn--ghost btn--sm" title="App aus Sicht dieses Nutzers ansehen (nur Lesen)">👁</a>
+              <?php endif; ?>
               <?php if ($canManageRow): ?>
                 <a href="<?= url('jurors', ['edit' => $u['id']]) ?>" class="btn btn--ghost btn--sm">Bearbeiten</a>
               <?php endif; ?>

@@ -73,6 +73,13 @@ $roleLabel = ['admin' => 'Admin', 'lead' => 'Projektleitung', 'teacher' => 'Lehr
       </div>
     </div>
 
+    <?php if (Auth::isImpersonating()): $imp = Auth::impersonator(); ?>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#f4c430;color:#3a2d00;padding:10px 16px;font-size:14px;font-weight:500;border-bottom:1px solid #d9ae1f">
+        <span>👁 <strong>Ansehen als:</strong> <?= e($u['name'] ?? '') ?> (<?= e($roleLabel) ?>) – Nur-Lese-Ansicht<?php if ($imp): ?> · angemeldet als <?= e($imp['name']) ?><?php endif; ?></span>
+        <a href="<?= url('viewstop') ?>" class="btn btn--sm" style="margin-left:auto;background:#3a2d00;color:#fff">Sicht beenden</a>
+      </div>
+    <?php endif; ?>
+
     <div class="content">
       <?php foreach (flashes() as $f): ?>
         <div class="flash <?= e($f['type']) ?>"><?= e($f['message']) ?></div>

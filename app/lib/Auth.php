@@ -85,6 +85,51 @@ final class Auth
         return self::is('admin', 'lead');
     }
 
+    // --- „Ansehen als" (View-as): Admin betrachtet die App aus Nutzersicht ---
+
+    /** Ist gerade eine „Ansehen als"-Sicht aktiv? */
+    public static function isImpersonating(): bool
+    {
+        return isset($_SESSION['impersonator']);
+    }
+
+    /** Reale Identität (Admin), während eine View-as-Sicht aktiv ist. */
+    public static function impersonator(): ?array
+    {
+        return $_SESSION['impersonator'] ?? null;
+    }
+
+    /**
+     * Startet die „Ansehen als"-Sicht auf einen Zielnutzer. Die reale Identität
+     * (Admin) wird gesichert, damit sie später wiederhergestellt werden kann.
+     */
+    public static function startImpersonation(array $target): void
+    {
+        if (!isset($_SESSION['impersonator'])) {
+            $_SESSION['impersonator'] = [
+                'uid'  => (int) $_SESSION['uid'],
+                'role' => $_SESSION['role'],
+                'name' => $_SESSION['name'],
+            ];
+        }
+        $_SESSION['uid']  = (int) $target['id'];
+        $_SESSION['role'] = $target['role'];
+        $_SESSION['name'] = $target['name'];
+        self::$cached = null;
+    }
+
+    /** Beendet die View-as-Sicht und stellt die Admin-Identität wieder her. */
+    public static function stopImpersonation(): void
+    {
+        if (isset($_SESSION['impersonator'])) {
+            $_SESSION['uid']  = (int) $_SESSION['impersonator']['uid'];
+            $_SESSION['role'] = $_SESSION['impersonator']['role'];
+            $_SESSION['name'] = $_SESSION['impersonator']['name'];
+            unset($_SESSION['impersonator']);
+            self::$cached = null;
+        }
+    }
+
     private static ?array $cached = null;
 
     public static function user(): ?array

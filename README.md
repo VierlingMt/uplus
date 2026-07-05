@@ -29,6 +29,8 @@ besten 7 (+2 Nachrücker) für den Pitch-Day nominieren und dort final bewerten.
   (`mv@vimatec.de`). Volle Verwaltung wie die Projektleitung, zusätzlich:
   vergibt/entzieht die Admin-Rolle, kann nicht gelöscht oder herabgestuft
   werden. Bleibt unabhängig von der jährlich wechselnden Projektleitung.
+  Kann über **„Ansehen als"** (👁 in „Jury & Nutzer") die App aus Sicht eines
+  beliebigen Nutzers betrachten – Nur-Lese-Ansicht mit Hinweisbanner.
 - **Projektleitung (lead)** – volle Verwaltung; wechselt jährlich.
 - **Lehrkraft (teacher)** – verwaltet Teams/Schüler der eigenen Schule, lädt
   Businesspläne hoch, sieht Material.
