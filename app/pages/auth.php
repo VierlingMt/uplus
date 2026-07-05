@@ -33,6 +33,18 @@ if ($token !== '') {
     $error = 'Dieser Login-Link ist ungültig oder abgelaufen. Bitte fordere einen neuen an.';
 }
 
+// Eingabe kann E-Mail ODER Handynummer sein.
+$typedId    = trim($typedEmail);
+$looksEmail = $typedId !== '' && filter_var(strtolower($typedId), FILTER_VALIDATE_EMAIL) !== false;
+$normPhone  = $looksEmail ? null : phone_normalize($typedId);
+$validId    = $looksEmail || $normPhone !== null;
+$resolveUser = static function () use ($looksEmail, $typedId, $normPhone): ?array {
+    if ($looksEmail) {
+        return Auth::findActiveByEmail(strtolower($typedId));
+    }
+    return $normPhone !== null ? Auth::findActiveByPhone($normPhone) : null;
+};
+
 if (is_post()) {
     Csrf::check();
     $mode = (string) input('mode', 'email');
@@ -52,15 +64,15 @@ if (is_post()) {
 
     // --- B1) SMS-Code anfordern ----------------------------------------------
     } elseif ($mode === 'sms') {
-        if (!filter_var(strtolower(trim($typedEmail)), FILTER_VALIDATE_EMAIL)) {
-            $error = 'Bitte gib eine gültige E-Mail-Adresse ein.';
+        if (!$validId) {
+            $error = 'Bitte gib eine gültige E-Mail-Adresse oder Handynummer ein.';
         } elseif (!$smsConfigured) {
             $error = 'Der SMS-Login ist derzeit nicht verfügbar. Bitte nutze den E-Mail-Link.';
         } else {
             // Neutral: Ergebnis nach aussen unabhängig davon, ob es das Konto
             // gibt oder eine Handynummer hinterlegt ist (kein User-Enumeration).
             unset($_SESSION['sms_uid']);
-            $user = Auth::findActiveByEmail(strtolower(trim($typedEmail)));
+            $user = $resolveUser();
             if ($user && trim((string) ($user['phone'] ?? '')) !== '') {
                 $code = SmsCode::issue((int) $user['id']);
                 $text = 'Unternehmen Plus: Dein Login-Code lautet ' . $code
@@ -74,12 +86,12 @@ if (is_post()) {
 
     // --- A) Magic-Link per E-Mail anfordern ----------------------------------
     } else {
-        $email = strtolower(trim($typedEmail));
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $error = 'Bitte gib eine gültige E-Mail-Adresse ein.';
+        if (!$validId) {
+            $error = 'Bitte gib eine gültige E-Mail-Adresse oder Handynummer ein.';
         } else {
-            $user = Auth::findActiveByEmail($email);
+            $user = $resolveUser();
             if ($user) {
+                $email = strtolower(trim((string) $user['email']));
                 $raw  = MagicLink::issue((int) $user['id']);
                 $link = abs_url('login', ['token' => $raw]);
 
@@ -141,8 +153,8 @@ if (is_post()) {
     <div class="inner">
       <?php if ($smsStep): ?>
         <h2>Code eingeben</h2>
-        <p class="sub">Wenn zu dieser Adresse ein Konto mit hinterlegter Handynummer
-           besteht, haben wir dir einen 6-stelligen Code per SMS geschickt.</p>
+        <p class="sub">Wenn dazu ein Konto mit hinterlegter Handynummer besteht,
+           haben wir dir einen 6-stelligen Code per SMS geschickt.</p>
         <?php if ($error): ?><div class="flash error"><?= e($error) ?></div><?php endif; ?>
         <form method="post" action="<?= url('login') ?>">
           <?= Csrf::field() ?>
@@ -165,8 +177,8 @@ if (is_post()) {
 
       <?php elseif ($sent): ?>
         <h2>E-Mail unterwegs</h2>
-        <p class="sub">Wenn zu dieser Adresse ein Konto besteht, haben wir dir einen
-           Login-Link geschickt. Bitte schau in dein Postfach.</p>
+        <p class="sub">Wenn dazu ein Konto besteht, haben wir dir einen Login-Link an die
+           hinterlegte E-Mail-Adresse geschickt. Bitte schau in dein Postfach.</p>
         <?php if ($devLink): ?>
           <div class="flash" style="word-break:break-all">
             <strong>Testmodus:</strong> <a href="<?= e($devLink) ?>">Jetzt anmelden</a>
@@ -181,9 +193,9 @@ if (is_post()) {
         <form method="post" action="<?= url('login') ?>">
           <?= Csrf::field() ?>
           <div class="field">
-            <label for="email">E-Mail</label>
-            <input type="email" id="email" name="email" required autofocus autocomplete="email"
-                   inputmode="email" value="<?= e($typedEmail) ?>">
+            <label for="email">E-Mail oder Handynummer</label>
+            <input type="text" id="email" name="email" required autofocus autocomplete="username"
+                   placeholder="name@schule.de oder 0170 …" value="<?= e($typedEmail) ?>">
           </div>
           <button type="submit" name="mode" value="email" class="btn btn--primary" style="width:100%;justify-content:center">Login-Link per E-Mail</button>
           <?php if ($smsConfigured): ?>

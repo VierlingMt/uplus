@@ -17,7 +17,9 @@ if (is_post()) {
     if ($action === 'add_teacher') {
         $name   = trim((string) input('name'));
         $email  = strtolower(trim((string) input('email')));
-        $mobile = trim((string) input('mobile'));
+        $mobileRaw = trim((string) input('mobile'));
+        // Immer im internationalen Format ohne Leerzeichen speichern.
+        $mobile = $mobileRaw === '' ? '' : (phone_normalize($mobileRaw) ?? $mobileRaw);
         if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             flash('error', 'Bitte Name und gültige E-Mail angeben.');
         } elseif (Database::value('SELECT id FROM users WHERE email = ?', [$email])) {
@@ -38,7 +40,9 @@ if (is_post()) {
         if ($t) {
             $name   = trim((string) input('name'));
             $email  = strtolower(trim((string) input('email')));
-            $mobile = trim((string) input('mobile'));
+            $mobileRaw = trim((string) input('mobile'));
+        // Immer im internationalen Format ohne Leerzeichen speichern.
+        $mobile = $mobileRaw === '' ? '' : (phone_normalize($mobileRaw) ?? $mobileRaw);
             $active = input('is_active') ? 1 : 0;
             if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 flash('error', 'Bitte Name und gültige E-Mail angeben.');

@@ -25,6 +25,24 @@ final class Auth
     }
 
     /**
+     * Aktiven Nutzer über die Handynummer finden – tolerant gegenüber der
+     * Schreibweise (0170… vs. +49170…). Die Nummer wird vor dem Vergleich ins
+     * internationale Format normalisiert; Bestandsnummern sind per Migration
+     * bereits normalisiert gespeichert.
+     */
+    public static function findActiveByPhone(string $phone): ?array
+    {
+        $norm = phone_normalize($phone);
+        if ($norm === null) {
+            return null;
+        }
+        return Database::one(
+            'SELECT * FROM users WHERE phone = ? AND is_active = 1 LIMIT 1',
+            [$norm]
+        );
+    }
+
+    /**
      * Session fuer einen bereits verifizierten Nutzer aufbauen (passwortloser
      * Login per Magic-Link). Erwartet einen Nutzer-Datensatz aus der DB.
      */

@@ -7,6 +7,19 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-07-05
+### Hinzugefügt
+- **Login per E-Mail oder Handynummer.** Auf der Anmeldeseite kann jetzt wahlweise die
+  E-Mail-Adresse **oder die Handynummer** eingegeben werden – beides führt zum Login-Link
+  per E-Mail bzw. zum Einmalcode per SMS. Die Handynummer wird dabei robust erkannt,
+  unabhängig von der Schreibweise (`+491709009124` und `01709009124` gelten als dieselbe
+  Nummer; Leerzeichen/Bindestriche werden ignoriert).
+### Geändert
+- **Handynummern werden immer im internationalen Format ohne Leerzeichen gespeichert**
+  (z. B. `+491709009124`). Neu erfasste Nummern (Jury/Nutzer, Projektlehrer) werden beim
+  Speichern normalisiert; eine Migration bringt bestehende Nummern automatisch ins
+  gleiche Format.
+
 ## [0.35.7] - 2026-07-05
 ### Behoben
 - **Businessplan-Einzelsicht lief mobil noch über den Rand.** Ursachen behoben:

@@ -36,7 +36,9 @@ if (is_post()) {
     $name  = trim((string) input('name'));
     $email = strtolower(trim((string) input('email')));
     $spec  = trim((string) input('specialty'));
-    $phone = trim((string) input('phone'));
+    $phoneRaw = trim((string) input('phone'));
+    // Immer im internationalen Format ohne Leerzeichen speichern (z. B. +491709009124).
+    $phone = $phoneRaw === '' ? '' : (phone_normalize($phoneRaw) ?? $phoneRaw);
     $school = (int) input('school_id', 0) ?: null;
     $active = input('is_active') ? 1 : 0;
     if ($role !== 'teacher') { $school = null; }
@@ -198,7 +200,7 @@ ob_start(); ?>
         </select>
       </div>
       <div class="field"><label>Spezialgebiet (Jury)</label><input type="text" name="specialty" placeholder="z. B. Marketing, Finanzen"></div>
-      <div class="field"><label>Telefon</label><input type="text" name="phone"></div>
+      <div class="field"><label>Handynummer</label><input type="text" name="phone" placeholder="z. B. 0170 9009124 – für SMS-/Handy-Login"><div class="help">Wird international gespeichert (+49…) und erlaubt Login per Handynummer.</div></div>
       <div class="field" id="cyclesField"><label>Wettbewerbsjahre (Teilnahme)</label>
         <?php if (!$cycles): ?>
           <div class="help">Noch kein Wettbewerbsjahr angelegt – zuerst unter „Wettbewerbsjahre“ eines anlegen.</div>

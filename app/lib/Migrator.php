@@ -242,7 +242,26 @@ final class Migrator
                 'name'    => 'Bekannten Sponsoren den vorhandenen Logo-Pfad nachtragen (falls leer)',
                 'up'      => [self::class, 'sponsorLogoBackfill'],
             ],
+            [
+                'version' => '2026_07_22_phone_normalize',
+                'name'    => 'Bestehende Handynummern ins internationale Format (+49…) normalisieren',
+                'up'      => [self::class, 'phoneNormalize'],
+            ],
         ];
+    }
+
+    /** Alle hinterlegten Handynummern ins internationale Format ohne Leerzeichen bringen. */
+    public static function phoneNormalize(PDO $pdo): void
+    {
+        $rows = $pdo->query("SELECT id, phone FROM users WHERE phone IS NOT NULL AND phone <> ''")
+                    ->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $upd = $pdo->prepare('UPDATE users SET phone = ? WHERE id = ?');
+        foreach ($rows as $r) {
+            $norm = phone_normalize((string) $r['phone']);
+            if ($norm !== null && $norm !== $r['phone']) {
+                $upd->execute([$norm, (int) $r['id']]);
+            }
+        }
     }
 
     /** Vorbelegung des Projektablaufs (bisher hartkodiert im Dashboard). */

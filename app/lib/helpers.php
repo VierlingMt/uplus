@@ -11,6 +11,21 @@ function e(?string $s): string
     return htmlspecialchars((string) $s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+/**
+ * Telefonnummer ins internationale Format „+49…“ ohne Leerzeichen bringen
+ * (E.164). Toleriert Schreibweisen wie „0170 900 9124“, „+49 170 …“, „0049…“.
+ * Liefert null, wenn keine plausible Nummer erkennbar ist.
+ * Beispiel: „0170 9009124“ und „+491709009124“ ergeben beide „+491709009124“.
+ */
+function phone_normalize(?string $raw): ?string
+{
+    if ($raw === null || trim($raw) === '') {
+        return null;
+    }
+    $digits = Sms::normalizeNumber((string) $raw); // E.164-Ziffern ohne „+“
+    return $digits !== null ? '+' . $digits : null;
+}
+
 /** Interne URL zu einer Route bauen: url('teams', ['id'=>5]) -> index.php?r=teams&id=5 */
 function url(string $route = 'dashboard', array $params = []): string
 {
