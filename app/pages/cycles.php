@@ -35,14 +35,17 @@ if (is_post()) {
         $leads  = array_map('intval', (array) input('leads', []));
         $schools = array_map('intval', (array) input('schools', []));
 
-        // Bestehende Zuordnungen des Zyklus (nur Personen) ersetzen.
+        // Über dieses Formular werden nur Jury- und Projektleitungs-Zuordnungen (lead)
+        // verwaltet. Zuordnungen von Admin-Konten (Eigentümer) bleiben unangetastet.
         $keep = [];
         foreach ($jurors as $uid) { $keep[$uid] = 'juror'; }
         foreach ($leads  as $uid) { $keep[$uid] = 'project_lead'; }
 
         $existing = array_map(
             static fn($r) => (int) $r['user_id'],
-            Database::all('SELECT user_id FROM cycle_members WHERE cycle_id = ?', [$id])
+            Database::all(
+                "SELECT cm.user_id FROM cycle_members cm JOIN users u ON u.id = cm.user_id
+                 WHERE cm.cycle_id = ? AND u.role IN ('juror','lead')", [$id])
         );
         foreach ($existing as $uid) {
             if (!isset($keep[$uid])) {
@@ -114,7 +117,7 @@ $schoolCounts  = Cycle::schoolCounts();
 // Daten für die Zuordnung
 if ($sel) {
     $allJurors = Database::all("SELECT id, name, email, specialty FROM users WHERE role = 'juror' ORDER BY name");
-    $allLeads  = Database::all("SELECT id, name, email FROM users WHERE role IN ('admin','lead') ORDER BY name");
+    $allLeads  = Database::all("SELECT id, name, email FROM users WHERE role = 'lead' ORDER BY name");
     $allSchools = Database::all('SELECT id, name, short_name FROM schools ORDER BY name');
     $memberRole = [];
     foreach (Database::all('SELECT user_id, role_in_cycle FROM cycle_members WHERE cycle_id = ?', [$sel['id']]) as $r) {
