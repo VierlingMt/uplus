@@ -292,7 +292,9 @@ CREATE TABLE IF NOT EXISTS settings (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
--- Sponsoren + Beiträge je Wettbewerbsjahr (Geld- oder Sachleistung)
+-- Sponsoren + Beiträge je Wettbewerbszyklus (Geld- oder Sachleistung).
+-- Das Wettbewerbsjahr ergibt sich über cycle_id aus competition_cycles –
+-- eine einzige Quelle für „welches Jahr" (kein separates Jahres-Feld mehr).
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sponsors (
     id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -310,14 +312,15 @@ CREATE TABLE IF NOT EXISTS sponsors (
 CREATE TABLE IF NOT EXISTS sponsor_contributions (
     id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
     sponsor_id  INT UNSIGNED NOT NULL,
-    year        SMALLINT UNSIGNED NOT NULL,
+    cycle_id    INT UNSIGNED NOT NULL,            -- Wettbewerbsjahr (Zyklus)
     amount      DECIMAL(10,2) NULL,
     description VARCHAR(190) NULL,
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_contrib_sponsor (sponsor_id),
-    KEY idx_contrib_year (year),
-    CONSTRAINT fk_contrib_sponsor FOREIGN KEY (sponsor_id) REFERENCES sponsors(id) ON DELETE CASCADE
+    KEY idx_contrib_cycle (cycle_id),
+    CONSTRAINT fk_contrib_sponsor FOREIGN KEY (sponsor_id) REFERENCES sponsors(id) ON DELETE CASCADE,
+    CONSTRAINT fk_contrib_cycle  FOREIGN KEY (cycle_id)  REFERENCES competition_cycles(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------

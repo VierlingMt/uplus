@@ -7,6 +7,22 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-07-05
+### Geändert
+- **Vereinheitlichtes Wettbewerbsjahr:** Es gibt jetzt nur noch **eine** Quelle für
+  „welches Jahr" – den Wettbewerbszyklus (`competition_cycles`). Die Sponsoren-Beiträge
+  hängen jetzt am Zyklus (`cycle_id`) statt an einer separaten Jahreszahl; die frühere
+  Einstellung `competition_year` und das Admin-Feld dazu entfallen
+- Sponsoren-Beitrag wird über ein **Wettbewerbsjahr-Auswahlfeld** erfasst; die
+  Dashboard-Auto-Anzeige der Sponsoren richtet sich nach dem **aktiven Zyklus**
+- Admin → „Wettbewerb" zeigt das aktive Jahr nur noch an und verlinkt zur zentralen
+  Verwaltung unter „Wettbewerbsjahre"
+
+### Migration
+- `sponsor_contributions.year` → `cycle_id` (Fremdschlüssel auf `competition_cycles`):
+  bestehende Beiträge werden automatisch dem passenden Zyklus zugeordnet, die alte
+  Spalte und die Einstellung `competition_year` werden entfernt
+
 ## [0.16.0] - 2026-07-05
 ### Hinzugefügt
 - **Eigene Admin-Rolle** (Eigentümer/Super-Admin) getrennt von der

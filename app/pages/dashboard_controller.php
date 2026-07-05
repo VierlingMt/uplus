@@ -22,14 +22,15 @@ $timeline = [
     ['Project Closing', '22.07', 'upcoming'],
 ];
 
-// Sponsoren, die im aktuellen Wettbewerbsjahr eine Leistung erbringen → Auto-Anzeige
-$year = Settings::getInt('competition_year', 2026);
-$sponsors = Database::all(
+// Sponsoren, die im aktiven Wettbewerbsjahr (Zyklus) eine Leistung erbringen → Auto-Anzeige
+$activeCycle = Cycle::active();
+$year = (string) ($activeCycle['year_label'] ?? '');
+$sponsors = $activeCycle ? Database::all(
     'SELECT DISTINCT s.name, s.logo_path
      FROM sponsors s JOIN sponsor_contributions c ON c.sponsor_id = s.id
-     WHERE c.year = ? AND s.logo_path IS NOT NULL AND s.logo_path <> ""
+     WHERE c.cycle_id = ? AND s.logo_path IS NOT NULL AND s.logo_path <> ""
      ORDER BY s.name',
-    [$year]
-);
+    [(int) $activeCycle['id']]
+) : [];
 
 render('dashboard', ['stats' => $stats, 'timeline' => $timeline, 'sponsors' => $sponsors, 'year' => $year]);
