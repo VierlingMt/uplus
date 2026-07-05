@@ -230,3 +230,32 @@ CREATE TABLE IF NOT EXISTS settings (
     v          TEXT NULL,
     PRIMARY KEY (k)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Sponsoren + Beiträge je Wettbewerbsjahr (Geld- oder Sachleistung)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sponsors (
+    id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name         VARCHAR(190) NOT NULL,
+    logo_path    VARCHAR(255) NULL,
+    address      TEXT NULL,
+    contact_name VARCHAR(190) NULL,
+    email        VARCHAR(190) NULL,
+    website      VARCHAR(255) NULL,
+    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_sponsors_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS sponsor_contributions (
+    id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    sponsor_id  INT UNSIGNED NOT NULL,
+    year        SMALLINT UNSIGNED NOT NULL,
+    amount      DECIMAL(10,2) NULL,
+    description VARCHAR(190) NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_contrib_sponsor (sponsor_id),
+    KEY idx_contrib_year (year),
+    CONSTRAINT fk_contrib_sponsor FOREIGN KEY (sponsor_id) REFERENCES sponsors(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

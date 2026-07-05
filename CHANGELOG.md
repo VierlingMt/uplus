@@ -7,6 +7,15 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-07-05
+### Hinzugefügt
+- **Sponsoren-Verwaltung** (Menü, nur Admin): Logo, Name, Anschrift, Ansprechpartner,
+  E-Mail, Website; je Sponsor eine Tabelle mit Beiträgen pro Jahr — Geldbetrag oder
+  Sachleistung (z. B. „kostenfreier Bustransfer")
+- Sponsor-Logos erscheinen **automatisch im Dashboard**, sobald der Sponsor im
+  aktuellen Wettbewerbsjahr eine Leistung erbringt; Wettbewerbsjahr im Admin wählbar
+- Logo-Upload je Sponsor (einfacher Datei-Upload; Bildeditor folgt)
+
 ## [0.8.1] - 2026-07-05
 ### Behoben
 - App hängte während einer Massen-Verarbeitung: Die frühere synchrone „alle prüfen/
@@ -122,7 +131,8 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Login, Dashboard mit Kennzahlen und Projekt-Timeline, Profil
 - GitHub-Actions-Deploy: `config.local.php` aus Secrets + FTP-Upload
 
-[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.9.0
 [0.8.1]: https://github.com/VierlingMt/uplus/releases/tag/v0.8.1
 [0.8.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.8.0
 [0.7.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.7.0

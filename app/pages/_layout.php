@@ -13,6 +13,7 @@ $nav = [
     ['teams',     'Teams & Schüler', '👥', ['admin', 'teacher']],
     ['schools',   'Schulen', '🏫', ['admin']],
     ['jurors',    'Jury & Nutzer', '⚖', ['admin']],
+    ['sponsors',  'Sponsoren', '🤝', ['admin']],
     ['materials', 'Material & Vorlagen', '📎', ['admin', 'teacher', 'juror']],
     ['admin',     'Admin', '⚙', ['admin']],
 ];

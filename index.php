@@ -50,6 +50,7 @@ try {
         case 'jurors':
         case 'materials':
         case 'material_download':
+        case 'sponsors':
         case 'plans':
         case 'bp_download':
         case 'ranking':

@@ -18,6 +18,7 @@ if (is_post()) {
         Settings::set('ai_extra_guidance', trim((string) input('ai_extra_guidance')));
         flash('success', 'KI-Einstellungen gespeichert.');
     } elseif ($section === 'general') {
+        Settings::set('competition_year', (string) max(2000, (int) input('competition_year', 2026)));
         Settings::set('pitch_slots', (string) max(1, (int) input('pitch_slots', 7)));
         Settings::set('fallback_slots', (string) max(0, (int) input('fallback_slots', 2)));
         Settings::set('current_phase', (string) input('current_phase', 'evaluation'));
@@ -102,6 +103,10 @@ ob_start(); ?>
     <div class="card__body">
       <form method="post" action="<?= url('admin') ?>">
         <?= Csrf::field() ?><input type="hidden" name="section" value="general">
+        <div class="field"><label>Wettbewerbsjahr</label>
+          <input type="number" name="competition_year" value="<?= (int) Settings::getInt('competition_year', 2026) ?>" style="width:120px">
+          <div class="help">Bestimmt, welche Sponsoren (mit Leistung in diesem Jahr) im Dashboard erscheinen.</div>
+        </div>
         <div class="field"><label>Aktuelle Phase</label>
           <select name="current_phase">
             <?php foreach ($phases as $pk => $pl): ?>

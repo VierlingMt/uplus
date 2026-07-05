@@ -142,7 +142,72 @@ final class Migrator
                     CONSTRAINT fk_sc_bp FOREIGN KEY (business_plan_id) REFERENCES business_plans(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             ],
+            [
+                'version' => '2026_07_08_sponsors',
+                'name'    => 'Sponsoren + Beiträge (Verwaltung, Auto-Anzeige je Jahr)',
+                'up'      => [self::class, 'sponsorsSetup'],
+            ],
         ];
+    }
+
+    /** Sponsoren-Tabellen anlegen + bekannte Sponsoren mit Beitrag fürs aktuelle Jahr seeden. */
+    public static function sponsorsSetup(PDO $pdo): void
+    {
+        $pdo->exec(
+            'CREATE TABLE IF NOT EXISTS sponsors (
+                id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                name         VARCHAR(190) NOT NULL,
+                logo_path    VARCHAR(255) NULL,
+                address      TEXT NULL,
+                contact_name VARCHAR(190) NULL,
+                email        VARCHAR(190) NULL,
+                website      VARCHAR(255) NULL,
+                created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_sponsors_name (name)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+        );
+        $pdo->exec(
+            'CREATE TABLE IF NOT EXISTS sponsor_contributions (
+                id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                sponsor_id  INT UNSIGNED NOT NULL,
+                year        SMALLINT UNSIGNED NOT NULL,
+                amount      DECIMAL(10,2) NULL,
+                description VARCHAR(190) NULL,
+                created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_contrib_sponsor (sponsor_id),
+                KEY idx_contrib_year (year),
+                CONSTRAINT fk_contrib_sponsor FOREIGN KEY (sponsor_id) REFERENCES sponsors(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+        );
+
+        $pdo->prepare('INSERT IGNORE INTO settings (k, v) VALUES (?, ?)')->execute(['competition_year', '2026']);
+
+        // Bekannte Sponsoren (Logos bereits als Assets vorhanden) + Beitrag 2026.
+        $sponsors = [
+            ['Sparkasse Forchheim', 'img/sponsors/sparkasse.png'],
+            ['Medical Valley', 'img/sponsors/medical-valley.png'],
+            ['Bildungsregion Forchheim', 'img/sponsors/bildungsregion.png'],
+            ['VIERLING', 'img/sponsors/vierling.jpg'],
+            ['Stadtwerke Ebermannstadt', 'img/sponsors/stadtwerke-ebs.png'],
+            ['Stadt Ebermannstadt', 'img/sponsors/stadt-ebs.png'],
+            ['Wirtschaftsjunioren Bayern', 'img/sponsors/wj-bayern.jpg'],
+        ];
+        $insS = $pdo->prepare('INSERT INTO sponsors (name, logo_path) VALUES (?, ?) ON DUPLICATE KEY UPDATE logo_path=VALUES(logo_path)');
+        $insC = $pdo->prepare('INSERT INTO sponsor_contributions (sponsor_id, year, description) VALUES (?, ?, ?)');
+        foreach ($sponsors as $s) {
+            $insS->execute($s);
+            $sid = (int) $pdo->lastInsertId();
+            if ($sid === 0) {
+                $sid = (int) $pdo->query('SELECT id FROM sponsors WHERE name=' . $pdo->quote($s[0]))->fetchColumn();
+            }
+            // Beitrag 2026 nur setzen, wenn noch keiner existiert (idempotent)
+            $has = (int) $pdo->query("SELECT COUNT(*) FROM sponsor_contributions WHERE sponsor_id=$sid AND year=2026")->fetchColumn();
+            if ($sid && !$has) {
+                $insC->execute([$sid, 2026, 'Unterstützung 2025/2026']);
+            }
+        }
     }
 
     /** Grunddaten anlegen (einmalig). */

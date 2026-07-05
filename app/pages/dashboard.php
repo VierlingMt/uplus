@@ -37,15 +37,17 @@
 </div>
 
 <div class="card">
-  <div class="card__head">Partner & Sponsoren</div>
+  <div class="card__head">Partner &amp; Sponsoren <?= (int) $year ?></div>
   <div class="card__body">
-    <div class="partner-bar">
-      <img src="<?= asset('img/wj/wj-forchheim.png') ?>" alt="WJ Forchheim">
-      <img src="<?= asset('img/sponsors/sparkasse.png') ?>" alt="Sparkasse Forchheim">
-      <img src="<?= asset('img/sponsors/medical-valley.png') ?>" alt="Medical Valley">
-      <img src="<?= asset('img/sponsors/bildungsregion.png') ?>" alt="Bildungsregion Forchheim">
-      <img src="<?= asset('img/sponsors/vierling.jpg') ?>" alt="Vierling">
-      <img src="<?= asset('img/sponsors/stadtwerke-ebs.png') ?>" alt="Stadtwerke Ebermannstadt">
-    </div>
+    <?php if (!empty($sponsors)): ?>
+      <div class="partner-bar">
+        <img src="<?= asset('img/wj/wj-forchheim.png') ?>" alt="WJ Forchheim">
+        <?php foreach ($sponsors as $sp): ?>
+          <img src="<?= asset($sp['logo_path']) ?>" alt="<?= e($sp['name']) ?>" title="<?= e($sp['name']) ?>">
+        <?php endforeach; ?>
+      </div>
+    <?php else: ?>
+      <p class="muted">Für <?= (int) $year ?> sind noch keine Sponsoren mit Leistung hinterlegt.</p>
+    <?php endif; ?>
   </div>
 </div>
