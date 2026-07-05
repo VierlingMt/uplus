@@ -63,10 +63,11 @@ ob_start(); ?>
     <div class="card__head"><?= count($schools) ?> Schulen</div>
     <div class="table-wrap">
       <table class="data">
-        <thead><tr><th>Schule</th><th>Ort</th><th>Teams</th><th></th></tr></thead>
+        <thead><tr><th></th><th>Schule</th><th>Ort</th><th>Teams</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($schools as $s): ?>
           <tr>
+            <td style="width:52px"><?php if ($s['logo_path']): ?><img src="<?= asset($s['logo_path']) ?>" alt="" style="width:40px;height:40px;object-fit:contain"><?php endif; ?></td>
             <td><strong><?= e($s['name']) ?></strong><?php if ($s['short_name']): ?> <span class="pill muted"><?= e($s['short_name']) ?></span><?php endif; ?></td>
             <td><?= e($s['city'] ?? '—') ?></td>
             <td><?= (int) $s['teams'] ?></td>
@@ -79,7 +80,7 @@ ob_start(); ?>
             </td>
           </tr>
         <?php endforeach; ?>
-        <?php if (!$schools): ?><tr><td colspan="4" class="muted">Noch keine Schulen.</td></tr><?php endif; ?>
+        <?php if (!$schools): ?><tr><td colspan="5" class="muted">Noch keine Schulen.</td></tr><?php endif; ?>
         </tbody>
       </table>
     </div>

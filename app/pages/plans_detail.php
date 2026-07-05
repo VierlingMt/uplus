@@ -14,6 +14,7 @@ if ($isTeacher && (int) $team['school_id'] !== $mySchool) {
 
 $plan = Database::one('SELECT * FROM business_plans WHERE team_id = ? AND is_current = 1', [$tid]);
 $ai   = $plan ? AiEval::latest((int) $plan['id']) : null;
+$sc   = $plan ? AiEval::latestStructure((int) $plan['id']) : null;
 $canUpload = $isAdmin || ($isTeacher && (int) $team['school_id'] === $mySchool);
 $members = Database::all('SELECT name FROM students WHERE team_id = ? ORDER BY name', [$tid]);
 $fmt = fn($n) => $n === null ? '—' : rtrim(rtrim(number_format((float) $n, 1, ',', ''), '0'), ',');
@@ -69,6 +70,52 @@ ob_start(); ?>
 
 <div class="card mt">
   <div class="card__head" style="display:flex;justify-content:space-between;align-items:center">
+    <span>Struktur-Check <span class="muted" style="font-weight:400;font-size:13px">(Vollständigkeit gegen die Vorlage · günstiges Modell)</span></span>
+    <?php if ($plan && $isAdmin): ?>
+      <form method="post" action="<?= url('plans') ?>">
+        <?= Csrf::field() ?><input type="hidden" name="action" value="run_structure"><input type="hidden" name="bp_id" value="<?= (int) $plan['id'] ?>">
+        <button class="btn btn--ghost btn--sm" data-loading="Prüfe …"><?= $sc ? 'Neu prüfen' : 'Struktur-Check starten' ?></button>
+      </form>
+    <?php endif; ?>
+  </div>
+  <div class="card__body">
+    <?php if (!$plan): ?>
+      <p class="muted">Zuerst einen Businessplan hochladen.</p>
+    <?php elseif (!$sc): ?>
+      <p class="muted">Noch kein Struktur-Check.<?= $isAdmin ? '' : ' Die Projektleitung kann ihn starten.' ?></p>
+    <?php elseif ($sc['status'] === 'error'): ?>
+      <div class="flash error">Fehler: <?= e($sc['error_message'] ?: 'unbekannt') ?></div>
+    <?php elseif ($sc['status'] !== 'done'): ?>
+      <p class="muted">Prüfung läuft …</p>
+    <?php else: ?>
+      <?php if ((int) $sc['meets_minimum'] === 0): ?>
+        <div class="flash error"><strong>⚠ Mindeststandard nicht erfüllt</strong> – kann ohne weitere Sichtung aussortiert werden.
+          <?php if ($sc['reason']): ?><br><span style="font-size:13px"><?= nl2br(e($sc['reason'])) ?></span><?php endif; ?></div>
+      <?php else: ?>
+        <div class="flash success"><strong>✓ Mindeststandard erfüllt</strong><?= $sc['reason'] ? ' – <span style="font-weight:400">' . e($sc['reason']) . '</span>' : '' ?></div>
+      <?php endif; ?>
+      <table class="data mt">
+        <thead><tr><th>Abschnitt der Vorlage</th><th style="width:140px">Status</th><th>Hinweis</th></tr></thead>
+        <tbody>
+        <?php foreach (($sc['sections'] ?? []) as $sec):
+            $st = $sec['status'] ?? 'fehlt';
+            $map = ['behandelt' => ['behandelt', 'teal'], 'oberflaechlich' => ['nur oberflächlich', 'amber'], 'fehlt' => ['fehlt', 'red']];
+            [$lbl, $cls] = $map[$st] ?? [$st, 'muted']; ?>
+          <tr>
+            <td><?= e($sec['title'] ?? '') ?><?= empty($sec['required']) ? ' <span class="muted" style="font-size:12px">(optional)</span>' : '' ?></td>
+            <td><span class="pill <?= $cls ?>"><?= e($lbl) ?></span></td>
+            <td class="muted" style="font-size:13px"><?= e($sec['note'] ?? '') ?></td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+      <p class="muted mt" style="font-size:12px">Modell: <?= e((string) $sc['model']) ?> · reiner Vollständigkeits-Check, keine inhaltliche Note.</p>
+    <?php endif; ?>
+  </div>
+</div>
+
+<div class="card mt">
+  <div class="card__head" style="display:flex;justify-content:space-between;align-items:center">
     <span>KI-Vorbewertung <span class="muted" style="font-weight:400;font-size:13px">(Businessplan, max 50)</span></span>
     <?php if ($plan && $isAdmin): ?>
       <form method="post" action="<?= url('plans') ?>">
@@ -87,16 +134,6 @@ ob_start(); ?>
     <?php elseif ($ai['status'] !== 'done'): ?>
       <p class="muted">Bewertung läuft …</p>
     <?php else: ?>
-      <?php if (array_key_exists('meets_minimum', $ai) && $ai['meets_minimum'] !== null): ?>
-        <?php if ((int) $ai['meets_minimum'] === 0): ?>
-          <div class="flash error" style="margin-bottom:14px">
-            <strong>⚠ Mindeststandard nicht erfüllt.</strong> Dieser Plan kann ohne weitere Sichtung aussortiert werden.
-            <?php if ($ai['min_reason']): ?><br><span style="font-size:13px"><?= nl2br(e($ai['min_reason'])) ?></span><?php endif; ?>
-          </div>
-        <?php else: ?>
-          <div class="flash success" style="margin-bottom:14px"><strong>✓ Mindeststandard erfüllt.</strong></div>
-        <?php endif; ?>
-      <?php endif; ?>
       <p><strong style="font-size:22px;color:var(--wj-blue)"><?= $fmt($ai['total_score']) ?></strong> / 50
          <span class="muted">· Modell <?= e($ai['model']) ?></span></p>
       <?php if ($ai['summary']): ?><p><?= nl2br(e($ai['summary'])) ?></p><?php endif; ?>

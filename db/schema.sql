@@ -134,6 +134,24 @@ CREATE TABLE IF NOT EXISTS ai_evaluation_scores (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
+-- Struktur-/Mindeststandard-Check (eigener, günstiger KI-Pass gegen die Vorlage)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS structure_checks (
+    id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    business_plan_id INT UNSIGNED NOT NULL,
+    model            VARCHAR(80) NULL,
+    status           ENUM('running','done','error') NOT NULL DEFAULT 'running',
+    meets_minimum    TINYINT(1) NULL,
+    reason           TEXT NULL,
+    sections_json    LONGTEXT NULL,
+    error_message    TEXT NULL,
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_sc_bp (business_plan_id),
+    CONSTRAINT fk_sc_bp FOREIGN KEY (business_plan_id) REFERENCES business_plans(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
 -- Jury-Bewertung: eine Bewertung je Juror:in und Team (Kopf)
 -- Enthaelt Businessplan-Phase (5 Kriterien) und optional Pitch-Phase (4 Kriterien)
 -- ---------------------------------------------------------------------------

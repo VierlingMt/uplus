@@ -5,7 +5,6 @@ name: Deploy (FTP)
 on:
   push:
     branches:
-      - claude/uplus-management-system-ostrxb
       - main
   workflow_dispatch:
 

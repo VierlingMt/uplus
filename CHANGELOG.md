@@ -7,6 +7,26 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-07-05
+### Geändert
+- Mindeststandard-Gate ist jetzt ein eigener **Struktur-Check** gegen die Abschnitte
+  der Businessplan-Vorlage (Zusammenfassung, Geschäftsidee, Vertrieb & Wettbewerb,
+  Team & Partner, Dein Unternehmen, Finanzen, Anhang): je Abschnitt „behandelt /
+  nur oberflächlich / fehlt". Läuft als **günstiger, eigener Pass** (Standard: Haiku),
+  getrennt vom inhaltlichen Scoring
+- Modell für den Struktur-Check separat im Admin wählbar
+
+### Hinzugefügt
+- Struktur-Check-Spalte in der Businessplan-Liste und eigene Karte auf der
+  Detailseite (Abschnitts-Abdeckung + Gate-Ergebnis); Einzel-Button je Plan
+- Bulk-Aktionen im Menü Businesspläne: Struktur-Check bzw. KI-Vorbewertung für
+  alle offenen Pläne auf einmal (verarbeitet nur noch nicht Erledigte)
+- Schul-Logos in der Schulen-Übersicht
+- Alle Tabellen sind jetzt standardmäßig **sortierbar** (Klick auf die Spalte,
+  korrekte Behandlung deutscher Zahlen- und Datumswerte) und haben eine
+  **tokenbasierte Suche** darüber (mehrere Begriffe = UND-Verknüpfung) —
+  automatisch für alle bestehenden und künftigen Tabellen
+
 ## [0.6.0] - 2026-07-05
 ### Hinzugefügt
 - Mindeststandard-Gate der KI-Vorbewertung: die KI beurteilt zusätzlich, ob ein Plan
@@ -83,7 +103,8 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Login, Dashboard mit Kennzahlen und Projekt-Timeline, Profil
 - GitHub-Actions-Deploy: `config.local.php` aus Secrets + FTP-Upload
 
-[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.7.0
 [0.6.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.6.0
 [0.5.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.5.0
 [0.4.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.4.0

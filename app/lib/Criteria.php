@@ -93,6 +93,26 @@ final class Criteria
         return self::BUSINESSPLAN + self::PITCH;
     }
 
+    /**
+     * Abschnitts-Struktur der Businessplan-Vorlage (für den Struktur-/Mindeststandard-Check).
+     * required=false → Abschnitt ist optional (Anhang).
+     * @return array<int,array{key:string,title:string,required:bool,aspects:array}>
+     */
+    public static function templateSections(): array
+    {
+        $bp = self::BUSINESSPLAN;
+        return [
+            ['key' => 'summary', 'title' => 'Zusammenfassung', 'required' => true,
+             'aspects' => ['Kurzer Gesamtüberblick der Geschäftsidee auf einen Blick']],
+            ['key' => 'idea',    'title' => 'Geschäftsidee', 'required' => true, 'aspects' => $bp['idea']['points']],
+            ['key' => 'sales',   'title' => 'Vertrieb & Wettbewerb', 'required' => true, 'aspects' => $bp['sales']['points']],
+            ['key' => 'team',    'title' => 'Team & Partner', 'required' => true, 'aspects' => $bp['team']['points']],
+            ['key' => 'company', 'title' => 'Dein Unternehmen (Umsetzung, Standort, Risiko)', 'required' => true, 'aspects' => $bp['foundation']['points']],
+            ['key' => 'finance', 'title' => 'Finanzen & Kosten', 'required' => true, 'aspects' => $bp['finance']['points']],
+            ['key' => 'appendix','title' => 'Anhang', 'required' => false, 'aspects' => ['Ergänzende Materialien (optional)']],
+        ];
+    }
+
     /** Gesamtpunktzahl nach Gewichtung (max 140). */
     public static function grandTotal(?float $bpTotal, ?float $pitchTotal): float
     {

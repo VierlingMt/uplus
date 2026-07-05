@@ -53,8 +53,6 @@ final class Claude
             $scaleText .= "{$p} = {$desc}\n";
         }
 
-        // In der App editierbare Leitlinien (Admin -> KI-Integration).
-        $minStd = (string) Settings::get('ai_min_standard', self::DEFAULT_MIN_STANDARD);
         $extra  = trim((string) Settings::get('ai_extra_guidance', ''));
         $extraBlock = $extra !== '' ? "\nZusätzliche Hinweise der Projektleitung:\n{$extra}\n" : '';
 
@@ -68,14 +66,6 @@ der fünf Kriterien. Vergib je Kriterium 0-10 Punkte nach dieser Skala:
 Berücksichtige das Altersniveau (Schüler:innen, kein Profi-Startup). KI-Nutzung war
 erlaubt. Bewertungskriterien:
 {$rubric}
-
-MINDESTSTANDARD-GATE:
-Beurteile zusätzlich, ob der Plan den Mindeststandard erfüllt, den man von einem
-Schülerteam mit ernsthaftem Bemühen erwarten kann. Maßstab:
-{$minStd}
-Setze meets_minimum_standard = true, wenn erkennbar ernsthaft gearbeitet wurde (auch
-mit Schwächen). Setze false nur bei klarem Nicht-Bemühen und begründe das konkret,
-damit ein solcher Plan ohne weitere Sichtung aussortiert werden kann.
 {$extraBlock}
 Gib pro Kriterium eine kurze, konkrete Begründung (2-4 Sätze, deutsch) und nenne
 Stärken sowie Verbesserungspotenzial. Nutze ausschließlich das Tool "submit_evaluation".
@@ -89,14 +79,12 @@ TXT;
                 'properties' => array_merge(
                     self::criteriaSchema(),
                     [
-                        'meets_minimum_standard'  => ['type' => 'boolean', 'description' => 'Erfüllt der Plan den Mindeststandard eines ernsthaft bemühten Schülerteams?'],
-                        'minimum_standard_reason' => ['type' => 'string', 'description' => 'Kurze Begründung zum Mindeststandard-Urteil.'],
                         'summary'    => ['type' => 'string', 'description' => 'Gesamteinschätzung (3-5 Sätze).'],
                         'strengths'  => ['type' => 'string', 'description' => 'Wichtigste Stärken (Stichpunkte).'],
                         'weaknesses' => ['type' => 'string', 'description' => 'Wichtigstes Verbesserungspotenzial (Stichpunkte).'],
                     ]
                 ),
-                'required'   => array_merge(array_keys(Criteria::BUSINESSPLAN), ['meets_minimum_standard', 'minimum_standard_reason', 'summary']),
+                'required'   => array_merge(array_keys(Criteria::BUSINESSPLAN), ['summary']),
             ],
         ];
 
@@ -146,15 +134,131 @@ TXT;
         }
 
         return [
+            'ok'         => true,
+            'model'      => $model,
+            'scores'     => $scores,
+            'summary'    => $toolInput['summary'] ?? null,
+            'strengths'  => $toolInput['strengths'] ?? null,
+            'weaknesses' => $toolInput['weaknesses'] ?? null,
+            'total'      => $total,
+            'raw'        => $body,
+            'error'      => null,
+        ];
+    }
+
+    /**
+     * Struktur-/Mindeststandard-Check (günstiges Modell): prüft, ob der Plan die
+     * Abschnitte der Businessplan-Vorlage jeweils inhaltlich behandelt (nicht nur
+     * Stichworte). Dient als Gate, um offensichtlich nicht bearbeitete Pläne ohne
+     * weitere Sichtung auszusortieren.
+     */
+    public static function structureCheck(string $pdfPath): array
+    {
+        $key = Settings::get('anthropic_api_key', cfg('anthropic_api_key'));
+        if (!$key) {
+            return ['ok' => false, 'error' => 'Kein Anthropic-API-Key hinterlegt (Admin → KI-Integration).'];
+        }
+        if (!is_file($pdfPath)) {
+            return ['ok' => false, 'error' => 'Businessplan-Datei nicht gefunden.'];
+        }
+
+        $model = Settings::get('ai_gate_model', cfg('anthropic_gate_model', 'claude-haiku-4-5-20251001'));
+        $def   = (string) Settings::get('ai_min_standard', self::DEFAULT_MIN_STANDARD);
+        $sections = Criteria::templateSections();
+
+        $listText = '';
+        $props = [];
+        $required = [];
+        foreach ($sections as $s) {
+            $opt = $s['required'] ? '' : ' (optional)';
+            $listText .= "\n### {$s['title']}{$opt} (Schlüssel: {$s['key']})\n- " . implode("\n- ", $s['aspects']) . "\n";
+            $props[$s['key']] = [
+                'type' => 'object',
+                'description' => $s['title'],
+                'properties' => [
+                    'status' => ['type' => 'string', 'enum' => ['behandelt', 'oberflaechlich', 'fehlt'],
+                                 'description' => 'behandelt = inhaltlich ausgearbeitet; oberflaechlich = nur Stichworte/sehr dünn; fehlt = gar nicht vorhanden'],
+                    'note'   => ['type' => 'string'],
+                ],
+                'required' => ['status'],
+            ];
+            $required[] = $s['key'];
+        }
+
+        $prompt = <<<TXT
+Du prüfst schnell und günstig, ob ein Schüler-Businessplan (PDF) die vorgegebene
+Vorlagen-Struktur inhaltlich abdeckt. Es geht NICHT um inhaltliche Qualität/Note,
+sondern nur um Vollständigkeit und Bearbeitungstiefe je Abschnitt.
+
+Bewerte für jeden Abschnitt der Vorlage den Status:
+- "behandelt": inhaltlich ausgearbeitet (ganze Sätze/Erklärungen, mehr als bloße Stichworte)
+- "oberflaechlich": nur 1-3 Stichworte, sehr dünn, kaum Substanz
+- "fehlt": Abschnitt gar nicht vorhanden/leer
+
+Abschnitte der Vorlage:
+{$listText}
+
+Mindeststandard (wann ist er NICHT erfüllt):
+{$def}
+
+Setze meets_minimum_standard = false, wenn wesentliche (nicht-optionale) Abschnitte
+fehlen oder überwiegend nur oberflächlich (Stichworte) behandelt sind – solche Pläne
+werden ohne weitere Sichtung aussortiert. Begründe kurz und konkret.
+Nutze ausschließlich das Tool "submit_structure_check".
+TXT;
+
+        $props['meets_minimum_standard'] = ['type' => 'boolean'];
+        $props['reason'] = ['type' => 'string'];
+        $required[] = 'meets_minimum_standard';
+        $required[] = 'reason';
+
+        $tool = [
+            'name' => 'submit_structure_check',
+            'description' => 'Struktur-/Vollständigkeitsprüfung des Businessplans abgeben.',
+            'input_schema' => ['type' => 'object', 'properties' => $props, 'required' => $required],
+        ];
+
+        $payload = [
+            'model' => $model,
+            'max_tokens' => 1500,
+            'tools' => [$tool],
+            'tool_choice' => ['type' => 'tool', 'name' => 'submit_structure_check'],
+            'messages' => [[
+                'role' => 'user',
+                'content' => [
+                    ['type' => 'document', 'source' => ['type' => 'base64', 'media_type' => 'application/pdf', 'data' => base64_encode((string) file_get_contents($pdfPath))]],
+                    ['type' => 'text', 'text' => $prompt],
+                ],
+            ]],
+        ];
+
+        [$code, $body, $err] = self::post($key, $payload);
+        if ($err) { return ['ok' => false, 'error' => 'Verbindungsfehler: ' . $err]; }
+        if ($code !== 200) { return ['ok' => false, 'error' => 'API-Fehler (HTTP ' . $code . '): ' . substr($body, 0, 400)]; }
+
+        $data = json_decode($body, true);
+        $in = null;
+        foreach ($data['content'] ?? [] as $b) {
+            if (($b['type'] ?? '') === 'tool_use') { $in = $b['input'] ?? null; break; }
+        }
+        if (!is_array($in)) { return ['ok' => false, 'error' => 'Unerwartete API-Antwort.']; }
+
+        $secOut = [];
+        foreach ($sections as $s) {
+            $secOut[$s['key']] = [
+                'title'  => $s['title'],
+                'status' => $in[$s['key']]['status'] ?? 'fehlt',
+                'note'   => $in[$s['key']]['note'] ?? '',
+                'required' => $s['required'],
+            ];
+        }
+
+        return [
             'ok'            => true,
             'model'         => $model,
-            'scores'        => $scores,
-            'meets_minimum' => isset($toolInput['meets_minimum_standard']) ? (int) (bool) $toolInput['meets_minimum_standard'] : null,
-            'min_reason'    => $toolInput['minimum_standard_reason'] ?? null,
-            'summary'       => $toolInput['summary'] ?? null,
-            'strengths'     => $toolInput['strengths'] ?? null,
-            'weaknesses'    => $toolInput['weaknesses'] ?? null,
-            'total'         => $total,
+            'meets_minimum' => isset($in['meets_minimum_standard']) ? (int) (bool) $in['meets_minimum_standard'] : null,
+            'reason'        => $in['reason'] ?? null,
+            'sections'      => $secOut,
             'raw'           => $body,
             'error'         => null,
         ];

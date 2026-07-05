@@ -124,6 +124,24 @@ final class Migrator
                     ADD COLUMN IF NOT EXISTS meets_minimum TINYINT(1) NULL AFTER total_score,
                     ADD COLUMN IF NOT EXISTS min_reason TEXT NULL AFTER meets_minimum',
             ],
+            [
+                'version' => '2026_07_07_structure_checks',
+                'name'    => 'Struktur-/Mindeststandard-Check (eigener Pass, günstiges Modell)',
+                'up'      => "CREATE TABLE IF NOT EXISTS structure_checks (
+                    id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    business_plan_id INT UNSIGNED NOT NULL,
+                    model            VARCHAR(80) NULL,
+                    status           ENUM('running','done','error') NOT NULL DEFAULT 'running',
+                    meets_minimum    TINYINT(1) NULL,
+                    reason           TEXT NULL,
+                    sections_json    LONGTEXT NULL,
+                    error_message    TEXT NULL,
+                    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (id),
+                    KEY idx_sc_bp (business_plan_id),
+                    CONSTRAINT fk_sc_bp FOREIGN KEY (business_plan_id) REFERENCES business_plans(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ],
         ];
     }
 

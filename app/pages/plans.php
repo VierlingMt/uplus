@@ -76,6 +76,57 @@ if (is_post()) {
         redirect(url('plans'));
     }
 
+    if ($action === 'bulk_structure') {
+        Auth::require('admin');
+        $pending = Database::all(
+            "SELECT bp.id FROM business_plans bp
+             WHERE bp.is_current = 1
+               AND NOT EXISTS (SELECT 1 FROM structure_checks sc WHERE sc.business_plan_id = bp.id AND sc.status = 'done')"
+        );
+        $done = 0; $below = 0; $err = 0;
+        foreach ($pending as $row) {
+            @set_time_limit(120);
+            $res = AiEval::runStructureCheck((int) $row['id']);
+            if (!$res['ok']) { $err++; }
+            else { $done++; if ((int) $res['meets_minimum'] === 0) { $below++; } }
+        }
+        flash($err && !$done ? 'error' : 'success',
+            "Struktur-Check abgeschlossen: {$done} geprüft" . ($below ? ", davon {$below} unter Mindeststandard" : '') . ($err ? ", {$err} Fehler" : '') . '.');
+        redirect(url('plans'));
+    }
+
+    if ($action === 'bulk_ai') {
+        Auth::require('admin');
+        $pending = Database::all(
+            "SELECT bp.id FROM business_plans bp
+             WHERE bp.is_current = 1
+               AND NOT EXISTS (SELECT 1 FROM ai_evaluations ai WHERE ai.business_plan_id = bp.id AND ai.status = 'done')"
+        );
+        $done = 0; $err = 0;
+        foreach ($pending as $row) {
+            @set_time_limit(180);
+            $res = AiEval::run((int) $row['id']);
+            if ($res['ok']) { $done++; } else { $err++; }
+        }
+        flash($err && !$done ? 'error' : 'success',
+            "KI-Vorbewertung abgeschlossen: {$done} bewertet" . ($err ? ", {$err} Fehler" : '') . '.');
+        redirect(url('plans'));
+    }
+
+    if ($action === 'run_structure') {
+        Auth::require('admin');
+        $bpId = (int) input('bp_id');
+        $bp = Database::one('SELECT * FROM business_plans WHERE id = ?', [$bpId]);
+        if ($bp) {
+            $res = AiEval::runStructureCheck($bpId);
+            flash($res['ok'] ? 'success' : 'error',
+                $res['ok'] ? ('Struktur-Check fertig: ' . ((int) $res['meets_minimum'] === 1 ? 'Mindeststandard erfüllt.' : 'Mindeststandard NICHT erfüllt.'))
+                           : ('Struktur-Check-Fehler: ' . $res['error']));
+            redirect(url('plans', ['team' => (int) $bp['team_id']]));
+        }
+        redirect(url('plans'));
+    }
+
     if ($action === 'delete_plan') {
         Auth::require('admin');
         $bp = Database::one('SELECT * FROM business_plans WHERE id = ?', [(int) input('bp_id')]);
@@ -103,24 +154,48 @@ $where = $isTeacher ? 'WHERE t.school_id = ' . (int) $mySchool : '';
 $teams = Database::all(
     "SELECT t.*, s.name AS school_name, s.short_name,
             bp.id AS bp_id, bp.version, bp.created_at AS uploaded_at,
-            ai.total_score AS ai_score, ai.status AS ai_status, ai.meets_minimum AS ai_min
+            ai.total_score AS ai_score, ai.status AS ai_status,
+            sc.meets_minimum AS sc_min, sc.status AS sc_status
      FROM teams t
      JOIN schools s ON s.id = t.school_id
      LEFT JOIN business_plans bp ON bp.team_id = t.id AND bp.is_current = 1
      LEFT JOIN ai_evaluations ai ON ai.id = (
         SELECT id FROM ai_evaluations WHERE business_plan_id = bp.id ORDER BY id DESC LIMIT 1)
+     LEFT JOIN structure_checks sc ON sc.id = (
+        SELECT id FROM structure_checks WHERE business_plan_id = bp.id ORDER BY id DESC LIMIT 1)
      $where
      ORDER BY (bp.id IS NULL), s.name, t.name"
 );
 
 $fmt = fn($n) => $n === null ? '—' : rtrim(rtrim(number_format((float) $n, 1, ',', ''), '0'), ',');
 
+$pendStruct = $isAdmin ? (int) Database::value(
+    "SELECT COUNT(*) FROM business_plans bp WHERE bp.is_current=1
+       AND NOT EXISTS (SELECT 1 FROM structure_checks sc WHERE sc.business_plan_id=bp.id AND sc.status='done')") : 0;
+$pendAi = $isAdmin ? (int) Database::value(
+    "SELECT COUNT(*) FROM business_plans bp WHERE bp.is_current=1
+       AND NOT EXISTS (SELECT 1 FROM ai_evaluations ai WHERE ai.business_plan_id=bp.id AND ai.status='done')") : 0;
+
 ob_start(); ?>
-<div class="page-head"><h1>Businesspläne</h1></div>
+<div class="page-head">
+  <h1>Businesspläne</h1>
+  <?php if ($isAdmin): ?>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <form method="post" action="<?= url('plans') ?>" data-confirm="Struktur-Check für <?= $pendStruct ?> offene Pläne starten? Das kann etwas dauern.">
+        <?= Csrf::field() ?><input type="hidden" name="action" value="bulk_structure">
+        <button class="btn btn--ghost btn--sm" data-loading="Prüfe alle …" <?= $pendStruct ? '' : 'disabled' ?>>Struktur-Check: alle offenen (<?= $pendStruct ?>)</button>
+      </form>
+      <form method="post" action="<?= url('plans') ?>" data-confirm="KI-Vorbewertung für <?= $pendAi ?> offene Pläne starten? Das kann einige Minuten dauern und verursacht API-Kosten.">
+        <?= Csrf::field() ?><input type="hidden" name="action" value="bulk_ai">
+        <button class="btn btn--teal btn--sm" data-loading="Bewerte alle …" <?= $pendAi ? '' : 'disabled' ?>>KI-Vorbewertung: alle offenen (<?= $pendAi ?>)</button>
+      </form>
+    </div>
+  <?php endif; ?>
+</div>
 <div class="card">
   <div class="table-wrap">
     <table class="data">
-      <thead><tr><th>Team</th><th>Schule</th><th>Businessplan</th><th>KI-Vorbewertung</th><th></th></tr></thead>
+      <thead><tr><th>Team</th><th>Schule</th><th>Businessplan</th><th>Struktur-Check</th><th>KI-Vorbewertung</th><th></th></tr></thead>
       <tbody>
       <?php foreach ($teams as $t): ?>
         <tr>
@@ -133,16 +208,22 @@ ob_start(); ?>
           </td>
           <td>
             <?php if (!$t['bp_id']): ?>—
-            <?php elseif ($t['ai_status'] === 'done'): ?>
-              <strong><?= $fmt($t['ai_score']) ?></strong> / 50
-              <?php if ($t['ai_min'] !== null && (int) $t['ai_min'] === 0): ?><br><span class="pill red" title="Mindeststandard nicht erfüllt">⚠ unter Standard</span><?php endif; ?>
+            <?php elseif ($t['sc_status'] === 'done'): ?>
+              <?php if ((int) $t['sc_min'] === 0): ?><span class="pill red" title="Mindeststandard nicht erfüllt">⚠ unter Standard</span>
+              <?php else: ?><span class="pill teal">✓ ok</span><?php endif; ?>
+            <?php elseif ($t['sc_status'] === 'error'): ?><span class="pill red">Fehler</span>
+            <?php else: ?><span class="pill muted">offen</span><?php endif; ?>
+          </td>
+          <td>
+            <?php if (!$t['bp_id']): ?>—
+            <?php elseif ($t['ai_status'] === 'done'): ?><strong><?= $fmt($t['ai_score']) ?></strong> / 50
             <?php elseif ($t['ai_status'] === 'error'): ?><span class="pill red">Fehler</span>
             <?php else: ?><span class="pill muted">offen</span><?php endif; ?>
           </td>
           <td style="text-align:right"><a href="<?= url('plans', ['team' => $t['id']]) ?>" class="btn btn--ghost btn--sm">Öffnen</a></td>
         </tr>
       <?php endforeach; ?>
-      <?php if (!$teams): ?><tr><td colspan="5" class="muted">Noch keine Teams.</td></tr><?php endif; ?>
+      <?php if (!$teams): ?><tr><td colspan="6" class="muted">Noch keine Teams.</td></tr><?php endif; ?>
       </tbody>
     </table>
   </div>

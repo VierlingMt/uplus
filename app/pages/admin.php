@@ -13,6 +13,7 @@ if (is_post()) {
         if ($key !== '') { Settings::set('anthropic_api_key', $key); }
         if (input('clear_key')) { Settings::set('anthropic_api_key', ''); }
         Settings::set('anthropic_model', trim((string) input('anthropic_model')) ?: 'claude-sonnet-5');
+        Settings::set('ai_gate_model', trim((string) input('ai_gate_model')) ?: 'claude-haiku-4-5-20251001');
         Settings::set('ai_min_standard', trim((string) input('ai_min_standard')) ?: Claude::DEFAULT_MIN_STANDARD);
         Settings::set('ai_extra_guidance', trim((string) input('ai_extra_guidance')));
         flash('success', 'KI-Einstellungen gespeichert.');
@@ -62,12 +63,21 @@ ob_start(); ?>
           <div class="help">Wird verschlüsselt übertragen und in der Datenbank gespeichert. Überschreibt das Deploy-Secret.</div>
         </div>
         <div class="field">
-          <label>Modell</label>
+          <label>Modell – KI-Vorbewertung (inhaltliche Note)</label>
           <select name="anthropic_model">
             <?php foreach ($models as $mk => $ml): ?>
               <option value="<?= e($mk) ?>" <?= $model === $mk ? 'selected' : '' ?>><?= e($ml) ?></option>
             <?php endforeach; ?>
           </select>
+        </div>
+        <div class="field">
+          <label>Modell – Struktur-Check (Mindeststandard)</label>
+          <select name="ai_gate_model">
+            <?php $gm = (string) Settings::get('ai_gate_model', 'claude-haiku-4-5-20251001'); foreach ($models as $mk => $ml): ?>
+              <option value="<?= e($mk) ?>" <?= $gm === $mk ? 'selected' : '' ?>><?= e($ml) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <div class="help">Günstiges Modell (Haiku) genügt – reiner Vollständigkeits-/Struktur-Check gegen die Vorlage.</div>
         </div>
         <div class="field">
           <label>Mindeststandard-Gate (Definition für die KI)</label>
