@@ -8,6 +8,9 @@ $jurorId = (int) Auth::id();
 
 $pitchSlots = Settings::getInt('pitch_slots', 7);
 $fallbackSlots = Settings::getInt('fallback_slots', 2);
+// KI-Vorbewertung nur für Verwaltung – oder für Jury, falls im Admin freigegeben.
+$showAiEval = $isAdmin || Settings::getInt('ai_eval_jurors', 0) === 1;
+$cols = $showAiEval ? 10 : 9;
 
 /** Ranking-Daten laden (inkl. Mittelwerte je Team). */
 $loadRows = function () use ($jurorId): array {
@@ -88,7 +91,7 @@ ob_start(); ?>
     <table class="data data--cards">
       <thead><tr>
         <th style="width:40px">#</th><th>Team</th><th>Schule</th><th>Jury</th>
-        <th>Ø BP<br>/50</th><th>Ø Pitch<br>/40</th><th>Gesamt<br>/140</th><th>KI</th><th>Status</th><th></th>
+        <th>Ø BP<br>/50</th><th>Ø Pitch<br>/40</th><th>Gesamt<br>/140</th><?php if ($showAiEval): ?><th>KI</th><?php endif; ?><th>Status</th><th></th>
       </tr></thead>
       <tbody>
       <?php foreach ($rows as $i => $r): [$sl, $sc] = $phaseLabels[$r['status']] ?? [$r['status'], 'muted']; ?>
@@ -108,7 +111,7 @@ ob_start(); ?>
           <td data-label="Ø BP /50"><strong><?= $fmt($r['avg_bp']) ?></strong></td>
           <td data-label="Ø Pitch /40"><?= $fmt($r['avg_pitch']) ?></td>
           <td data-label="Gesamt /140"><strong style="color:var(--wj-blue)"><?= $fmt($r['grand']) ?></strong></td>
-          <td class="muted" data-label="KI"><?= $r['ai_score'] !== null ? $fmt($r['ai_score']) . '/50' : '–' ?></td>
+          <?php if ($showAiEval): ?><td class="muted" data-label="KI"><?= $r['ai_score'] !== null ? $fmt($r['ai_score']) . '/50' : '–' ?></td><?php endif; ?>
           <td data-label="Status"><span class="pill <?= $sc ?>"><?= e($sl) ?></span></td>
           <td class="row-actions" style="white-space:nowrap;text-align:right">
             <?php if ($r['bp_id']): ?>
@@ -117,7 +120,7 @@ ob_start(); ?>
           </td>
         </tr>
         <?php if ($isAdmin): ?>
-        <tr class="admin-row"><td colspan="10" style="padding-top:0">
+        <tr class="admin-row"><td colspan="<?= $cols ?>" style="padding-top:0">
           <form method="post" action="<?= url('ranking') ?>" style="display:flex;gap:8px;align-items:center;justify-content:flex-end">
             <?= Csrf::field() ?><input type="hidden" name="action" value="set_status"><input type="hidden" name="team_id" value="<?= (int) $r['id'] ?>">
             <span class="muted" style="font-size:12px">Status setzen:</span>
@@ -132,7 +135,7 @@ ob_start(); ?>
         </td></tr>
         <?php endif; ?>
       <?php endforeach; ?>
-      <?php if (!$rows): ?><tr><td colspan="10" class="muted">Noch keine Teams.</td></tr><?php endif; ?>
+      <?php if (!$rows): ?><tr><td colspan="<?= $cols ?>" class="muted">Noch keine Teams.</td></tr><?php endif; ?>
       </tbody>
     </table>
   </div>

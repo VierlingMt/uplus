@@ -216,6 +216,10 @@ $scEff      = $scOverride !== null ? $scOverride : $scAuto;
   </div>
 </details>
 
+<?php
+// KI-Vorbewertung (inhaltliche Note) nur für Verwaltung – oder für Jury, falls im Admin freigegeben.
+$canSeeAiEval = $isAdmin || Settings::getInt('ai_eval_jurors', 0) === 1;
+if ($canSeeAiEval): ?>
 <details class="card mt collapse">
   <summary class="collapse__head">
     <span class="collapse__title"><span class="collapse__chev" aria-hidden="true">▸</span> KI-Vorbewertung
@@ -270,6 +274,7 @@ $scEff      = $scOverride !== null ? $scOverride : $scAuto;
     <?php endif; ?>
   </div>
 </details>
+<?php endif; /* Ende KI-Vorbewertung */ ?>
 <?php endif; /* Ende Bewertungs-Karten (nur für Nicht-Lehrkräfte) */ ?>
 <?php
 $content = ob_get_clean();

@@ -7,6 +7,15 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.35.3] - 2026-07-05
+### Geändert
+- **KI-Vorbewertung standardmäßig nur für Verwaltung sichtbar.** Die inhaltliche
+  KI-Note (/50) sehen jetzt nur noch Admin und Projektleitung – nicht mehr die normale
+  Jury. Betrifft Businessplan-Detail, Businessplan-Übersicht und das Ranking (KI-Spalte).
+### Hinzugefügt
+- Neue Admin-Einstellung unter KI-Integration: „KI-Vorbewertung auch für Juror:innen
+  sichtbar" – bei Bedarf schaltet die Verwaltung die KI-Note wieder für die Jury frei.
+
 ## [0.35.2] - 2026-07-05
 ### Geändert
 - **Teams-Verwaltung für Lehrkräfte ohne Schulzuordnung:** Ist einer Lehrkraft keine

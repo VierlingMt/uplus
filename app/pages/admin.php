@@ -19,6 +19,7 @@ if (is_post()) {
         Settings::set('ai_min_core', (string) max(0, min(5, (int) input('ai_min_core', 2))));
         Settings::set('ai_min_standard', trim((string) input('ai_min_standard')) ?: Claude::DEFAULT_MIN_STANDARD);
         Settings::set('ai_extra_guidance', trim((string) input('ai_extra_guidance')));
+        Settings::set('ai_eval_jurors', input('ai_eval_jurors') ? '1' : '0');
         flash('success', 'KI-Einstellungen gespeichert.');
     } elseif ($section === 'general') {
         Settings::set('pitch_slots', (string) max(1, (int) input('pitch_slots', 7)));
@@ -149,6 +150,11 @@ ob_start(); ?>
         <div class="field">
           <label>Zusätzliche Bewertungshinweise (optional)</label>
           <textarea name="ai_extra_guidance" rows="3" placeholder="z. B. besonderer Fokus, Tonalität, Gewichtung …"><?= e((string) Settings::get('ai_extra_guidance', '')) ?></textarea>
+        </div>
+        <div class="field">
+          <label style="font-weight:400"><input type="checkbox" name="ai_eval_jurors" value="1" <?= Settings::getInt('ai_eval_jurors', 0) === 1 ? 'checked' : '' ?>> KI-Vorbewertung auch für Juror:innen sichtbar</label>
+          <div class="help">Standardmäßig sehen nur Admin und Projektleitung die KI-Vorbewertung (inhaltliche Note /50).
+            Aktivieren, damit auch die Jury sie in Businessplan-Detail, Übersicht und Ranking sieht.</div>
         </div>
         <?php if ($storedKey !== ''): ?>
           <label style="font-weight:400;font-size:13px"><input type="checkbox" name="clear_key" value="1"> gespeicherten Key entfernen</label>

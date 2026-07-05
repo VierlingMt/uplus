@@ -7,6 +7,8 @@ $me = Auth::user();
 $isAdmin = Auth::isManager(); // Admin oder Projektleitung = volle Verwaltung
 $isTeacher = Auth::is('teacher');
 $mySchool = $me['school_id'] ? (int) $me['school_id'] : null;
+// KI-Vorbewertung nur für Verwaltung – oder für Jury, falls im Admin freigegeben.
+$showAiEval = $isAdmin || Settings::getInt('ai_eval_jurors', 0) === 1;
 
 $canUploadFor = function (array $team) use ($isAdmin, $isTeacher, $mySchool): bool {
     if ($isAdmin) return true;
@@ -239,7 +241,7 @@ ob_start(); ?>
 <div class="card">
   <div class="table-wrap">
     <table class="data data--cards hide-evaluated" id="plansTable">
-      <thead><tr><th>Team</th><th>Schule</th><th>Businessplan</th><?php if (!$isTeacher): ?><th>Struktur-Check</th><th>KI-Vorbewertung</th><?php endif; ?><th></th></tr></thead>
+      <thead><tr><th>Team</th><th>Schule</th><th>Businessplan</th><?php if (!$isTeacher): ?><th>Struktur-Check</th><?php if ($showAiEval): ?><th>KI-Vorbewertung</th><?php endif; ?><?php endif; ?><th></th></tr></thead>
       <tbody>
       <?php foreach ($teams as $t): ?>
         <tr data-evaluated="<?= (!$isTeacher && (int) $t['my_eval'] > 0) ? 1 : 0 ?>">
@@ -272,6 +274,7 @@ ob_start(); ?>
             <?php elseif ($t['sc_status'] === 'error'): ?><span class="pill red">Fehler</span>
             <?php else: ?><span class="pill muted">offen</span><?php endif; ?>
           </td>
+          <?php if ($showAiEval): ?>
           <td data-label="KI-Vorbewertung">
             <?php if (!$t['bp_id']): ?>—
             <?php elseif ($t['ai_status'] === 'done'): ?><strong><?= $fmt($t['ai_score']) ?></strong> / 50
@@ -279,10 +282,11 @@ ob_start(); ?>
             <?php else: ?><span class="pill muted">offen</span><?php endif; ?>
           </td>
           <?php endif; ?>
+          <?php endif; ?>
           <td class="row-actions" style="text-align:right"><a href="<?= url('plans', ['team' => $t['id']]) ?>" class="btn btn--ghost btn--sm">Öffnen</a></td>
         </tr>
       <?php endforeach; ?>
-      <?php if (!$teams): ?><tr><td colspan="<?= $isTeacher ? 4 : 6 ?>" class="muted">Noch keine Teams.</td></tr><?php endif; ?>
+      <?php if (!$teams): ?><tr><td colspan="<?= $isTeacher ? 4 : (5 + ($showAiEval ? 1 : 0)) ?>" class="muted">Noch keine Teams.</td></tr><?php endif; ?>
       </tbody>
     </table>
   </div>
