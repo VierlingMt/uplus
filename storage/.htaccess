@@ -1,0 +1,3 @@
+# Kein direkter Web-Zugriff auf Uploads/Storage.
+# Businesspläne werden ausschliesslich ueber die App (mit Auth-Pruefung) ausgeliefert.
+Require all denied

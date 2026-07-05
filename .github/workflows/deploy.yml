@@ -1,0 +1,69 @@
+name: Deploy (FTP)
+
+# Bei jedem Push auf den Arbeits-/Main-Branch: Config aus Secrets erzeugen
+# und per FTP auf den Webspace hochladen. Manuell ausloesbar via "Run workflow".
+on:
+  push:
+    branches:
+      - claude/uplus-management-system-ostrxb
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-ftp
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: PHP einrichten
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: config.local.php aus Secrets erzeugen
+        env:
+          DB_HOST:             ${{ secrets.DB_HOST }}
+          DB_NAME:             ${{ secrets.DB_NAME }}
+          DB_USER:             ${{ secrets.DB_USER }}
+          DB_PASS:             ${{ secrets.DB_PASS }}
+          APP_KEY:             ${{ secrets.APP_KEY }}
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_MODEL:     ${{ secrets.ANTHROPIC_MODEL }}
+          BASE_PATH:           ${{ secrets.BASE_PATH }}
+          SEED_ADMIN_EMAIL:    ${{ secrets.SEED_ADMIN_EMAIL }}
+          SEED_ADMIN_PASSWORD: ${{ secrets.SEED_ADMIN_PASSWORD }}
+        run: php scripts/gen_config.php
+
+      - name: PHP-Syntax pruefen
+        run: |
+          find app config index.php scripts -name '*.php' -print0 \
+            | xargs -0 -n1 -P4 php -l >/dev/null
+
+      - name: Per FTP hochladen
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server:       ${{ secrets.FTP_SERVER }}
+          username:     ${{ secrets.FTP_USER }}
+          password:     ${{ secrets.FTP_PASS }}
+          port:         ${{ secrets.FTP_PORT }}
+          protocol:     ${{ vars.FTP_PROTOCOL || 'ftp' }}
+          server-dir:   ${{ vars.FTP_DIR || './' }}
+          local-dir:    ./
+          # Nicht hochladen: Git, CI, Doku/PDFs, Doku-Generator, Beispiel-Config.
+          # storage/uploads bleibt unangetastet (Laufzeit-Uploads).
+          exclude: |
+            **/.git*
+            **/.git*/**
+            .github/**
+            docs/**
+            scripts/**
+            scratchpad/**
+            README.md
+            .gitignore
+            .gitattributes
+            config/config.local.example.php

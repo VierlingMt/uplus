@@ -1,0 +1,22 @@
+# Secrets & local config (generated at deploy from GitHub Actions secrets)
+/config/config.local.php
+
+# Uploaded business plans and generated files
+/storage/uploads/*
+!/storage/uploads/.gitkeep
+/storage/cache/*
+!/storage/cache/.gitkeep
+
+# Dependencies (we vendor them into the repo for FTP deploy, so keep vendor/ –
+# but ignore local composer noise)
+composer.phar
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+
+# Scratch
+/scratchpad/

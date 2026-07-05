@@ -1,0 +1,61 @@
+<?php
+/**
+ * Front-Controller / Router.
+ * Routing ueber ?r=route (robust auf Shared-Hosting, unabhaengig von mod_rewrite).
+ */
+
+declare(strict_types=1);
+
+require __DIR__ . '/app/bootstrap.php';
+
+$route = (string) ($_GET['r'] ?? 'dashboard');
+
+// Oeffentliche Routen (ohne Login)
+$public = ['login'];
+
+try {
+    if (!in_array($route, $public, true)) {
+        Auth::require();
+    }
+
+    switch ($route) {
+        case 'login':
+            require APP_PATH . '/pages/auth.php';
+            break;
+
+        case 'logout':
+            Auth::logout();
+            redirect(url('login'));
+            break;
+
+        case 'dashboard':
+            require APP_PATH . '/pages/dashboard_controller.php';
+            break;
+
+        case 'profile':
+            require APP_PATH . '/pages/profile.php';
+            break;
+
+        // --- Module (werden schrittweise ausgebaut) ---
+        case 'schools':
+        case 'teams':
+        case 'jurors':
+        case 'plans':
+        case 'ranking':
+        case 'materials':
+            render('stub', ['route' => $route, 'title' => ucfirst($route)]);
+            break;
+
+        default:
+            http_response_code(404);
+            render('error', ['title' => 'Seite nicht gefunden', 'message' => 'Diese Route existiert nicht: ' . e($route)]);
+    }
+} catch (Throwable $ex) {
+    http_response_code(500);
+    $detail = cfg('app_env') === 'production' ? null : $ex->getMessage() . "\n" . $ex->getTraceAsString();
+    render('error', [
+        'title'   => 'Ein Fehler ist aufgetreten',
+        'message' => 'Bitte versuche es erneut oder kontaktiere die Projektleitung.',
+        'detail'  => $detail,
+    ]);
+}
