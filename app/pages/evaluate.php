@@ -64,6 +64,14 @@ if (is_post()) {
         'UPDATE evaluations SET bp_submitted=1, pitch_submitted=?, bp_total=?, pitch_total=?, grand_total=? WHERE id=?',
         [$pitchSubmitted, $bpTotal, $pitchTotal, $grand, $evalId]
     );
+
+    // Autosave: still speichern und als JSON antworten (keine Umleitung / kein Flash).
+    if (input('ajax') === '1') {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => true, 'bp_total' => $bpTotal, 'pitch_total' => $pitchTotal, 'grand' => $grand]);
+        exit;
+    }
+
     flash('success', 'Bewertung gespeichert (' . $bpTotal . '/50' . ($isPitch ? ', Pitch ' . $pitchTotal . '/40' : '') . ').');
     redirect(url('evaluate', ['team' => $teamId]));
 }
@@ -73,7 +81,8 @@ $renderCriteria = function (array $group, string $phaseLabel) use ($scores) {
         $cur = $scores[$k]['points'] ?? '';
         $note = $scores[$k]['notes'] ?? '';
         echo '<div class="crit">';
-        echo '<div class="crit__head"><strong>' . e($c['title']) . '</strong>';
+        echo '<div class="crit__head">';
+        echo '<span style="display:inline-flex;align-items:center;gap:8px;min-width:0"><strong>' . e($c['title']) . '</strong><span class="crit__saved" hidden>✓ gespeichert</span></span>';
         echo '<div class="crit__pts"><input type="number" name="pts_' . e($k) . '" min="0" max="10" step="1" data-score value="' . e((string) $cur) . '"> <span class="muted">/10</span></div></div>';
         echo '<ul class="crit__hints">';
         foreach ($c['points'] as $h) { echo '<li>' . e($h) . '</li>'; }
@@ -92,7 +101,7 @@ ob_start(); ?>
   <?php if ($plan): ?> · <a href="<?= url('bp_download', ['id' => $plan['id']]) ?>" target="_blank">Businessplan-PDF ↗</a><?php endif; ?>
 </p>
 
-<form method="post" action="<?= url('evaluate', ['team' => $teamId]) ?>">
+<form method="post" action="<?= url('evaluate', ['team' => $teamId]) ?>" data-autosave>
   <?= Csrf::field() ?>
   <div class="card mb">
     <div class="card__head">Businessplan <span class="muted" style="font-weight:400">— Summe <span data-score-total>0</span>/50</span></div>
@@ -108,22 +117,32 @@ ob_start(); ?>
     <p class="muted mb">Pitch-Kriterien erscheinen, sobald das Team für den Pitch-Day nominiert ist.</p>
   <?php endif; ?>
 
-  <div class="card"><div class="card__body" style="display:flex;justify-content:space-between;align-items:center">
+  <div class="card"><div class="card__body" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
     <div>
       <strong>Punkteskala:</strong>
       <span class="muted" style="font-size:13px">10 herausragend · 8–9 sehr gut · 6–7 gut · 4–5 ausbaufähig · 1–3 schwach · 0 unbewertbar</span>
     </div>
-    <button class="btn btn--primary">Bewertung speichern</button>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="autosave-status" data-autosave-status aria-live="polite">✓ Automatisch gespeichert</span>
+      <button class="btn btn--primary">Speichern</button>
+    </div>
   </div></div>
 </form>
 
 <style>
 .eval-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.crit{border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.crit{border:1px solid var(--line);border-radius:10px;padding:12px 14px;transition:border-color .3s ease,box-shadow .3s ease}
+.crit.is-saved{border-color:var(--wj-teal);box-shadow:0 0 0 3px rgba(71,215,172,.30)}
 .crit__head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.crit__pts{display:flex;align-items:center;gap:6px}
 .crit__pts input{width:64px;text-align:center}
+.crit__saved{color:var(--wj-teal-d);font-family:"Chivo",sans-serif;font-weight:700;font-size:12px;white-space:nowrap;opacity:0;transition:opacity .3s ease}
+.crit.is-saved .crit__saved{opacity:1}
 .crit__hints{margin:8px 0;padding-left:18px;color:var(--muted);font-size:13px}
 .crit textarea{margin-top:6px}
+.autosave-status{color:var(--wj-teal-d);font-family:"Chivo",sans-serif;font-weight:700;font-size:13px;opacity:0;transition:opacity .3s ease}
+.autosave-status.is-visible{opacity:1}
+.autosave-status.is-saving{color:var(--muted)}
 @media(max-width:800px){.eval-grid{grid-template-columns:1fr}}
 </style>
 <?php

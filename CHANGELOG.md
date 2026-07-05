@@ -7,6 +7,15 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.35.6] - 2026-07-05
+### Hinzugefügt
+- **Automatisches Speichern der Jury-Bewertung.** In der Businessplan-Bewertung
+  werden Punkte und Notizen jetzt automatisch gespeichert – kurz nach der Eingabe und
+  spätestens beim Verlassen des Feldes. Als Rückmeldung leuchtet der Rahmen des
+  Kriteriums kurz grün auf („✓ gespeichert"), und im Fuß erscheint „✓ Automatisch
+  gespeichert". So kann nichts mehr verloren gehen; der „Speichern"-Knopf bleibt als
+  bewusstes Speichern erhalten. Bei Verbindungsproblemen erscheint ein roter Hinweis.
+
 ## [0.35.5] - 2026-07-05
 ### Behoben
 - **Businessplan-Einzelsicht: kein horizontaler Scroll mehr auf dem Handy.** Die

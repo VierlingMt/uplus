@@ -639,6 +639,69 @@
     window.UplusModal = { open: open, close: close };
   })();
 
+  // ---------------------------------------------------------------------------
+  // Autosave für Bewertungsformulare (form[data-autosave]) – speichert je
+  // Feldänderung debounced per AJAX; kurze grüne Rückmeldung „gespeichert“.
+  // ---------------------------------------------------------------------------
+  (function initAutosave() {
+    var form = document.querySelector('form[data-autosave]');
+    if (!form) return;
+    var status = document.querySelector('[data-autosave-status]');
+    var pending;
+
+    function setStatus(state) {
+      if (!status) return;
+      status.classList.add('is-visible');
+      status.style.color = '';
+      if (state === 'saving') { status.classList.add('is-saving'); status.textContent = 'Speichert …'; }
+      else { status.classList.remove('is-saving'); status.textContent = '✓ Automatisch gespeichert'; }
+    }
+    function setError() {
+      if (!status) return;
+      status.classList.add('is-visible'); status.classList.remove('is-saving');
+      status.style.color = 'var(--wj-red)'; status.textContent = 'Nicht gespeichert – Verbindung?';
+    }
+
+    function flashCrit(crit) {
+      if (!crit) return;
+      var badge = crit.querySelector('.crit__saved');
+      if (badge) badge.hidden = false;
+      crit.classList.add('is-saved');
+      clearTimeout(crit.__savedT);
+      crit.__savedT = setTimeout(function () {
+        crit.classList.remove('is-saved');
+        setTimeout(function () { if (badge) badge.hidden = true; }, 350);
+      }, 1500);
+    }
+
+    function save(crit) {
+      var data = new FormData(form);
+      data.set('ajax', '1');
+      setStatus('saving');
+      fetch(form.getAttribute('action') || location.href, {
+        method: 'POST', body: data, headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin'
+      })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function (res) { if (res && res.ok) { setStatus('saved'); flashCrit(crit); } else { setError(); } })
+        .catch(setError);
+    }
+
+    form.addEventListener('input', function (e) {
+      var t = e.target;
+      if (!t.matches('[data-score], textarea[name^="note_"]')) return;
+      var crit = t.closest('.crit');
+      clearTimeout(pending);
+      pending = setTimeout(function () { save(crit); }, 700);
+    });
+    // Verlässt der Fokus ein geändertes Feld, sofort sichern (kein Datenverlust).
+    form.addEventListener('blur', function (e) {
+      var t = e.target;
+      if (!t.matches || !t.matches('[data-score], textarea[name^="note_"]')) return;
+      clearTimeout(pending);
+      save(t.closest('.crit'));
+    }, true);
+  })();
+
   recalc();
 })();
 
