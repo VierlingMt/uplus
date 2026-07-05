@@ -84,15 +84,26 @@ if (is_post()) {
                 $link = abs_url('login', ['token' => $raw]);
 
                 $subject = 'Dein Login-Link für Unternehmen Plus';
-                $body =
+                $ttl = MagicLink::ttlMinutes();
+                $text =
                     "Hallo " . $user['name'] . ",\n\n" .
                     "hier ist dein persönlicher Login-Link für Unternehmen Plus:\n\n" .
                     $link . "\n\n" .
-                    "Der Link ist " . MagicLink::ttlMinutes() . " Minuten gültig und kann nur einmal verwendet werden.\n\n" .
+                    "Der Link ist " . $ttl . " Minuten gültig und kann nur einmal verwendet werden.\n\n" .
                     "Wenn du diese Anmeldung nicht angefordert hast, kannst du diese E-Mail ignorieren.\n\n" .
                     "Viele Grüße\nUnternehmen Plus – Wirtschaftsjunioren Forchheim\n";
 
-                Mailer::send($email, $subject, $body);
+                $html = Mailer::brandedHtml(
+                    'Dein Login-Link',
+                    'Hallo ' . e($user['name']) . ',<br><br>'
+                    . 'tippe auf den Button, um dich passwortlos bei <strong>Unternehmen Plus</strong> anzumelden:',
+                    'Jetzt anmelden',
+                    $link,
+                    'Der Link ist ' . $ttl . ' Minuten gültig und kann nur einmal verwendet werden. '
+                    . 'Falls du diese Anmeldung nicht angefordert hast, ignoriere diese E-Mail einfach.'
+                );
+
+                Mailer::send($email, $subject, $text, $html);
 
                 if (cfg('app_env') !== 'production') {
                     $devLink = $link;

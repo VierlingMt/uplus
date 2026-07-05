@@ -7,6 +7,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-07-05
+### Geändert
+- **Login-Mails im WJD-Design (HTML):** Der Magic-Link kommt jetzt als gestaltete
+  E-Mail mit Kopfband, klarem „Jetzt anmelden"-Button und Fußzeile – statt eines
+  nackten, langen Links. Versand als **multipart/alternative** (HTML + Text-Fallback),
+  wodurch auch Spamfilter-Warnungen zu „leeren" Nachrichten entfallen. Der `Mailer`
+  bietet dafür eine wiederverwendbare Vorlage `brandedHtml()`.
+
 ## [0.17.0] - 2026-07-05
 ### Geändert
 - **Vereinheitlichtes Wettbewerbsjahr:** Es gibt jetzt nur noch **eine** Quelle für
@@ -248,7 +256,10 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Login, Dashboard mit Kennzahlen und Projekt-Timeline, Profil
 - GitHub-Actions-Deploy: `config.local.php` aus Secrets + FTP-Upload
 
-[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.18.0
+[0.17.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.17.0
+[0.16.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.16.0
 [0.15.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.15.0
 [0.14.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.14.0
 [0.13.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.13.0
