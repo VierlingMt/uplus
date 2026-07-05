@@ -7,6 +7,23 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-07-05
+### Hinzugefügt
+- **Progressive Web App (PWA):** Die Anwendung ist jetzt auf Smartphone,
+  Tablet und Desktop installierbar (Web-Manifest, Service Worker, App-Icons im
+  WJD-Design). Nach der Installation läuft sie im eigenständigen Fenster; bei
+  fehlender Verbindung erscheint eine schlanke Offline-Hinweisseite.
+- Dezenter **Installations-Hinweis (Toast)** „… für ein super Erlebnis“ mit
+  Installieren-Button (Android/Chromium/Edge) bzw. Kurzanleitung „Zum
+  Home-Bildschirm“ auf iOS. Merkt sich das Wegklicken und nervt nicht erneut.
+
+### Geändert
+- **Navigation links ist jetzt einklappbar:** Am Desktop lässt sie sich per
+  Button auf eine schmale Icon-Leiste reduzieren (Zustand wird gemerkt); auf
+  dem Smartphone ist sie automatisch eingeklappt und öffnet als Drawer über den
+  Burger-Button. Im eingeklappten/mobilen Modus sind die Icons entsprechend
+  größer und die Touch-Ziele komfortabler.
+
 ## [0.11.0] - 2026-07-05
 ### Geändert
 - **Passwortloser Login (Magic-Link):** Die Anmeldung erfolgt jetzt ausschließlich
