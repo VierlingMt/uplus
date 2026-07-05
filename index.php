@@ -52,11 +52,9 @@ try {
         case 'material_download':
         case 'plans':
         case 'bp_download':
-            require APP_PATH . '/pages/' . $route . '.php';
-            break;
-
         case 'ranking':
-            render('stub', ['route' => $route, 'title' => ucfirst($route)]);
+        case 'evaluate':
+            require APP_PATH . '/pages/' . $route . '.php';
             break;
 
         default:

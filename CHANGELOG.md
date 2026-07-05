@@ -7,6 +7,16 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-05
+### Hinzugefügt
+- Jury-Bewertung: je Juror:in und Team die 5 Businessplan-Kriterien (0–10 mit
+  Notizen), Pitch-Kriterien erscheinen für nominierte Teams; Live-Summe
+- Bewertungsübersicht & Ranking: Mittelwerte je Team (Ø Businessplan, Ø Pitch,
+  Gesamt bis 140), KI-Wert zum Vergleich, Sortierung nach Gesamtpunktzahl
+- Nominierung: „Top 7 (+2)" automatisch aus dem Ranking, plus manuelles Setzen
+  von Status und Pitch-Reihenfolge
+- Jury-Bewertungen je Plan auf der Businessplan-Detailseite sichtbar
+
 ## [0.4.0] - 2026-07-05
 ### Hinzugefügt
 - Admin-Menü (nur Projektleitung) mit zentraler Einstellungen-Seite:
@@ -58,7 +68,8 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Login, Dashboard mit Kennzahlen und Projekt-Timeline, Profil
 - GitHub-Actions-Deploy: `config.local.php` aus Secrets + FTP-Upload
 
-[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.5.0
 [0.4.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.4.0
 [0.3.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.3.0
 [0.2.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.2.0

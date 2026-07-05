@@ -117,6 +117,42 @@ ob_start(); ?>
   </div>
 </div>
 <?php
+// Jury-Bewertungen (nur für Admin/Jury sichtbar)
+if (Auth::is('admin', 'juror')):
+    $evals = Database::all(
+        'SELECT e.*, u.name AS juror_name FROM evaluations e JOIN users u ON u.id=e.juror_id
+         WHERE e.team_id=? AND e.bp_submitted=1 ORDER BY u.name',
+        [$tid]
+    );
+    $avgBp = $evals ? array_sum(array_map(fn($e) => (float) $e['bp_total'], $evals)) / count($evals) : null;
+    ?>
+    <div class="card mt">
+      <div class="card__head" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Jury-Bewertung <span class="muted" style="font-weight:400;font-size:13px">(<?= count($evals) ?> abgegeben<?= $avgBp !== null ? ', Ø ' . $fmt($avgBp) . '/50' : '' ?>)</span></span>
+        <a class="btn btn--teal btn--sm" href="<?= url('evaluate', ['team' => $tid]) ?>">Selbst bewerten</a>
+      </div>
+      <div class="card__body">
+        <?php if (!$evals): ?>
+          <p class="muted">Noch keine Jury-Bewertung abgegeben.</p>
+        <?php else: ?>
+          <table class="data">
+            <thead><tr><th>Juror:in</th><th>Businessplan /50</th><th>Pitch /40</th><th>Gesamt /140</th></tr></thead>
+            <tbody>
+            <?php foreach ($evals as $ev): ?>
+              <tr>
+                <td><?= e($ev['juror_name']) ?></td>
+                <td><strong><?= $fmt($ev['bp_total']) ?></strong></td>
+                <td><?= $ev['pitch_submitted'] ? $fmt($ev['pitch_total']) : '–' ?></td>
+                <td><strong style="color:var(--wj-blue)"><?= $fmt($ev['grand_total']) ?></strong></td>
+              </tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table>
+        <?php endif; ?>
+      </div>
+    </div>
+<?php endif; ?>
+<?php
 $content = ob_get_clean();
 $title = $team['name'];
 require APP_PATH . '/pages/_layout.php';
