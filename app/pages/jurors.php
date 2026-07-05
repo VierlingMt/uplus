@@ -21,18 +21,6 @@ if (is_post()) {
         redirect(url('jurors'));
     }
 
-    if ($action === 'setpw') {
-        $pw = (string) input('password');
-        if (strlen($pw) < 8) {
-            flash('error', 'Passwort muss mindestens 8 Zeichen haben.');
-        } else {
-            Database::run('UPDATE users SET password_hash = ? WHERE id = ?',
-                [password_hash($pw, PASSWORD_DEFAULT), $id]);
-            flash('success', 'Passwort gesetzt.');
-        }
-        redirect(url('jurors'));
-    }
-
     // Anlegen / Bearbeiten
     $role  = (string) input('role');
     $name  = trim((string) input('name'));
@@ -59,11 +47,9 @@ if (is_post()) {
             [$role, $name, $email, $spec ?: null, $phone ?: null, $school, $active, $id]);
         flash('success', 'Nutzer aktualisiert.');
     } else {
-        $pw = (string) input('password');
-        $hash = strlen($pw) >= 8 ? password_hash($pw, PASSWORD_DEFAULT) : null;
-        Database::run('INSERT INTO users (role,name,email,specialty,phone,school_id,is_active,password_hash) VALUES (?,?,?,?,?,?,?,?)',
-            [$role, $name, $email, $spec ?: null, $phone ?: null, $school, $active, $hash]);
-        flash('success', $hash ? 'Nutzer angelegt.' : 'Nutzer angelegt – bitte noch ein Passwort setzen.');
+        Database::run('INSERT INTO users (role,name,email,specialty,phone,school_id,is_active) VALUES (?,?,?,?,?,?,?)',
+            [$role, $name, $email, $spec ?: null, $phone ?: null, $school, $active]);
+        flash('success', 'Nutzer angelegt. Anmeldung erfolgt passwortlos per Login-Link an die E-Mail.');
     }
     redirect(url('jurors'));
 }
@@ -106,24 +92,11 @@ ob_start(); ?>
         </div>
         <div class="field"><label>Spezialgebiet (Jury)</label><input type="text" name="specialty" value="<?= e($edit['specialty'] ?? '') ?>" placeholder="z. B. Marketing, Finanzen"></div>
         <div class="field"><label>Telefon</label><input type="text" name="phone" value="<?= e($edit['phone'] ?? '') ?>"></div>
-        <?php if (!$edit): ?>
-          <div class="field"><label>Passwort (optional, min. 8 Zeichen)</label><input type="password" name="password" autocomplete="new-password"></div>
-        <?php endif; ?>
         <div class="field"><label><input type="checkbox" name="is_active" value="1" <?= ($edit['is_active'] ?? 1) ? 'checked' : '' ?>> Aktiv (Login erlaubt)</label></div>
+        <p class="muted" style="font-size:13px;margin:0 0 12px">Anmeldung passwortlos per Login-Link an die E-Mail – kein Passwort nötig.</p>
         <button class="btn btn--primary"><?= $edit ? 'Speichern' : 'Anlegen' ?></button>
         <?php if ($edit): ?><a href="<?= url('jurors') ?>" class="btn btn--ghost">Abbrechen</a><?php endif; ?>
       </form>
-      <?php if ($edit): ?>
-        <hr style="margin:18px 0;border:none;border-top:1px solid var(--line)">
-        <form method="post" action="<?= url('jurors') ?>">
-          <?= Csrf::field() ?><input type="hidden" name="action" value="setpw"><input type="hidden" name="id" value="<?= (int) $edit['id'] ?>">
-          <label>Neues Passwort setzen</label>
-          <div style="display:flex;gap:8px">
-            <input type="password" name="password" placeholder="min. 8 Zeichen" autocomplete="new-password">
-            <button class="btn btn--teal">Setzen</button>
-          </div>
-        </form>
-      <?php endif; ?>
     </div>
   </div>
 
@@ -138,7 +111,7 @@ ob_start(); ?>
             <td><strong><?= e($u['name']) ?></strong><br><span class="muted" style="font-size:13px"><?= e($u['email']) ?></span>
               <?php if ($u['school_name']): ?><br><span class="pill muted"><?= e($u['school_name']) ?></span><?php endif; ?></td>
             <td><span class="pill <?= $u['role']==='admin'?'blue':($u['role']==='juror'?'teal':'amber') ?>"><?= e($roles[$u['role']] ?? $u['role']) ?></span></td>
-            <td><?php if (!$u['password_hash']): ?><span class="pill red">kein PW</span><?php elseif (!$u['is_active']): ?><span class="pill muted">inaktiv</span><?php else: ?><span class="pill teal">aktiv</span><?php endif; ?></td>
+            <td><?php if (!$u['is_active']): ?><span class="pill muted">inaktiv</span><?php else: ?><span class="pill teal">aktiv</span><?php endif; ?></td>
             <td style="white-space:nowrap;text-align:right">
               <a href="<?= url('jurors', ['edit' => $u['id']]) ?>" class="btn btn--ghost btn--sm">Bearbeiten</a>
               <?php if ($u['id'] !== Auth::id()): ?>

@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 // Anwendungsversion (bei relevanten Änderungen zusammen mit CHANGELOG.md pflegen).
 if (!defined('APP_VERSION')) {
-    define('APP_VERSION', '0.10.0');
+    define('APP_VERSION', '0.11.0');
 }
 
 $defaults = [
@@ -27,6 +27,13 @@ $defaults = [
     'app_env'           => getenv('APP_ENV')  ?: 'production',
     'app_key'           => getenv('APP_KEY')  ?: '',          // fuer CSRF/Signaturen
     'base_path'         => getenv('BASE_PATH') ?: '',          // '' wenn im Web-Root, sonst z.B. '/uplus'
+    // Absolute Basis-URL (nur Schema+Host) fuer Links in E-Mails (Magic-Link-Login).
+    // Leer = automatisch aus dem Request abgeleitet, z. B. 'https://uplus.example.de'.
+    'app_url'           => getenv('APP_URL') ?: '',
+
+    // E-Mail-Versand (passwortloser Magic-Link-Login). Leer = no-reply@<Host>.
+    'mail_from'         => getenv('MAIL_FROM')      ?: '',
+    'mail_from_name'    => getenv('MAIL_FROM_NAME') ?: 'Unternehmen Plus',
 
     // KI-Vorbewertung (Anthropic Claude)
     'anthropic_api_key' => getenv('ANTHROPIC_API_KEY') ?: '',

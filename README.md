@@ -36,7 +36,8 @@ besten 7 (+2 Nachrücker) für den Pitch-Day nominieren und dort final bewerten.
 Das Deployment-Ziel ist klassisches Shared-Hosting (FTP + MariaDB, kein dauerhafter
 Serverprozess/SSH). Daraus folgt der Stack:
 
-- **PHP 8.2** ohne Framework – kleiner Router, PDO, Session-Auth, CSRF. Läuft nativ,
+- **PHP 8.2** ohne Framework – kleiner Router, PDO, passwortloser Login per
+  Magic-Link (E-Mail), Session-Auth, CSRF. Läuft nativ,
   kein Build-Step, Deploy = Dateien per FTP kopieren.
 - **MariaDB 10.6** (UNIX-Socket, `localhost`).
 - Server-gerendertes HTML im **WJD-Corporate-Design** (Chivo/Bitter, Blau/Türkis).
@@ -98,15 +99,20 @@ Die App ist erreichbar unter **https://vimatec.de/uplus**.
 | `DB_HOST` | optional (Default `localhost`) | optional |
 | `ANTHROPIC_API_KEY` | KI-Vorbewertung | nachreichen |
 | `APP_KEY` | Session/CSRF (sonst automatisch erzeugt) | optional |
-| `SEED_ADMIN_EMAIL` `SEED_ADMIN_PASSWORD` | Start-Admin-Konto | optional |
+| `SEED_ADMIN_EMAIL` | Start-Admin-Konto (E-Mail) | optional |
+| `APP_URL` | Basis-URL für Login-Links in Mails (z. B. `https://vimatec.de`) | empfohlen |
+| `MAIL_FROM` `MAIL_FROM_NAME` | Absender der Login-Mails | optional |
 
 **Optionale Repository-Variablen** (Settings → Variables): `FTP_DIR` (Default `./`),
 `FTP_PROTOCOL` (`ftp`/`ftps`), `BASE_PATH` (Secret, falls Auto-Erkennung nicht passt).
 
-### Start-Admin
+### Anmeldung (passwortlos)
 
-Ohne `SEED_ADMIN_*`-Secrets: `mv@vimatec.de` / `UPlus-Start!2026`
-→ **bitte nach dem ersten Login unter „Profil“ ändern**.
+Der Login erfolgt **ausschließlich per E-Mail (Magic-Link)**: Auf der Login-Seite
+die E-Mail-Adresse eingeben, den zugeschickten Link (30 Min. gültig, einmalig)
+öffnen – fertig, kein Passwort. Voraussetzung ist eine korrekte, erreichbare
+E-Mail-Adresse am Nutzerkonto (in „Jury & Nutzer" pflegbar). Das dauerhafte
+Eigentümer-Konto ist `mv@vimatec.de`.
 
 ## Lokale Entwicklung
 

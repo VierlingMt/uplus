@@ -43,6 +43,25 @@ CREATE TABLE IF NOT EXISTS users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
+-- Login-Tokens (passwortloser Login per Magic-Link). Gespeichert wird nur der
+-- SHA-256-Hash des Einmal-Tokens, nie der Token selbst.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS login_tokens (
+    id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id      INT UNSIGNED NOT NULL,
+    token_hash   CHAR(64) NOT NULL,
+    expires_at   DATETIME NOT NULL,
+    used_at      DATETIME NULL,
+    requested_ip VARCHAR(45) NULL,
+    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_login_tokens_hash (token_hash),
+    KEY idx_login_tokens_user (user_id),
+    KEY idx_login_tokens_expires (expires_at),
+    CONSTRAINT fk_login_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
 -- Teams (= Projekte / Geschaeftsideen)
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS teams (

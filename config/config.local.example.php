@@ -21,4 +21,12 @@ return [
 
     // '' wenn die App im Web-Root liegt, sonst z.B. '/uplus'
     'base_path'         => '',
+
+    // Passwortloser Login per Magic-Link (E-Mail):
+    // Absolute Basis-URL (nur Schema+Host) fuer die Login-Links in den Mails.
+    // Leer lassen = automatisch aus dem Request; explizit setzen ist robuster.
+    'app_url'           => 'https://uplus.example.de',
+    // Absender der System-Mails (sollte zur Domain passen -> Zustellbarkeit).
+    'mail_from'         => 'no-reply@uplus.example.de',
+    'mail_from_name'    => 'Unternehmen Plus',
 ];

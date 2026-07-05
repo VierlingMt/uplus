@@ -8,26 +8,28 @@ declare(strict_types=1);
 
 final class Auth
 {
-    public static function attempt(string $email, string $password): bool
+    /**
+     * Aktiven Nutzer zu einer E-Mail suchen (fuer den Magic-Link-Versand).
+     */
+    public static function findActiveByEmail(string $email): ?array
     {
-        $user = Database::one(
+        return Database::one(
             'SELECT * FROM users WHERE email = ? AND is_active = 1 LIMIT 1',
             [strtolower(trim($email))]
         );
-        if (!$user || !$user['password_hash'] || !password_verify($password, $user['password_hash'])) {
-            return false;
-        }
-        // Rehash bei Bedarf
-        if (password_needs_rehash($user['password_hash'], PASSWORD_DEFAULT)) {
-            Database::run('UPDATE users SET password_hash = ? WHERE id = ?',
-                [password_hash($password, PASSWORD_DEFAULT), $user['id']]);
-        }
+    }
+
+    /**
+     * Session fuer einen bereits verifizierten Nutzer aufbauen (passwortloser
+     * Login per Magic-Link). Erwartet einen Nutzer-Datensatz aus der DB.
+     */
+    public static function login(array $user): void
+    {
         Database::run('UPDATE users SET last_login_at = NOW() WHERE id = ?', [$user['id']]);
         session_regenerate_id(true);
         $_SESSION['uid']  = (int) $user['id'];
         $_SESSION['role'] = $user['role'];
         $_SESSION['name'] = $user['name'];
-        return true;
     }
 
     public static function logout(): void

@@ -21,6 +21,11 @@ $cfg = [
     'base_path'         => getenv('BASE_PATH') ?: '',
 ];
 
+// Passwortloser Login per Magic-Link: Basis-URL + Mail-Absender.
+if ($u = getenv('APP_URL'))        { $cfg['app_url'] = $u; }
+if ($f = getenv('MAIL_FROM'))      { $cfg['mail_from'] = $f; }
+if ($n = getenv('MAIL_FROM_NAME')) { $cfg['mail_from_name'] = $n; }
+
 if ($e = getenv('SEED_ADMIN_EMAIL'))    { $cfg['seed_admin_email'] = $e; }
 if ($p = getenv('SEED_ADMIN_PASSWORD')) { $cfg['seed_admin_password'] = $p; }
 

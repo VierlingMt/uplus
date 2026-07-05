@@ -153,6 +153,25 @@ final class Migrator
                 'up'      => 'ALTER TABLE structure_checks
                     ADD COLUMN IF NOT EXISTS completeness_score TINYINT NULL AFTER meets_minimum',
             ],
+            [
+                'version' => '2026_07_10_login_tokens',
+                'name'    => 'Passwortloser Login per Magic-Link (Token-Tabelle)',
+                'up'      => "CREATE TABLE IF NOT EXISTS login_tokens (
+                    id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    user_id      INT UNSIGNED NOT NULL,
+                    token_hash   CHAR(64) NOT NULL,
+                    expires_at   DATETIME NOT NULL,
+                    used_at      DATETIME NULL,
+                    requested_ip VARCHAR(45) NULL,
+                    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (id),
+                    UNIQUE KEY uq_login_tokens_hash (token_hash),
+                    KEY idx_login_tokens_user (user_id),
+                    KEY idx_login_tokens_expires (expires_at),
+                    CONSTRAINT fk_login_tokens_user FOREIGN KEY (user_id)
+                        REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ],
         ];
     }
 

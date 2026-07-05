@@ -19,6 +19,29 @@ function url(string $route = 'dashboard', array $params = []): string
     return ($base ?: '') . '/index.php?' . $qs;
 }
 
+/**
+ * Basis-URL (Schema + Host) fuer absolute Links, z. B. in E-Mails.
+ * Bevorzugt cfg('app_url'); faellt sonst auf den aktuellen Request zurueck.
+ * Der Pfad (base_path) wird von url() ergaenzt – app_url daher nur Schema+Host.
+ */
+function base_url(): string
+{
+    $configured = trim((string) cfg('app_url', ''));
+    if ($configured !== '') {
+        return rtrim($configured, '/');
+    }
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    return ($https ? 'https' : 'http') . '://' . $host;
+}
+
+/** Absolute URL zu einer Route (fuer E-Mails o. Ae.). */
+function abs_url(string $route = 'dashboard', array $params = []): string
+{
+    return base_url() . url($route, $params);
+}
+
 /** Asset-URL (CSS/JS/Bilder) mit Versions-Cache-Busting. */
 function asset(string $path): string
 {

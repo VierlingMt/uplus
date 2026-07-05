@@ -7,6 +7,22 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-07-05
+### Geändert
+- **Passwortloser Login (Magic-Link):** Die Anmeldung erfolgt jetzt ausschließlich
+  über die E-Mail-Adresse. Nutzer geben ihre Adresse ein und erhalten einen
+  einmaligen, 30 Minuten gültigen Login-Link per Mail – es gibt keine Passwörter
+  mehr. Bestätigungstext und interne Nachschlage-Logik verhindern, dass sich
+  vorhandene Konten anhand der Rückmeldung erraten lassen (kein User-Enumeration)
+- Nutzerverwaltung („Jury & Nutzer") und Profil ohne Passwortfelder; neue Konten
+  sind sofort per Login-Link nutzbar, sobald eine gültige E-Mail hinterlegt ist
+
+### Hinzugefügt
+- Token-Tabelle `login_tokens` (es wird nur der SHA-256-Hash des Einmal-Tokens
+  gespeichert) samt automatischer Migration
+- Schlanker E-Mail-Versand (`Mailer`) über PHP `mail()` und neue Konfigurationswerte
+  `app_url`, `mail_from`, `mail_from_name`
+
 ## [0.10.0] - 2026-07-05
 ### Geändert
 - **Struktur-Check kalibriert & steuerbar:** statt einer unzuverlässigen Ja/Nein-
@@ -142,7 +158,8 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Login, Dashboard mit Kennzahlen und Projekt-Timeline, Profil
 - GitHub-Actions-Deploy: `config.local.php` aus Secrets + FTP-Upload
 
-[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.11.0
 [0.10.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.10.0
 [0.9.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.9.0
 [0.8.1]: https://github.com/VierlingMt/uplus/releases/tag/v0.8.1

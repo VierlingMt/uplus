@@ -34,6 +34,9 @@ jobs:
           ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
           ANTHROPIC_MODEL:     ${{ secrets.ANTHROPIC_MODEL }}
           BASE_PATH:           ${{ secrets.BASE_PATH }}
+          APP_URL:             ${{ secrets.APP_URL }}
+          MAIL_FROM:           ${{ secrets.MAIL_FROM }}
+          MAIL_FROM_NAME:      ${{ secrets.MAIL_FROM_NAME }}
           SEED_ADMIN_EMAIL:    ${{ secrets.SEED_ADMIN_EMAIL }}
           SEED_ADMIN_PASSWORD: ${{ secrets.SEED_ADMIN_PASSWORD }}
         run: php scripts/gen_config.php
