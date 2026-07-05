@@ -237,6 +237,11 @@ final class Migrator
                     ADD COLUMN IF NOT EXISTS sc_override_reason VARCHAR(255) NULL,
                     ADD COLUMN IF NOT EXISTS sc_override_at DATETIME NULL',
             ],
+            [
+                'version' => '2026_07_20_sponsor_logo_backfill',
+                'name'    => 'Bekannten Sponsoren den vorhandenen Logo-Pfad nachtragen (falls leer)',
+                'up'      => [self::class, 'sponsorLogoBackfill'],
+            ],
         ];
     }
 
@@ -379,6 +384,23 @@ final class Migrator
         $insS = $pdo->prepare('INSERT INTO sponsors (name, logo_path) VALUES (?, ?) ON DUPLICATE KEY UPDATE logo_path=VALUES(logo_path)');
         foreach (self::SEED_SPONSORS as $s) {
             $insS->execute($s);
+        }
+    }
+
+    /**
+     * Bekannten Sponsoren den passenden Logo-Pfad nachtragen, wenn dieser (etwa
+     * weil die ursprüngliche Seed-Migration früher ohne Logos lief) noch leer
+     * ist. Ändert nur Datensätze ohne Logo – vom Nutzer gepflegte Logos bleiben
+     * unangetastet. Idempotent.
+     */
+    public static function sponsorLogoBackfill(PDO $pdo): void
+    {
+        $upd = $pdo->prepare(
+            "UPDATE sponsors SET logo_path = ?
+             WHERE name = ? AND (logo_path IS NULL OR logo_path = '')"
+        );
+        foreach (self::SEED_SPONSORS as [$name, $logo]) {
+            $upd->execute([$logo, $name]);
         }
     }
 

@@ -161,12 +161,20 @@ ob_start(); ?>
   <div class="card">
     <div class="table-wrap">
       <table class="data data--cards">
-        <thead><tr><th></th><th>Sponsor</th><th>Ansprechpartner</th><th>E-Mail</th><th><?= e($activeLabel) ?> aktiv</th><th>Beiträge</th><th></th></tr></thead>
+        <thead><tr><th>Sponsor</th><th>Ansprechpartner</th><th>E-Mail</th><th><?= e($activeLabel) ?> aktiv</th><th>Beiträge</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($sponsors as $s): ?>
           <tr>
-            <td class="cell-media" style="width:52px"><?php if ($s['logo_path']): ?><img src="<?= asset($s['logo_path']) ?>" alt="" style="width:44px;height:36px;object-fit:contain"><?php endif; ?></td>
-            <td data-label="Sponsor"><strong><?= e($s['name']) ?></strong></td>
+            <td data-label="Sponsor">
+              <div class="sponsor-cell">
+                <?php if ($s['logo_path']): ?>
+                  <img class="sponsor-cell__logo" src="<?= asset($s['logo_path']) ?>" alt="Logo <?= e($s['name']) ?>">
+                <?php else: ?>
+                  <span class="sponsor-cell__logo sponsor-cell__logo--empty" aria-hidden="true"><?= e(mb_strtoupper(mb_substr((string) $s['name'], 0, 1))) ?></span>
+                <?php endif; ?>
+                <strong><?= e($s['name']) ?></strong>
+              </div>
+            </td>
             <td data-label="Ansprechpartner"><?= e($s['contact_name'] ?? '—') ?></td>
             <td data-label="E-Mail"><?= $s['email'] ? '<a href="mailto:' . e($s['email']) . '">' . e($s['email']) . '</a>' : '—' ?></td>
             <td data-label="<?= e($activeLabel) ?> aktiv"><?= $s['active_now'] ? '<span class="pill teal">ja</span>' : '<span class="pill muted">nein</span>' ?></td>
@@ -181,7 +189,7 @@ ob_start(); ?>
             </td>
           </tr>
         <?php endforeach; ?>
-        <?php if (!$sponsors): ?><tr><td colspan="7" class="muted">Noch keine Sponsoren.</td></tr><?php endif; ?>
+        <?php if (!$sponsors): ?><tr><td colspan="6" class="muted">Noch keine Sponsoren.</td></tr><?php endif; ?>
         </tbody>
       </table>
     </div>

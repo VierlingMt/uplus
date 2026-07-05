@@ -241,6 +241,19 @@ table.data th, table.data td { padding: 12px 14px; text-align: left; border-bott
 table.data th { font-family: "Chivo",sans-serif; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; }
 table.data tr:hover td { background: #fafcfe; }
 
+/* Sponsor-Zelle: Logo (wenn vorhanden) + Name zusammen in der ersten Spalte. */
+.sponsor-cell { display: flex; align-items: center; gap: 12px; }
+.sponsor-cell__logo {
+  flex: 0 0 auto; width: 48px; height: 40px; object-fit: contain;
+  border-radius: 8px; background: #fff; border: 1px solid var(--line);
+  padding: 3px;
+}
+.sponsor-cell__logo--empty {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: "Chivo",sans-serif; font-weight: 700; font-size: 16px;
+  color: var(--muted); background: var(--wj-grey-l);
+}
+
 /* ---------- Pills ---------- */
 .pill { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 12px; font-family: "Chivo",sans-serif; font-weight: 700; }
 .pill.muted { background: var(--wj-grey-l); color: var(--muted); }

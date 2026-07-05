@@ -7,6 +7,20 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-07-05
+### Geändert
+- **Sponsoren-Übersicht: Logo in der ersten Spalte.** In der Verwaltungsliste
+  steht das Sponsorenlogo jetzt direkt neben dem Namen in der ersten Spalte
+  (statt in einer separaten, leicht übersehbaren Mini-Spalte). Ist kein Logo
+  hinterlegt, erscheint ein neutraler Platzhalter mit dem Anfangsbuchstaben.
+
+### Behoben
+- **Fehlende Logos bekannter Sponsoren nachgetragen:** Eine Migration setzt für
+  bekannte Sponsoren (Sparkasse, VIERLING, Medical Valley, Bildungsregion,
+  Stadt/Stadtwerke Ebermannstadt, WJ Bayern) den vorhandenen Logo-Pfad, falls
+  dieser in der Datenbank noch leer war. Selbst gepflegte Logos bleiben
+  unverändert.
+
 ## [0.34.0] - 2026-07-05
 ### Hinzugefügt
 - **Kontakt-Seite im Menü (für alle sichtbar):** Neuer Menüpunkt „Kontakt" in der
