@@ -7,6 +7,21 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.35.7] - 2026-07-05
+### Behoben
+- **Businessplan-Einzelsicht lief mobil noch über den Rand.** Ursachen behoben:
+  langer Datei­name bricht jetzt hart im Wort um, die Datei-Auswahl (Upload) schrumpft
+  und bricht um, und der „Team verwalten"-Knopf im Kopf darf umbrechen. Zusätzlich ein
+  globales Sicherheitsnetz gegen versehentlichen horizontalen Seiten-Scroll.
+### Geändert
+- **Businessplan-Übersicht: klarere, kompakte Zeilen.** Fett steht jetzt nur noch der
+  Plan-/Team-Name (keine Dopplung mehr mit der Idee). Die graue zweite Zeile zeigt –
+  auch auf dem Handy – kurz **Schule (Kürzel) · Struktur-Check · eigene Bewertung**
+  (z. B. „EGF · Struktur 7/10 · ● offen").
+### Hinzugefügt
+- **Filter „Schwache Struktur ausblenden"** in der Businessplan-Übersicht: blendet Pläne
+  unter dem Mindeststandard aus (Auswahl wird pro Gerät gemerkt).
+
 ## [0.35.6] - 2026-07-05
 ### Hinzugefügt
 - **Automatisches Speichern der Jury-Bewertung.** In der Businessplan-Bewertung

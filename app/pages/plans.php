@@ -235,7 +235,10 @@ ob_start(); ?>
     </div>
   <?php endif; ?>
   <?php if (!$isTeacher): ?>
-    <label class="toggle-eval"><input type="checkbox" id="hideEvaluatedToggle" checked> Bereits bewertete Pläne ausblenden</label>
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <label class="toggle-eval"><input type="checkbox" id="hideEvaluatedToggle" checked> Bereits bewertete Pläne ausblenden</label>
+      <label class="toggle-eval"><input type="checkbox" id="hideWeakToggle"> Schwache Struktur ausblenden</label>
+    </div>
   <?php endif; ?>
 </div>
 <div class="card">
@@ -243,8 +246,18 @@ ob_start(); ?>
     <table class="data data--compact hide-evaluated" id="plansTable">
       <thead><tr><th>Team</th><th>Schule</th><th>Businessplan</th><?php if (!$isTeacher): ?><th>Struktur-Check</th><?php if ($showAiEval): ?><th>KI-Vorbewertung</th><?php endif; ?><?php endif; ?><th></th></tr></thead>
       <tbody>
-      <?php foreach ($teams as $t): ?>
-        <tr data-evaluated="<?= (!$isTeacher && (int) $t['my_eval'] > 0) ? 1 : 0 ?>">
+      <?php foreach ($teams as $t):
+          // Struktur-Check kompakt + „schwach"-Kennzeichnung (unter Mindeststandard)
+          $scOvr  = $t['sc_override'] === null ? null : (int) $t['sc_override'];
+          $scEff  = $scOvr !== null ? $scOvr : (int) $t['sc_min'];
+          $isWeak = ($t['sc_status'] === 'done') && $scEff === 0;
+          $schoolShort = $t['short_name'] ?: $t['school_name'];
+          if (!$t['bp_id'])                    { $scShort = 'kein Plan'; }
+          elseif ($t['sc_status'] === 'done')  { $scShort = 'Struktur ' . ($t['sc_score'] !== null ? (int) $t['sc_score'] : '–') . '/10' . ($isWeak ? ' ⚠' : ''); }
+          elseif ($t['sc_status'] === 'error') { $scShort = 'Struktur: Fehler'; }
+          else                                 { $scShort = 'Struktur offen'; }
+      ?>
+        <tr data-evaluated="<?= (!$isTeacher && (int) $t['my_eval'] > 0) ? 1 : 0 ?>" data-weak="<?= $isWeak ? 1 : 0 ?>">
           <td data-label="Team" class="col-primary">
             <?php if ($t['bp_id']): ?>
               <a class="pdf-link" href="<?= url('bp_download', ['id' => $t['bp_id']]) ?>"
@@ -254,7 +267,10 @@ ob_start(); ?>
             <?php else: ?>
               <strong><?= e($t['name']) ?></strong>
             <?php endif; ?>
-            <?php if ($t['idea_name']): ?><br><span class="muted" style="font-size:13px"><?= e($t['idea_name']) ?></span><?php endif; ?>
+            <?php if ($t['idea_name'] && strcasecmp((string) $t['idea_name'], (string) $t['name']) !== 0): ?>
+              <span class="hide-sm muted" style="font-size:13px"> — <?= e($t['idea_name']) ?></span>
+            <?php endif; ?>
+            <span class="show-sm muted" style="font-size:13px"><?= e($schoolShort) ?><?php if (!$isTeacher): ?> · <?= e($scShort) ?> · <?= (int) $t['my_eval'] ? '✓ bewertet' : '● offen' ?><?php endif; ?></span>
           </td>
           <td data-label="Schule" class="hide-sm"><?= e($t['short_name'] ?: $t['school_name']) ?></td>
           <td data-label="Businessplan" class="hide-sm">
@@ -284,9 +300,6 @@ ob_start(); ?>
           <?php endif; ?>
           <?php endif; ?>
           <td class="row-actions" style="text-align:right">
-            <?php if (!$isTeacher && $t['bp_id']): ?>
-              <span class="show-sm-inline pill <?= (int) $t['my_eval'] ? 'teal' : 'amber' ?>" title="<?= (int) $t['my_eval'] ? 'von dir bewertet' : 'noch nicht von dir bewertet' ?>"><?= (int) $t['my_eval'] ? '✓' : 'offen' ?></span>
-            <?php endif; ?>
             <a href="<?= url('plans', ['team' => $t['id']]) ?>" class="btn btn--ghost btn--sm">Öffnen</a>
           </td>
         </tr>
@@ -298,15 +311,20 @@ ob_start(); ?>
 </div>
 <script>
 (function () {
-  var t = document.getElementById('hideEvaluatedToggle'), tbl = document.getElementById('plansTable');
-  if (!t || !tbl) return;
-  var KEY = 'uplus_hide_evaluated';
-  var saved = null; try { saved = localStorage.getItem(KEY); } catch (e) {}
-  var on = saved === null ? true : saved === '1';           // Standard: an
-  t.checked = on; tbl.classList.toggle('hide-evaluated', on);
-  t.addEventListener('change', function () {
-    try { localStorage.setItem(KEY, t.checked ? '1' : '0'); } catch (e) {}
-    tbl.classList.toggle('hide-evaluated', t.checked);
+  var tbl = document.getElementById('plansTable');
+  if (!tbl) return;
+  // [Toggle-Element-ID, Tabellen-Klasse, localStorage-Key, Standard-an?]
+  [['hideEvaluatedToggle', 'hide-evaluated', 'uplus_hide_evaluated', true],
+   ['hideWeakToggle', 'hide-weak', 'uplus_hide_weak', false]].forEach(function (cfg) {
+    var t = document.getElementById(cfg[0]);
+    if (!t) return;
+    var saved = null; try { saved = localStorage.getItem(cfg[2]); } catch (e) {}
+    var on = saved === null ? cfg[3] : saved === '1';
+    t.checked = on; tbl.classList.toggle(cfg[1], on);
+    t.addEventListener('change', function () {
+      try { localStorage.setItem(cfg[2], t.checked ? '1' : '0'); } catch (e) {}
+      tbl.classList.toggle(cfg[1], t.checked);
+    });
   });
 })();
 </script>

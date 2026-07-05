@@ -27,7 +27,7 @@ ob_start(); ?>
 
 <div class="grid cols-2">
   <div class="card">
-    <div class="card__head" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+    <div class="card__head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
       <span>Team</span>
       <?php $canManageTeam = $isAdmin || ($isTeacher && (int) $team['school_id'] === $mySchool); ?>
       <?php if ($canManageTeam): ?>
@@ -48,7 +48,7 @@ ob_start(); ?>
     <div class="card__body">
       <?php if ($plan): ?>
         <p><span class="pill teal">Version <?= (int) $plan['version'] ?></span>
-           <span class="muted"><?= e($plan['original_name']) ?> · <?= human_size((int) $plan['size_bytes']) ?> · <?= e(date('d.m.Y H:i', strtotime((string) $plan['created_at']))) ?></span></p>
+           <span class="muted" style="overflow-wrap:anywhere;word-break:break-word"><?= e($plan['original_name']) ?> · <?= human_size((int) $plan['size_bytes']) ?> · <?= e(date('d.m.Y H:i', strtotime((string) $plan['created_at']))) ?></span></p>
         <a class="btn btn--primary" href="<?= url('bp_download', ['id' => $plan['id']]) ?>"
            data-pdf-url="<?= url('bp_download', ['id' => $plan['id']]) ?>"
            data-pdf-title="<?= e($team['name'] . ($team['idea_name'] ? ' – ' . $team['idea_name'] : '')) ?>">PDF ansehen</a>
@@ -68,8 +68,8 @@ ob_start(); ?>
         <form method="post" action="<?= url('plans') ?>" enctype="multipart/form-data">
           <?= Csrf::field() ?><input type="hidden" name="action" value="upload"><input type="hidden" name="team_id" value="<?= (int) $team['id'] ?>">
           <label><?= $plan ? 'Neue Version hochladen' : 'Businessplan hochladen' ?> (PDF)</label>
-          <div style="display:flex;gap:8px;margin-top:6px">
-            <input type="file" name="file" accept="application/pdf" required>
+          <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+            <input type="file" name="file" accept="application/pdf" required style="min-width:0;max-width:100%">
             <button class="btn btn--teal">Hochladen</button>
           </div>
         </form>

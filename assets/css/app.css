@@ -539,9 +539,12 @@ body.modal-open { overflow: hidden; }
 }
 
 /* ---------- Kompakte Listen (dichte Übersichten, z. B. Businesspläne) ---------- */
-.show-sm-inline { display: none; }
+.show-sm-inline, .show-sm { display: none; }
+table.hide-weak tr[data-weak="1"] { display: none; }
 @media (max-width: 680px) {
   .show-sm-inline { display: inline-block; }
+  .show-sm { display: block; }
+  .hide-sm { display: none; }
   /* data--compact: eine dichte Zeile je Eintrag (Name links, Aktion rechts) */
   .data--compact thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .data--compact, .data--compact tbody { display: block; }
@@ -558,3 +561,7 @@ body.modal-open { overflow: hidden; }
   .data--compact td[colspan] { flex: 1 1 100%; text-align: center; padding: 14px; }
   .data--compact .pill { font-size: 11px; }
 }
+
+/* Sicherheitsnetz gegen versehentlichen horizontalen Seiten-Scroll (Mobile) */
+input[type="file"] { max-width: 100%; }
+.content { overflow-x: clip; }
