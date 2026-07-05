@@ -7,6 +7,17 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-07-05
+### Hinzugefügt
+- **Businessplan-Übersicht (Verwaltung): KI- und Jury-Bewertung auf einen Blick.**
+  Für Admin und Projektleitung zeigt die Übersicht jetzt zusätzlich zur Struktur-Note
+  die **KI-Vorbewertung** (…/50) und die **Jury-Bewertung über alle Juror:innen**
+  (Durchschnitt …/50 samt Anzahl abgegebener Bewertungen) – als eigene Spalten am
+  Desktop und kompakt in der grauen Info-Zeile am Handy.
+- **Sortierung** in der Businessplan-Übersicht: nach Name (A–Z) sowie – höchste zuerst –
+  nach Struktur-Check, KI-Vorbewertung und Jury-Bewertung. Funktioniert auch mobil in
+  der Karten-Ansicht; die Auswahl wird pro Gerät gemerkt.
+
 ## [0.39.0] - 2026-07-05
 ### Hinzugefügt
 - **Vollständiges Audit-Log – wer hat wann was geändert.** Neuer Menüpunkt „Audit-Log"

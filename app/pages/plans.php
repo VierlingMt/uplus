@@ -190,7 +190,9 @@ $teams = Database::all(
             bp.id AS bp_id, bp.version, bp.created_at AS uploaded_at, bp.sc_override,
             ai.total_score AS ai_score, ai.status AS ai_status,
             sc.meets_minimum AS sc_min, sc.status AS sc_status, sc.completeness_score AS sc_score,
-            (SELECT COUNT(*) FROM evaluations e WHERE e.team_id = t.id AND e.juror_id = ? AND e.bp_submitted = 1) AS my_eval
+            (SELECT COUNT(*) FROM evaluations e WHERE e.team_id = t.id AND e.juror_id = ? AND e.bp_submitted = 1) AS my_eval,
+            (SELECT COUNT(*) FROM evaluations e WHERE e.team_id = t.id AND e.bp_submitted = 1) AS juror_count,
+            (SELECT AVG(e.bp_total) FROM evaluations e WHERE e.team_id = t.id AND e.bp_submitted = 1) AS juror_avg
      FROM teams t
      JOIN schools s ON s.id = t.school_id
      LEFT JOIN business_plans bp ON bp.team_id = t.id AND bp.is_current = 1
@@ -239,16 +241,24 @@ ob_start(); ?>
     </div>
   <?php endif; ?>
   <?php if (!$isTeacher): ?>
-    <div style="display:flex;gap:16px;flex-wrap:wrap">
+    <div style="display:flex;gap:16px 20px;flex-wrap:wrap;align-items:center">
       <label class="toggle-eval"><input type="checkbox" id="hideEvaluatedToggle" checked> Bereits bewertete Pläne ausblenden</label>
       <label class="toggle-eval"><input type="checkbox" id="hideWeakToggle"> Schwache Struktur ausblenden</label>
+      <label class="toggle-eval" style="gap:8px">Sortieren:
+        <select id="plansSort" style="padding:4px 8px">
+          <option value="name">Name (A–Z)</option>
+          <option value="struct">Struktur-Check (hoch → niedrig)</option>
+          <?php if ($showAiEval): ?><option value="ki">KI-Vorbewertung (hoch → niedrig)</option><?php endif; ?>
+          <?php if ($isAdmin): ?><option value="jury">Jury-Bewertung (hoch → niedrig)</option><?php endif; ?>
+        </select>
+      </label>
     </div>
   <?php endif; ?>
 </div>
 <div class="card">
   <div class="table-wrap">
     <table class="data data--compact hide-evaluated" id="plansTable">
-      <thead><tr><th>Team</th><th>Schule</th><th>Businessplan</th><?php if (!$isTeacher): ?><th>Struktur-Check</th><?php if ($showAiEval): ?><th>KI-Vorbewertung</th><?php endif; ?><?php endif; ?><th></th></tr></thead>
+      <thead><tr><th>Team</th><th>Schule</th><th>Businessplan</th><?php if (!$isTeacher): ?><th>Struktur-Check</th><?php if ($showAiEval): ?><th>KI-Vorbewertung</th><?php endif; ?><?php if ($isAdmin): ?><th>Jury</th><?php endif; ?><?php endif; ?><th></th></tr></thead>
       <tbody>
       <?php foreach ($teams as $t):
           // Struktur-Check kompakt + „schwach"-Kennzeichnung (unter Mindeststandard)
@@ -260,8 +270,23 @@ ob_start(); ?>
           elseif ($t['sc_status'] === 'done')  { $scShort = 'Struktur ' . ($t['sc_score'] !== null ? (int) $t['sc_score'] : '–') . '/10' . ($isWeak ? ' ⚠' : ''); }
           elseif ($t['sc_status'] === 'error') { $scShort = 'Struktur: Fehler'; }
           else                                 { $scShort = 'Struktur offen'; }
+          // KI-Vorbewertung kompakt
+          $kiShort = null;
+          if ($t['bp_id']) {
+              if ($t['ai_status'] === 'done')       { $kiShort = 'KI ' . $fmt($t['ai_score']) . '/50'; }
+              elseif ($t['ai_status'] === 'error')  { $kiShort = 'KI: Fehler'; }
+              else                                  { $kiShort = 'KI offen'; }
+          }
+          // Jury-Bewertung (Durchschnitt über alle Juror:innen)
+          $juryCount = (int) $t['juror_count'];
+          $juryShort = $juryCount > 0 ? 'Jury Ø ' . $fmt($t['juror_avg']) . '/50 (' . $juryCount . ')' : 'Jury –';
+          // Sortier-Werte (nicht bewertet = -1, damit unten einsortiert)
+          $sortStruct = ($t['bp_id'] && $t['sc_status'] === 'done' && $t['sc_score'] !== null) ? (int) $t['sc_score'] : -1;
+          $sortKi     = ($t['bp_id'] && $t['ai_status'] === 'done' && $t['ai_score'] !== null) ? (float) $t['ai_score'] : -1;
+          $sortJury   = $juryCount > 0 ? (float) $t['juror_avg'] : -1;
       ?>
-        <tr data-evaluated="<?= (!$isTeacher && (int) $t['my_eval'] > 0) ? 1 : 0 ?>" data-weak="<?= $isWeak ? 1 : 0 ?>">
+        <tr data-evaluated="<?= (!$isTeacher && (int) $t['my_eval'] > 0) ? 1 : 0 ?>" data-weak="<?= $isWeak ? 1 : 0 ?>"
+            data-name="<?= e(mb_strtolower((string) $t['name'])) ?>" data-struct="<?= $sortStruct ?>" data-ki="<?= $sortKi ?>" data-jury="<?= $sortJury ?>">
           <td data-label="Team" class="col-primary">
             <?php if ($t['bp_id']): ?>
               <a class="pdf-link" href="<?= url('bp_download', ['id' => $t['bp_id']]) ?>"
@@ -274,7 +299,7 @@ ob_start(); ?>
             <?php if ($t['idea_name'] && strcasecmp((string) $t['idea_name'], (string) $t['name']) !== 0): ?>
               <span class="hide-sm muted" style="font-size:13px"> — <?= e($t['idea_name']) ?></span>
             <?php endif; ?>
-            <span class="show-sm muted" style="font-size:13px"><?= e($schoolShort) ?><?php if (!$isTeacher): ?> · <?= e($scShort) ?> · <?= (int) $t['my_eval'] ? '✓ bewertet' : '● offen' ?><?php endif; ?></span>
+            <span class="show-sm muted" style="font-size:13px"><?= e($schoolShort) ?><?php if (!$isTeacher): ?> · <?= e($scShort) ?><?php if ($showAiEval && $kiShort): ?> · <?= e($kiShort) ?><?php endif; ?><?php if ($isAdmin): ?> · <?= e($juryShort) ?><?php else: ?> · <?= (int) $t['my_eval'] ? '✓ bewertet' : '● offen' ?><?php endif; ?><?php endif; ?></span>
           </td>
           <td data-label="Schule" class="hide-sm"><?= e($t['short_name'] ?: $t['school_name']) ?></td>
           <td data-label="Businessplan" class="hide-sm">
@@ -283,7 +308,7 @@ ob_start(); ?>
             <?php else: ?><span class="pill muted">nicht eingereicht</span><?php endif; ?>
           </td>
           <?php if (!$isTeacher): ?>
-          <td data-label="Struktur-Check" class="hide-sm">
+          <td data-label="Struktur-Check" class="hide-sm" data-sort="<?= $sortStruct ?>">
             <?php if (!$t['bp_id']): ?>—
             <?php elseif ($t['sc_status'] === 'done'):
                 $ovr = $t['sc_override'] === null ? null : (int) $t['sc_override'];
@@ -295,11 +320,17 @@ ob_start(); ?>
             <?php else: ?><span class="pill muted">offen</span><?php endif; ?>
           </td>
           <?php if ($showAiEval): ?>
-          <td data-label="KI-Vorbewertung" class="hide-sm">
+          <td data-label="KI-Vorbewertung" class="hide-sm" data-sort="<?= $sortKi ?>">
             <?php if (!$t['bp_id']): ?>—
             <?php elseif ($t['ai_status'] === 'done'): ?><strong><?= $fmt($t['ai_score']) ?></strong> / 50
             <?php elseif ($t['ai_status'] === 'error'): ?><span class="pill red">Fehler</span>
             <?php else: ?><span class="pill muted">offen</span><?php endif; ?>
+          </td>
+          <?php endif; ?>
+          <?php if ($isAdmin): ?>
+          <td data-label="Jury" class="hide-sm" data-sort="<?= $sortJury ?>">
+            <?php if ($juryCount > 0): ?><strong><?= $fmt($t['juror_avg']) ?></strong> / 50 <span class="muted" style="font-size:12px">(<?= $juryCount ?> Bew.)</span>
+            <?php else: ?><span class="pill muted">—</span><?php endif; ?>
           </td>
           <?php endif; ?>
           <?php endif; ?>
@@ -308,7 +339,7 @@ ob_start(); ?>
           </td>
         </tr>
       <?php endforeach; ?>
-      <?php if (!$teams): ?><tr><td colspan="<?= $isTeacher ? 4 : (5 + ($showAiEval ? 1 : 0)) ?>" class="muted">Noch keine Teams.</td></tr><?php endif; ?>
+      <?php if (!$teams): ?><tr><td colspan="<?= $isTeacher ? 4 : (5 + ($showAiEval ? 1 : 0) + ($isAdmin ? 1 : 0)) ?>" class="muted">Noch keine Teams.</td></tr><?php endif; ?>
       </tbody>
     </table>
   </div>
@@ -330,6 +361,33 @@ ob_start(); ?>
       tbl.classList.toggle(cfg[1], t.checked);
     });
   });
+
+  // Sortierung (Name A–Z bzw. Bewertungen hoch→niedrig) – funktioniert auch mobil (Karten).
+  var sortSel = document.getElementById('plansSort');
+  if (sortSel) {
+    var tbody = tbl.querySelector('tbody');
+    function applySort() {
+      var key = sortSel.value;
+      var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr[data-name]'));
+      rows.sort(function (a, b) {
+        if (key === 'name') {
+          return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'), 'de');
+        }
+        var av = parseFloat(a.getAttribute('data-' + key));
+        var bv = parseFloat(b.getAttribute('data-' + key));
+        if (isNaN(av)) av = -1; if (isNaN(bv)) bv = -1;
+        if (bv !== av) return bv - av; // absteigend, höchste zuerst
+        // bei Gleichstand alphabetisch stabil nach Name
+        return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'), 'de');
+      });
+      rows.forEach(function (r) { tbody.appendChild(r); });
+      try { localStorage.setItem('uplus_plans_sort', key); } catch (e) {}
+    }
+    var savedSort = null; try { savedSort = localStorage.getItem('uplus_plans_sort'); } catch (e) {}
+    if (savedSort && sortSel.querySelector('option[value="' + savedSort + '"]')) { sortSel.value = savedSort; }
+    sortSel.addEventListener('change', applySort);
+    applySort();
+  }
 })();
 </script>
 <?php
