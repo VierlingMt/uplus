@@ -22,7 +22,7 @@ jobs:
       - name: PHP einrichten
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.5'
 
       - name: config.local.php aus Secrets erzeugen
         env:

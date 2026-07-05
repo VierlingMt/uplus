@@ -36,7 +36,7 @@ besten 7 (+2 Nachrücker) für den Pitch-Day nominieren und dort final bewerten.
 Das Deployment-Ziel ist klassisches Shared-Hosting (FTP + MariaDB, kein dauerhafter
 Serverprozess/SSH). Daraus folgt der Stack:
 
-- **PHP 8.2** ohne Framework – kleiner Router, PDO, passwortloser Login per
+- **PHP 8.5** ohne Framework – kleiner Router, PDO, passwortloser Login per
   Magic-Link (E-Mail), Session-Auth, CSRF. Läuft nativ,
   kein Build-Step, Deploy = Dateien per FTP kopieren.
 - **MariaDB 10.6** (UNIX-Socket, `localhost`).
@@ -74,8 +74,11 @@ eingereichten Businesspläne importiert.
 
 ### Base-Path
 
-Der Base-Path (z. B. `/uplus`) wird automatisch aus dem Request abgeleitet; die App
-funktioniert damit im Web-Root wie im Unterordner ohne weitere Konfiguration.
+Der Base-Path wird automatisch aus dem Request abgeleitet; die App funktioniert damit
+im Web-Root (eigene Subdomain, `base_path` leer) wie in einem Unterordner
+(z. B. `/uplus`) ohne weitere Konfiguration. Seit dem Umzug auf die eigene Subdomain
+**https://uplus.vimatec.de** liegt die App im Web-Root – das `BASE_PATH`-Secret bleibt
+daher leer bzw. entfällt.
 
 ## Bewertungsmodell (Formular 06)
 
@@ -87,8 +90,8 @@ funktioniert damit im Web-Root wie im Unterordner ohne weitere Konfiguration.
 
 ## Deploy & Secrets
 
-Push auf `claude/uplus-management-system-ostrxb` oder `main` löst den Deploy aus.
-Die App ist erreichbar unter **https://vimatec.de/uplus**.
+Push auf `main` löst den Deploy aus (manuell auch via „Run workflow").
+Die App ist erreichbar unter **https://uplus.vimatec.de** (eigene Subdomain, PHP 8.5).
 
 **GitHub Actions Secrets**
 
@@ -100,7 +103,7 @@ Die App ist erreichbar unter **https://vimatec.de/uplus**.
 | `ANTHROPIC_API_KEY` | KI-Vorbewertung | nachreichen |
 | `APP_KEY` | Session/CSRF (sonst automatisch erzeugt) | optional |
 | `SEED_ADMIN_EMAIL` | Start-Admin-Konto (E-Mail) | optional |
-| `APP_URL` | Basis-URL für Login-Links in Mails (z. B. `https://vimatec.de`) | empfohlen |
+| `APP_URL` | Basis-URL für Login-Links in Mails (z. B. `https://uplus.vimatec.de`) | empfohlen |
 | `MAIL_FROM` `MAIL_FROM_NAME` | Absender der Login-Mails | optional |
 
 **Optionale Repository-Variablen** (Settings → Variables): `FTP_DIR` (Default `./`),
