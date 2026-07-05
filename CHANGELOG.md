@@ -7,6 +7,15 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-07-05
+### Hinzugefügt
+- **Material & Vorlagen: editierbarer Eingangstext (Markdown).** Über der Download-Liste
+  lässt sich jetzt ein Einführungstext pflegen – mit Überschriften, Listen, **fett** und
+  Links. Bearbeitbar für **Admin und Projektleitung**; für alle anderen wird der Text
+  nur angezeigt (falls gepflegt).
+- **Downloads & Links sortierbar.** Die Verwaltung kann Einträge per Hoch-/Runter-Pfeil
+  in die gewünschte Reihenfolge bringen; die Sortierung wird dauerhaft gespeichert.
+
 ## [0.27.0] - 2026-07-05
 ### Hinzugefügt
 - **Konfigurierbare Meilensteine (Projektablauf) je Wettbewerbsjahr:** Der bisher

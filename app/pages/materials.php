@@ -20,6 +20,35 @@ if (is_post()) {
         redirect(url('materials'));
     }
 
+    // Eingangstext (Markdown) speichern.
+    if ($action === 'save_intro') {
+        Settings::set('materials_intro', trim((string) input('intro')));
+        flash('success', 'Eingangstext gespeichert.');
+        redirect(url('materials'));
+    }
+
+    // Reihenfolge der Downloads & Links ändern (hoch/runter). Immer neu
+    // durchnummerieren, damit auch bei bisher gleicher sort_order getauscht wird.
+    if ($action === 'move') {
+        $id  = (int) input('id');
+        $dir = input('dir') === 'up' ? -1 : 1;
+        $ids = array_map(
+            static fn($r) => (int) $r['id'],
+            Database::all('SELECT id FROM materials ORDER BY sort_order, id')
+        );
+        $pos = array_search($id, $ids, true);
+        if ($pos !== false) {
+            $swap = $pos + $dir;
+            if ($swap >= 0 && $swap < count($ids)) {
+                [$ids[$pos], $ids[$swap]] = [$ids[$swap], $ids[$pos]];
+                foreach ($ids as $i => $mid) {
+                    Database::run('UPDATE materials SET sort_order = ? WHERE id = ?', [$i + 1, $mid]);
+                }
+            }
+        }
+        redirect(url('materials'));
+    }
+
     $title = trim((string) input('title'));
     $desc  = trim((string) input('description'));
     $link  = trim((string) input('link_url'));
@@ -64,8 +93,43 @@ $ytId = function (?string $u): ?string {
     return null;
 };
 
+$intro = (string) Settings::get('materials_intro', '');
+
 ob_start(); ?>
 <div class="page-head"><h1>Material &amp; Vorlagen</h1></div>
+
+<?php if (trim($intro) !== ''): ?>
+  <div class="card mb"><div class="card__body materials-intro"><?= render_markdown($intro) ?></div></div>
+  <style>
+  .materials-intro h2{margin:16px 0 4px;font-size:20px;color:var(--wj-blue)}
+  .materials-intro h2:first-child,.materials-intro h3:first-child,.materials-intro > :first-child{margin-top:0}
+  .materials-intro h3{margin:12px 0 4px;font-size:15px;color:var(--wj-teal-d)}
+  .materials-intro ul{margin:4px 0 10px;padding-left:20px}
+  .materials-intro li{margin:3px 0}
+  .materials-intro p{margin:6px 0}
+  </style>
+<?php endif; ?>
+
+<?php if ($isAdmin): ?>
+  <details class="card mb"<?= trim($intro) === '' ? ' open' : '' ?>>
+    <style>details > summary.card__head{cursor:pointer;list-style:none}details > summary.card__head::-webkit-details-marker{display:none}</style>
+    <summary class="card__head">
+      Eingangstext bearbeiten <span class="muted" style="font-weight:400;font-size:13px">(Markdown)</span>
+    </summary>
+    <div class="card__body">
+      <form method="post" action="<?= url('materials') ?>">
+        <?= Csrf::field() ?><input type="hidden" name="action" value="save_intro">
+        <div class="field">
+          <textarea name="intro" rows="6" placeholder="# Überschrift&#10;&#10;Kurzer Einführungstext … **fett**, Listen mit - und [Links](https://…)."><?= e($intro) ?></textarea>
+        </div>
+        <p class="muted" style="font-size:13px;margin:0 0 10px">
+          Unterstützt: Überschriften (#), Listen (-), **fett** und [Text](https://…)-Links.
+        </p>
+        <button class="btn btn--primary">Eingangstext speichern</button>
+      </form>
+    </div>
+  </details>
+<?php endif; ?>
 
 <?php
 $video = null;
@@ -88,7 +152,7 @@ if ($video): ?>
     <div class="table-wrap">
       <table class="data data--cards">
         <tbody>
-        <?php foreach ($materials as $m): ?>
+        <?php foreach ($materials as $i => $m): ?>
           <tr>
             <td>
               <strong><?= e($m['title']) ?></strong>
@@ -96,6 +160,16 @@ if ($video): ?>
               <?php if ($isAdmin && $m['visibility'] !== 'all'): ?> <span class="pill muted"><?= e($m['visibility']) ?></span><?php endif; ?>
             </td>
             <td class="row-actions" style="text-align:right;white-space:nowrap">
+              <?php if ($isAdmin && count($materials) > 1): ?>
+                <form method="post" action="<?= url('materials') ?>" style="display:inline">
+                  <?= Csrf::field() ?><input type="hidden" name="action" value="move"><input type="hidden" name="id" value="<?= (int) $m['id'] ?>"><input type="hidden" name="dir" value="up">
+                  <button class="btn btn--ghost btn--sm no-spinner" title="Nach oben" aria-label="Nach oben"<?= $i === 0 ? ' disabled' : '' ?>>↑</button>
+                </form>
+                <form method="post" action="<?= url('materials') ?>" style="display:inline">
+                  <?= Csrf::field() ?><input type="hidden" name="action" value="move"><input type="hidden" name="id" value="<?= (int) $m['id'] ?>"><input type="hidden" name="dir" value="down">
+                  <button class="btn btn--ghost btn--sm no-spinner" title="Nach unten" aria-label="Nach unten"<?= $i === count($materials) - 1 ? ' disabled' : '' ?>>↓</button>
+                </form>
+              <?php endif; ?>
               <?php if ($m['stored_name']): ?>
                 <a class="btn btn--ghost btn--sm" href="<?= url('material_download', ['id' => $m['id']]) ?>">Download</a>
               <?php elseif ($m['link_url']): ?>
