@@ -1,15 +1,16 @@
 <?php
-/** Kontakt: Projektleitung (und Admin) mit Foto und Kontaktdaten – für alle sichtbar. */
+/** Kontakt: Projektleitung mit Foto und Kontaktdaten – für alle sichtbar. */
 declare(strict_types=1);
 
-$roles = ['admin' => 'Projektleitung', 'lead' => 'Projektleitung'];
+$roles = ['lead' => 'Projektleitung'];
 
-// Ansprechpartner = Verwaltung (Admin & Projektleitung), nur aktive Konten.
+// Ansprechpartner = Projektleitung (Rolle „lead"), nur aktive Konten.
+// Das Admin/Super-Admin-Konto ist eine technische Rolle und erscheint hier nicht.
 $leads = Database::all(
     'SELECT id, name, email, phone, specialty, photo_path, role
      FROM users
-     WHERE role IN ("admin", "lead") AND is_active = 1
-     ORDER BY FIELD(role, "admin", "lead"), name'
+     WHERE role = "lead" AND is_active = 1
+     ORDER BY name'
 );
 
 ob_start(); ?>

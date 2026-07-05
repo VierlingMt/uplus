@@ -7,6 +7,13 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.35.1] - 2026-07-05
+### Behoben
+- **Kontakt-Seite zeigt nur noch die Projektleitung.** Bisher erschien dort auch das
+  Admin/Super-Admin-Konto – fälschlich als „Projektleitung" beschriftet – und führte
+  bei doppelt geführten Personen zu Dubletten. Die Seite listet jetzt ausschließlich
+  Konten mit der Rolle „lead".
+
 ## [0.35.0] - 2026-07-05
 ### Geändert
 - **Sponsoren-Übersicht: Logo in der ersten Spalte.** In der Verwaltungsliste
