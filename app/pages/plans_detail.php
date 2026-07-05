@@ -176,7 +176,7 @@ $scEff      = $scOverride !== null ? $scOverride : $scAuto;
         </div>
       <?php endif; ?>
 
-      <table class="data mt">
+      <table class="data data--cards mt">
         <thead><tr><th>Abschnitt der Vorlage</th><th style="width:140px">Status</th><th style="width:80px">Eigene Sätze</th><th>Hinweis</th></tr></thead>
         <tbody>
         <?php foreach (($sc['sections'] ?? []) as $sec):
@@ -184,10 +184,10 @@ $scEff      = $scOverride !== null ? $scOverride : $scAuto;
             $map = ['behandelt' => ['behandelt', 'teal'], 'oberflaechlich' => ['nur oberflächlich', 'amber'], 'fehlt' => ['fehlt', 'red']];
             [$lbl, $cls] = $map[$st] ?? [$st, 'muted']; ?>
           <tr>
-            <td><?= e($sec['title'] ?? '') ?><?= empty($sec['required']) ? ' <span class="muted" style="font-size:12px">(optional)</span>' : '' ?></td>
-            <td><span class="pill <?= $cls ?>"><?= e($lbl) ?></span></td>
-            <td><?= isset($sec['own_sentences']) && $sec['own_sentences'] !== null ? (int) $sec['own_sentences'] : '–' ?></td>
-            <td class="muted" style="font-size:13px"><?= e($sec['note'] ?? '') ?></td>
+            <td data-label="Abschnitt"><?= e($sec['title'] ?? '') ?><?= empty($sec['required']) ? ' <span class="muted" style="font-size:12px">(optional)</span>' : '' ?></td>
+            <td data-label="Status"><span class="pill <?= $cls ?>"><?= e($lbl) ?></span></td>
+            <td data-label="Eigene Sätze"><?= isset($sec['own_sentences']) && $sec['own_sentences'] !== null ? (int) $sec['own_sentences'] : '–' ?></td>
+            <td class="muted" data-label="Hinweis" style="font-size:13px"><?= e($sec['note'] ?? '') ?></td>
           </tr>
         <?php endforeach; ?>
         </tbody>
@@ -248,7 +248,7 @@ if ($canSeeAiEval): ?>
       <p><strong style="font-size:22px;color:var(--wj-blue)"><?= $fmt($ai['total_score']) ?></strong> / 50
          <span class="muted">· Modell <?= e($ai['model']) ?></span></p>
       <?php if ($ai['summary']): ?><p><?= nl2br(e($ai['summary'])) ?></p><?php endif; ?>
-      <table class="data mt">
+      <table class="data data--cards mt">
         <thead><tr><th>Kriterium</th><th style="width:70px">Punkte</th><th>Begründung</th></tr></thead>
         <tbody>
         <?php
@@ -257,9 +257,9 @@ if ($canSeeAiEval): ?>
         foreach (Criteria::BUSINESSPLAN as $k => $c):
             $s = $byKey[$k] ?? null; ?>
           <tr>
-            <td><strong><?= e($c['title']) ?></strong></td>
-            <td><strong><?= $s ? $fmt($s['score']) : '—' ?></strong>/10</td>
-            <td class="muted" style="font-size:13px"><?= $s ? nl2br(e($s['rationale'])) : '' ?></td>
+            <td data-label="Kriterium"><strong><?= e($c['title']) ?></strong></td>
+            <td data-label="Punkte"><strong><?= $s ? $fmt($s['score']) : '—' ?></strong>/10</td>
+            <td class="muted" data-label="Begründung" style="font-size:13px"><?= $s ? nl2br(e($s['rationale'])) : '' ?></td>
           </tr>
         <?php endforeach; ?>
         </tbody>

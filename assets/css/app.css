@@ -537,3 +537,24 @@ body.modal-open { overflow: hidden; }
   .modal--confirm .modal__foot { flex-wrap: wrap; }
   .modal--confirm .modal__foot .btn { flex: 1 1 auto; justify-content: center; min-height: 46px; }
 }
+
+/* ---------- Kompakte Listen (dichte Übersichten, z. B. Businesspläne) ---------- */
+.show-sm-inline { display: none; }
+@media (max-width: 680px) {
+  .show-sm-inline { display: inline-block; }
+  /* data--compact: eine dichte Zeile je Eintrag (Name links, Aktion rechts) */
+  .data--compact thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .data--compact, .data--compact tbody { display: block; }
+  .data--compact tr { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; margin: 0 0 8px; background: #fff; }
+  .data--compact tr:hover td { background: transparent; }
+  table.data--compact td { padding: 0; border: 0; white-space: normal; }
+  .data--compact td::before { content: none !important; }
+  .data--compact td.hide-sm { display: none; }
+  .data--compact td.col-primary { flex: 1 1 auto; min-width: 0; }
+  .data--compact td.col-primary strong { font-size: 15px; }
+  .data--compact td.row-actions { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; margin: 0; padding: 0; border: 0; }
+  .data--compact td.row-actions .btn { min-height: 38px; }
+  .data--compact td.row-actions .btn--sm { padding: 8px 12px; }
+  .data--compact td[colspan] { flex: 1 1 100%; text-align: center; padding: 14px; }
+  .data--compact .pill { font-size: 11px; }
+}

@@ -454,9 +454,18 @@
       document.addEventListener('keydown', onKey);
     }
 
+    var mqMobile = window.matchMedia('(max-width: 900px)');
     document.addEventListener('click', function (e) {
       var trg = e.target.closest('[data-pdf-url]');
       if (!trg) return;
+      // Auf Handy/Tablet rendern Browser PDFs nicht im <iframe> (Download-Stub),
+      // daher das Modal überspringen und das PDF nativ öffnen.
+      if (mqMobile.matches) {
+        if (trg.tagName === 'A' && trg.getAttribute('href')) return; // Standardlink öffnet das PDF
+        e.preventDefault();
+        window.open(trg.getAttribute('data-pdf-url'), '_blank', 'noopener');
+        return;
+      }
       e.preventDefault();
       openPdf(trg.getAttribute('data-pdf-url'), trg.getAttribute('data-pdf-title'));
     });

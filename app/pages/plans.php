@@ -240,12 +240,12 @@ ob_start(); ?>
 </div>
 <div class="card">
   <div class="table-wrap">
-    <table class="data data--cards hide-evaluated" id="plansTable">
+    <table class="data data--compact hide-evaluated" id="plansTable">
       <thead><tr><th>Team</th><th>Schule</th><th>Businessplan</th><?php if (!$isTeacher): ?><th>Struktur-Check</th><?php if ($showAiEval): ?><th>KI-Vorbewertung</th><?php endif; ?><?php endif; ?><th></th></tr></thead>
       <tbody>
       <?php foreach ($teams as $t): ?>
         <tr data-evaluated="<?= (!$isTeacher && (int) $t['my_eval'] > 0) ? 1 : 0 ?>">
-          <td data-label="Team">
+          <td data-label="Team" class="col-primary">
             <?php if ($t['bp_id']): ?>
               <a class="pdf-link" href="<?= url('bp_download', ['id' => $t['bp_id']]) ?>"
                  data-pdf-url="<?= url('bp_download', ['id' => $t['bp_id']]) ?>"
@@ -256,14 +256,14 @@ ob_start(); ?>
             <?php endif; ?>
             <?php if ($t['idea_name']): ?><br><span class="muted" style="font-size:13px"><?= e($t['idea_name']) ?></span><?php endif; ?>
           </td>
-          <td data-label="Schule"><?= e($t['short_name'] ?: $t['school_name']) ?></td>
-          <td data-label="Businessplan">
+          <td data-label="Schule" class="hide-sm"><?= e($t['short_name'] ?: $t['school_name']) ?></td>
+          <td data-label="Businessplan" class="hide-sm">
             <?php if ($t['bp_id']): ?>
               <span class="pill teal">v<?= (int) $t['version'] ?></span> <span class="muted" style="font-size:12px"><?= e(date('d.m.Y', strtotime((string) $t['uploaded_at']))) ?></span>
             <?php else: ?><span class="pill muted">nicht eingereicht</span><?php endif; ?>
           </td>
           <?php if (!$isTeacher): ?>
-          <td data-label="Struktur-Check">
+          <td data-label="Struktur-Check" class="hide-sm">
             <?php if (!$t['bp_id']): ?>—
             <?php elseif ($t['sc_status'] === 'done'):
                 $ovr = $t['sc_override'] === null ? null : (int) $t['sc_override'];
@@ -275,7 +275,7 @@ ob_start(); ?>
             <?php else: ?><span class="pill muted">offen</span><?php endif; ?>
           </td>
           <?php if ($showAiEval): ?>
-          <td data-label="KI-Vorbewertung">
+          <td data-label="KI-Vorbewertung" class="hide-sm">
             <?php if (!$t['bp_id']): ?>—
             <?php elseif ($t['ai_status'] === 'done'): ?><strong><?= $fmt($t['ai_score']) ?></strong> / 50
             <?php elseif ($t['ai_status'] === 'error'): ?><span class="pill red">Fehler</span>
@@ -283,7 +283,12 @@ ob_start(); ?>
           </td>
           <?php endif; ?>
           <?php endif; ?>
-          <td class="row-actions" style="text-align:right"><a href="<?= url('plans', ['team' => $t['id']]) ?>" class="btn btn--ghost btn--sm">Öffnen</a></td>
+          <td class="row-actions" style="text-align:right">
+            <?php if (!$isTeacher && $t['bp_id']): ?>
+              <span class="show-sm-inline pill <?= (int) $t['my_eval'] ? 'teal' : 'amber' ?>" title="<?= (int) $t['my_eval'] ? 'von dir bewertet' : 'noch nicht von dir bewertet' ?>"><?= (int) $t['my_eval'] ? '✓' : 'offen' ?></span>
+            <?php endif; ?>
+            <a href="<?= url('plans', ['team' => $t['id']]) ?>" class="btn btn--ghost btn--sm">Öffnen</a>
+          </td>
         </tr>
       <?php endforeach; ?>
       <?php if (!$teams): ?><tr><td colspan="<?= $isTeacher ? 4 : (5 + ($showAiEval ? 1 : 0)) ?>" class="muted">Noch keine Teams.</td></tr><?php endif; ?>

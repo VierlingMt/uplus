@@ -7,6 +7,21 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.35.5] - 2026-07-05
+### Behoben
+- **Businessplan-Einzelsicht: kein horizontaler Scroll mehr auf dem Handy.** Die
+  Tabellen von Struktur-Check und KI-Vorbewertung liefen über den Rand hinaus; sie
+  werden auf schmalen Bildschirmen jetzt als gestapelte Karten dargestellt.
+- **PDF-Vorschau auf Handy/Tablet:** Businessplan-PDFs öffnen dort jetzt direkt
+  (nativer Viewer/Download) statt im Vorschau-Modal – mobile Browser können PDFs
+  nicht im eingebetteten Rahmen anzeigen und zeigten stattdessen nur einen
+  Download-Platzhalter. Am Desktop bleibt die eingebettete Vorschau.
+### Geändert
+- **Businessplan-Übersicht mobil viel kompakter:** Eine dichte Zeile je Plan
+  (Team-/Projektname + Status „✓ / offen" + „Öffnen"); Detailspalten (Schule,
+  Version, Struktur-Check, KI) sind auf dem Handy ausgeblendet. So passen deutlich
+  mehr Pläne auf den Bildschirm; die Suchleiste steht oben.
+
 ## [0.35.4] - 2026-07-05
 ### Behoben
 - **Mobiles Menü scrollt jetzt selbst statt des Hintergrunds.** Bei geöffnetem
