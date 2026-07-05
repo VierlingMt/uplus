@@ -13,6 +13,16 @@ define('UPLOAD_PATH', STORAGE_PATH . '/uploads');
 
 require ROOT_PATH . '/config/config.php';
 
+// Base-Path automatisch aus dem Request ableiten (z. B. /uplus), falls nicht
+// explizit per Secret/ENV gesetzt. So funktionieren Links & Assets sowohl im
+// Web-Root als auch in einem Unterordner ohne weitere Konfiguration.
+if ((string) cfg('base_path') === '' && !empty($_SERVER['SCRIPT_NAME'])) {
+    $dir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
+    if ($dir !== '' && $dir !== '/' && $dir !== '.') {
+        $GLOBALS['__CONFIG']['base_path'] = $dir;
+    }
+}
+
 // Einfache Klassen-Autoloader fuer app/lib
 spl_autoload_register(static function (string $class): void {
     $file = APP_PATH . '/lib/' . $class . '.php';

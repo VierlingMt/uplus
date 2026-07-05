@@ -141,7 +141,15 @@ table.data tr:hover td { background: #fafcfe; }
 
 /* ---------- Login ---------- */
 .login-wrap { min-height: 100vh; display: grid; grid-template-columns: 1.1fr 1fr; }
-.login-hero { background: linear-gradient(160deg, var(--wj-blue) 0%, var(--wj-blue-d) 70%); color: #fff; padding: 54px 50px; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
+/* Login-Hero: falls assets/img/pitch-day.jpg vorhanden ist, scheint das Foto
+   unter dem blauen WJ-Verlauf durch; sonst greift nur der Verlauf. */
+.login-hero {
+  background:
+    linear-gradient(160deg, rgba(0,53,148,.90) 0%, rgba(1,42,118,.94) 70%),
+    url("../img/pitch-day.jpg") center/cover no-repeat,
+    linear-gradient(160deg, var(--wj-blue) 0%, var(--wj-blue-d) 70%);
+  color: #fff; padding: 54px 50px; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden;
+}
 .login-hero__circle { position: absolute; width: 340px; height: 340px; border-radius: 50%; background: var(--wj-red); opacity: .16; right: -90px; top: -70px; }
 .login-hero__bar { display: inline-block; background: var(--wj-teal); color: #04263f; font-family: "Chivo",sans-serif; font-weight: 700; padding: 6px 14px; border-radius: 4px; margin-bottom: 18px; }
 .login-hero h1 { font-size: 40px; margin: 0 0 12px; }
