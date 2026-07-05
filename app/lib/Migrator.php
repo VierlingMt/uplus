@@ -112,6 +112,11 @@ final class Migrator
                 'name'    => 'Dauerhafter App-Admin (mv@vimatec.de)',
                 'up'      => [self::class, 'ownerAdmin'],
             ],
+            [
+                'version' => '2026_07_05_admin_name',
+                'name'    => 'Admin-Konto mv@vimatec.de normalisieren',
+                'up'      => [self::class, 'normalizeOwnerAdmin'],
+            ],
         ];
     }
 
@@ -271,8 +276,22 @@ final class Migrator
             'INSERT IGNORE INTO users (role, name, email, password_hash, specialty, is_active)
              VALUES (?,?,?,?,?,1)'
         )->execute([
-            'admin', 'Martin Vierling (App-Admin)', 'mv@vimatec.de',
-            password_hash($pass, PASSWORD_DEFAULT), 'App-Verwaltung (dauerhaft)',
+            'admin', 'Martin Vierling', 'mv@vimatec.de',
+            password_hash($pass, PASSWORD_DEFAULT), null,
         ]);
+    }
+
+    /**
+     * Admin-Konto mv@vimatec.de sicherstellen und Bezeichnung normalisieren
+     * (ohne Zusatz „App-Admin“); Passwort bleibt unangetastet.
+     */
+    public static function normalizeOwnerAdmin(PDO $pdo): void
+    {
+        $pass = (string) cfg('seed_admin_password', 'UPlus-Start!2026');
+        $pdo->prepare(
+            "INSERT INTO users (role, name, email, password_hash, specialty, is_active)
+             VALUES ('admin', 'Martin Vierling', 'mv@vimatec.de', ?, NULL, 1)
+             ON DUPLICATE KEY UPDATE role = 'admin', name = 'Martin Vierling', specialty = NULL, is_active = 1"
+        )->execute([password_hash($pass, PASSWORD_DEFAULT)]);
     }
 }

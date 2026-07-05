@@ -22,15 +22,16 @@ final class Claude
      */
     public static function evaluateBusinessPlan(string $pdfPath): array
     {
-        $key = cfg('anthropic_api_key');
+        // Zuerst App-Einstellungen (Admin-Menü), dann Deploy-Secret/Config.
+        $key = Settings::get('anthropic_api_key', cfg('anthropic_api_key'));
         if (!$key) {
-            return self::fail('Kein ANTHROPIC_API_KEY konfiguriert.');
+            return self::fail('Kein Anthropic-API-Key hinterlegt (Admin → Einstellungen → KI-Integration).');
         }
         if (!is_file($pdfPath)) {
             return self::fail('Businessplan-Datei nicht gefunden.');
         }
 
-        $model = cfg('anthropic_model', 'claude-sonnet-5');
+        $model = Settings::get('anthropic_model', cfg('anthropic_model', 'claude-sonnet-5'));
         $pdfB64 = base64_encode((string) file_get_contents($pdfPath));
 
         // Kriterien-Beschreibung fuer den Prompt aufbereiten

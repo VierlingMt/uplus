@@ -7,6 +7,19 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-05
+### Hinzugefügt
+- Admin-Menü (nur Projektleitung) mit zentraler Einstellungen-Seite:
+  - KI-Integration: Anthropic-API-Key und Modell direkt in der App hinterlegbar
+    (überschreibt das Deploy-Secret, kein Redeploy nötig)
+  - Wettbewerb: aktuelle Phase, Anzahl Pitch-Plätze und Nachrücker
+  - Sicherheit: 2FA-Einstellung (TOTP-Einrichtung folgt)
+- Settings-Verwaltung (Key/Value) als Grundlage für in der App änderbare Konfiguration
+
+### Geändert
+- Admin-Konto `mv@vimatec.de` heißt jetzt schlicht „Martin Vierling“ (ohne Zusatz)
+- KI-Vorbewertung nutzt bevorzugt den in der App hinterlegten API-Key
+
 ## [0.3.0] - 2026-07-05
 ### Hinzugefügt
 - Businessplan-Upload (PDF, je Team versioniert) inkl. geschütztem Download
@@ -45,7 +58,8 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Login, Dashboard mit Kennzahlen und Projekt-Timeline, Profil
 - GitHub-Actions-Deploy: `config.local.php` aus Secrets + FTP-Upload
 
-[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/VierlingMt/uplus/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.4.0
 [0.3.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.3.0
 [0.2.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.2.0
 [0.1.0]: https://github.com/VierlingMt/uplus/releases/tag/v0.1.0

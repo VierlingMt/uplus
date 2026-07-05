@@ -14,6 +14,7 @@ $nav = [
     ['schools',   'Schulen', '🏫', ['admin']],
     ['jurors',    'Jury & Nutzer', '⚖', ['admin']],
     ['materials', 'Material & Vorlagen', '📎', ['admin', 'teacher', 'juror']],
+    ['admin',     'Admin', '⚙', ['admin']],
 ];
 $roleLabel = ['admin' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 'Jury'][$role] ?? $role;
 ?>

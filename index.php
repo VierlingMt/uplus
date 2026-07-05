@@ -40,6 +40,10 @@ try {
             require APP_PATH . '/pages/changelog.php';
             break;
 
+        case 'admin':
+            require APP_PATH . '/pages/admin.php';
+            break;
+
         // --- Module ---
         case 'schools':
         case 'teams':
