@@ -20,7 +20,7 @@ $nav = [
 $roleLabel = ['admin' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 'Jury'][$role] ?? $role;
 ?>
 <!doctype html>
-<html lang="de">
+<html lang="de" data-base="<?= e(rtrim(cfg('base_path', ''), '/')) ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -30,10 +30,12 @@ $roleLabel = ['admin' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;700;900&family=Bitter:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= asset('css/app.css') ?>">
+<?php require __DIR__ . '/_pwa_head.php'; ?>
 </head>
 <body>
 <div class="app">
-  <aside class="sidebar">
+  <div class="nav-overlay" data-nav-close hidden></div>
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar__brand">
       <img src="<?= asset('img/logo.svg') ?>" alt="Unternehmen Plus">
       <span>Unternehmen<br>Plus</span>
@@ -41,7 +43,7 @@ $roleLabel = ['admin' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 
     <nav class="nav">
       <?php foreach ($nav as [$r, $label, $ic, $roles]): ?>
         <?php if (in_array($role, $roles, true)): ?>
-          <a href="<?= url($r) ?>" class="<?= $current === $r ? 'active' : '' ?>"><span class="ic"><?= $ic ?></span><?= e($label) ?></a>
+          <a href="<?= url($r) ?>" class="<?= $current === $r ? 'active' : '' ?>" title="<?= e($label) ?>"><span class="ic"><?= $ic ?></span><span class="lbl"><?= e($label) ?></span></a>
         <?php endif; ?>
       <?php endforeach; ?>
     </nav>
@@ -55,6 +57,9 @@ $roleLabel = ['admin' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 
 
   <div class="main">
     <div class="topbar">
+      <button type="button" class="nav-toggle" data-nav-toggle aria-label="Menü ein-/ausklappen" aria-expanded="false" aria-controls="sidebar">
+        <span class="nav-toggle__bars" aria-hidden="true"></span>
+      </button>
       <div class="topbar__title"><?= e($title ?? 'Dashboard') ?></div>
       <div class="topbar__user">
         <span class="badge-role"><?= e($roleLabel) ?></span>

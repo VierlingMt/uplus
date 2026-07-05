@@ -24,5 +24,10 @@ AddDefaultCharset UTF-8
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
+# PWA: korrekte MIME-Typen fuer Manifest & Service Worker
+<IfModule mod_mime.c>
+    AddType application/manifest+json .webmanifest
+</IfModule>
+
 # Startseite
 DirectoryIndex index.php

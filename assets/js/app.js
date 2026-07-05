@@ -2,6 +2,176 @@
 (function () {
   'use strict';
 
+  var lsGet = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  var lsSet = function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} };
+
+  // ---------------------------------------------------------------------------
+  // Navigation: einklappbar (Desktop) bzw. Burger-Drawer (mobil)
+  // ---------------------------------------------------------------------------
+  (function initNav() {
+    var app = document.querySelector('.app');
+    var toggle = document.querySelector('[data-nav-toggle]');
+    if (!app || !toggle) return; // z. B. Login-Seite ohne Sidebar
+
+    var mqMobile = window.matchMedia('(max-width: 900px)');
+    var COLLAPSE_KEY = 'uplus_nav_collapsed';
+
+    // Gemerkten Desktop-Zustand anwenden.
+    if (lsGet(COLLAPSE_KEY) === '1') app.classList.add('nav-collapsed');
+
+    function setExpanded(open) {
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    function closeDrawer() {
+      app.classList.remove('nav-open');
+      setExpanded(false);
+    }
+
+    toggle.addEventListener('click', function () {
+      if (mqMobile.matches) {
+        // Mobil: Drawer auf/zu
+        var open = app.classList.toggle('nav-open');
+        setExpanded(open);
+      } else {
+        // Desktop: schmale Leiste ein-/ausklappen (gemerkt)
+        var collapsed = app.classList.toggle('nav-collapsed');
+        lsSet(COLLAPSE_KEY, collapsed ? '1' : '0');
+      }
+    });
+
+    // Overlay-Klick schließt den Drawer.
+    var overlay = document.querySelector('[data-nav-close]');
+    if (overlay) overlay.addEventListener('click', closeDrawer);
+
+    // Klick auf einen Menüpunkt schließt den mobilen Drawer.
+    document.querySelectorAll('.nav a').forEach(function (a) {
+      a.addEventListener('click', function () { if (mqMobile.matches) closeDrawer(); });
+    });
+
+    // Escape schließt den Drawer.
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && app.classList.contains('nav-open')) closeDrawer();
+    });
+
+    // Beim Wechsel auf Desktop einen offenen Drawer sauber schließen.
+    var onChange = function () { if (!mqMobile.matches) closeDrawer(); };
+    if (mqMobile.addEventListener) mqMobile.addEventListener('change', onChange);
+    else if (mqMobile.addListener) mqMobile.addListener(onChange);
+  })();
+
+  // ---------------------------------------------------------------------------
+  // PWA: Service Worker registrieren + Installations-Hinweis (Toast)
+  // ---------------------------------------------------------------------------
+  (function initPwa() {
+    var base = (document.documentElement.getAttribute('data-base') || '').replace(/\/$/, '');
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register(base + '/sw.js', { scope: base + '/' })
+          .catch(function () { /* SW optional – App funktioniert auch ohne */ });
+      });
+    }
+
+    var DISMISS_KEY = 'uplus_install_dismissed';
+    var deferredPrompt = null;
+
+    function isStandalone() {
+      return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+        || window.navigator.standalone === true;
+    }
+    function suppressed() { return isStandalone() || lsGet(DISMISS_KEY) === '1'; }
+    function dismissForever() { lsSet(DISMISS_KEY, '1'); }
+
+    function showToast(opts) {
+      var host = document.querySelector('.toast-host');
+      if (!host) {
+        host = document.createElement('div');
+        host.className = 'toast-host';
+        document.body.appendChild(host);
+      }
+      var t = document.createElement('div');
+      t.className = 'toast';
+      var actions = opts.actionsHtml ? '<div class="toast__actions">' + opts.actionsHtml + '</div>' : '';
+      t.innerHTML =
+        '<div class="toast__icon">' + (opts.icon || '📲') + '</div>' +
+        '<div class="toast__body"><strong></strong><span></span>' + actions + '</div>' +
+        '<button type="button" class="toast__close" aria-label="Schließen">&times;</button>';
+      // Text sicher setzen (kein HTML aus Variablen).
+      t.querySelector('strong').textContent = opts.title;
+      t.querySelector('.toast__body > span').textContent = opts.text;
+      host.appendChild(t);
+
+      function close() {
+        t.classList.add('is-hiding');
+        setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 220);
+      }
+      t.querySelector('.toast__close').addEventListener('click', function () {
+        close();
+        if (opts.onDismiss) opts.onDismiss();
+      });
+      return { el: t, close: close };
+    }
+
+    function showInstallToast() {
+      if (suppressed() || document.querySelector('.toast--install')) return;
+      var toast = showToast({
+        icon: '📲',
+        title: 'App installieren',
+        text: 'Installiere Unternehmen Plus auf deinem Gerät – für ein super Erlebnis.',
+        actionsHtml:
+          '<button type="button" class="btn btn--teal btn--sm no-spinner" data-install>Installieren</button>' +
+          '<button type="button" class="btn btn--ghost btn--sm no-spinner" data-later>Später</button>',
+        onDismiss: dismissForever
+      });
+      toast.el.classList.add('toast--install');
+      toast.el.querySelector('[data-install]').addEventListener('click', function () {
+        toast.close();
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function (choice) {
+          if (choice && choice.outcome === 'accepted') dismissForever();
+          deferredPrompt = null;
+        });
+      });
+      toast.el.querySelector('[data-later]').addEventListener('click', function () {
+        toast.close();
+        dismissForever();
+      });
+    }
+
+    function showIosToast() {
+      if (suppressed()) return;
+      showToast({
+        icon: '📲',
+        title: 'Zum Home-Bildschirm',
+        text: 'Für ein super Erlebnis: unten das Teilen-Symbol tippen und „Zum Home-Bildschirm“ wählen.',
+        onDismiss: dismissForever
+      });
+    }
+
+    // Chromium/Edge/Android: eigener Installations-Prompt.
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (suppressed()) return;
+      showInstallToast();
+    });
+
+    window.addEventListener('appinstalled', function () {
+      deferredPrompt = null;
+      dismissForever();
+    });
+
+    // iOS-Safari kennt kein beforeinstallprompt -> eigener Hinweis.
+    var ua = window.navigator.userAgent || '';
+    var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    var isSafari = isIOS && /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+    if (isSafari && !suppressed()) {
+      setTimeout(showIosToast, 1500);
+    }
+  })();
+
   // ---------------------------------------------------------------------------
   // Bestaetigung vor Aktionen + Lade-Spinner am Submit-Button
   // ---------------------------------------------------------------------------
