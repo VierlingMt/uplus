@@ -30,6 +30,7 @@ $roleLabel = ['admin' => 'Admin', 'lead' => 'Projektleitung', 'teacher' => 'Lehr
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;700;900&family=Bitter:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="<?= asset('vendor/cropperjs/cropper.min.css') ?>">
 <link rel="stylesheet" href="<?= asset('css/app.css') ?>">
 <?php require __DIR__ . '/_pwa_head.php'; ?>
 </head>
@@ -68,7 +69,9 @@ $roleLabel = ['admin' => 'Admin', 'lead' => 'Projektleitung', 'teacher' => 'Lehr
       <div class="topbar__title"><?= e($title ?? 'Dashboard') ?></div>
       <div class="topbar__user">
         <span class="badge-role"><?= e($roleLabel) ?></span>
-        <a href="<?= url('profile') ?>" style="text-decoration:none;color:var(--ink)"><?= e($u['name'] ?? '') ?></a>
+        <a href="<?= url('profile') ?>" style="text-decoration:none;color:var(--ink);display:inline-flex;align-items:center;gap:8px">
+          <?php if (!empty($u['photo_path'])): ?><img class="avatar avatar--sm" src="<?= asset($u['photo_path']) ?>" alt=""><?php endif; ?>
+          <?= e($u['name'] ?? '') ?></a>
         <a href="<?= url('logout') ?>" class="btn btn--ghost btn--sm">Abmelden</a>
       </div>
     </div>
@@ -88,6 +91,7 @@ $roleLabel = ['admin' => 'Admin', 'lead' => 'Projektleitung', 'teacher' => 'Lehr
     </div>
   </div>
 </div>
+<script src="<?= asset('vendor/cropperjs/cropper.min.js') ?>"></script>
 <script src="<?= asset('js/app.js') ?>"></script>
 </body>
 </html>

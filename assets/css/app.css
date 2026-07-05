@@ -291,3 +291,90 @@ table.data tr:hover td { background: #fafcfe; }
   .login-wrap { grid-template-columns: 1fr; }
   .login-hero { display: none; }
 }
+
+/* ---------- Bild-Ablage (Drag & Drop) + Avatare ---------- */
+.imgdrop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  padding: 12px;
+  border: 2px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--wj-grey-l);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color .15s, background .15s;
+}
+.imgdrop:hover,
+.imgdrop:focus-visible { border-color: var(--wj-blue-l); outline: none; }
+.imgdrop.is-drag { border-color: var(--wj-teal); background: #eafaf4; }
+.imgdrop__img { max-height: 140px; max-width: 100%; object-fit: contain; border-radius: 8px; }
+.imgdrop--round .imgdrop__img {
+  width: 120px; height: 120px; object-fit: cover; border-radius: 50%;
+}
+.imgdrop__placeholder {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  color: var(--muted); font-size: 14px;
+}
+.imgdrop__icon { font-size: 26px; line-height: 1; }
+.imgdrop__hint { max-width: 260px; }
+.imgdrop__clear {
+  position: absolute; top: 6px; right: 6px;
+  width: 26px; height: 26px; border: none; border-radius: 50%;
+  background: rgba(23,32,43,.6); color: #fff; font-size: 18px; line-height: 1;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.imgdrop__clear:hover { background: var(--wj-red); }
+
+/* Avatare (Nutzerliste, Topbar, Profil) */
+.avatar {
+  width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
+  background: var(--wj-grey-l); flex: 0 0 auto;
+}
+.avatar--sm { width: 28px; height: 28px; }
+.avatar--lg { width: 72px; height: 72px; }
+.avatar--ph {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--wj-blue); color: #fff; font-family: "Chivo", sans-serif;
+  font-weight: 700; font-size: 16px;
+}
+.avatar--lg.avatar--ph { font-size: 28px; }
+
+/* ---------- Zuschnitt-Dialog ---------- */
+body.modal-open { overflow: hidden; }
+.crop-modal {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(1,20,58,.6);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.crop-modal[hidden] { display: none; }
+.crop-modal__box {
+  background: var(--white); border-radius: var(--radius);
+  box-shadow: var(--shadow-lg); width: min(560px, 100%);
+  max-height: 92vh; display: flex; flex-direction: column; overflow: hidden;
+}
+.crop-modal__head {
+  padding: 14px 18px; font-family: "Chivo", sans-serif; font-weight: 700;
+  border-bottom: 1px solid var(--line);
+}
+.crop-modal__stage {
+  background: #101a2b; max-height: 60vh; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.crop-modal__stage img { max-width: 100%; display: block; }
+.crop-modal__tools {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 12px 18px; border-top: 1px solid var(--line);
+}
+.crop-modal__tools button {
+  width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--white); cursor: pointer; font-size: 17px; line-height: 1;
+}
+.crop-modal__tools button:hover { border-color: var(--wj-blue-l); background: var(--wj-grey-l); }
+.crop-modal__tools input[type="range"] { flex: 1; min-width: 100px; }
+.crop-modal__foot {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 12px 18px; border-top: 1px solid var(--line);
+}

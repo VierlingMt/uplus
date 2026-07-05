@@ -415,3 +415,186 @@
 
   recalc();
 })();
+
+// =============================================================================
+// Bild-Ablage per Drag & Drop + Zuschnitt (Cropper.js)
+// Felder werden serverseitig über image_field() erzeugt: [data-imgdrop] mit
+// verstecktem <input type="file"> und <input type="hidden" name="{field}_cropped">.
+// Rasterbilder öffnen den Zuschnitt-Dialog (Zoom/Drehen/Crop); SVG/Vektor wird
+// unverändert als Datei-Upload übernommen.
+// =============================================================================
+(function initImageDrop() {
+  'use strict';
+  var drops = document.querySelectorAll('[data-imgdrop]');
+  if (!drops.length) return;
+
+  var hasCropper = typeof window.Cropper !== 'undefined';
+  var modal = null; // gemeinsam genutzter Zuschnitt-Dialog
+
+  function buildModal() {
+    if (modal) return modal;
+    var ov = document.createElement('div');
+    ov.className = 'crop-modal';
+    ov.hidden = true;
+    ov.innerHTML =
+      '<div class="crop-modal__box" role="dialog" aria-modal="true" aria-label="Bild zuschneiden">' +
+        '<div class="crop-modal__head">Bild zuschneiden</div>' +
+        '<div class="crop-modal__stage"><img alt=""></div>' +
+        '<div class="crop-modal__tools">' +
+          '<button type="button" data-crop="rotl" title="Nach links drehen">⟲</button>' +
+          '<button type="button" data-crop="rotr" title="Nach rechts drehen">⟳</button>' +
+          '<button type="button" data-crop="zin" title="Vergrößern">＋</button>' +
+          '<button type="button" data-crop="zout" title="Verkleinern">－</button>' +
+          '<input type="range" data-crop="zoom" min="0" max="1" step="0.01" value="0" aria-label="Zoom">' +
+          '<button type="button" data-crop="reset" title="Zurücksetzen">↺</button>' +
+        '</div>' +
+        '<div class="crop-modal__foot">' +
+          '<button type="button" class="btn btn--ghost" data-crop="cancel">Abbrechen</button>' +
+          '<button type="button" class="btn btn--primary" data-crop="apply">Übernehmen</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(ov);
+    modal = {
+      el: ov,
+      img: ov.querySelector('.crop-modal__stage img'),
+      zoom: ov.querySelector('[data-crop="zoom"]'),
+      cropper: null,
+      onApply: null
+    };
+
+    var q = function (a) { return ov.querySelector('[data-crop="' + a + '"]'); };
+    q('rotl').addEventListener('click', function () { modal.cropper && modal.cropper.rotate(-90); });
+    q('rotr').addEventListener('click', function () { modal.cropper && modal.cropper.rotate(90); });
+    q('zin').addEventListener('click', function () { modal.cropper && modal.cropper.zoom(0.1); });
+    q('zout').addEventListener('click', function () { modal.cropper && modal.cropper.zoom(-0.1); });
+    q('reset').addEventListener('click', function () { modal.cropper && modal.cropper.reset(); });
+    modal.zoom.addEventListener('input', function () {
+      if (modal.cropper) modal.cropper.zoomTo(parseFloat(modal.zoom.value));
+    });
+    q('cancel').addEventListener('click', closeModal);
+    q('apply').addEventListener('click', function () {
+      if (modal.onApply) modal.onApply();
+    });
+    ov.addEventListener('click', function (e) { if (e.target === ov) closeModal(); });
+    document.addEventListener('keydown', function (e) {
+      if (!ov.hidden && e.key === 'Escape') closeModal();
+    });
+    return modal;
+  }
+
+  function closeModal() {
+    if (!modal) return;
+    if (modal.cropper) { modal.cropper.destroy(); modal.cropper = null; }
+    modal.onApply = null;
+    modal.el.hidden = true;
+    modal.img.removeAttribute('src');
+    document.body.classList.remove('modal-open');
+  }
+
+  function openCropper(dataUrl, aspect, format, apply) {
+    var m = buildModal();
+    m.onApply = null;
+    m.el.hidden = false;
+    document.body.classList.add('modal-open');
+    m.img.src = dataUrl;
+    if (m.cropper) { m.cropper.destroy(); m.cropper = null; }
+    m.cropper = new window.Cropper(m.img, {
+      viewMode: 1,
+      dragMode: 'move',
+      aspectRatio: aspect || NaN,
+      autoCropArea: 1,
+      background: false,
+      responsive: true,
+      zoomable: true,
+      ready: function () {
+        var d = m.cropper.getData();
+        m.zoom.value = 0; // Startwert; feinjustiert wird über zoom()
+      }
+    });
+    m.cropper.zoom(0); // Zoom-Slider synchron halten
+    m.zoom.oninput = function () { m.cropper.zoomTo(parseFloat(m.zoom.value)); };
+    m.onApply = function () {
+      var canvas = m.cropper.getCroppedCanvas({
+        maxWidth: 1400, maxHeight: 1400, imageSmoothingEnabled: true, imageSmoothingQuality: 'high'
+      });
+      if (!canvas) { closeModal(); return; }
+      var mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+      var out = canvas.toDataURL(mime, format === 'jpeg' ? 0.9 : undefined);
+      apply(out);
+      closeModal();
+    };
+  }
+
+  function wire(drop) {
+    var fileInput = drop.querySelector('.imgdrop__file');
+    var dataInput = drop.querySelector('.imgdrop__data');
+    var img = drop.querySelector('.imgdrop__img');
+    var ph = drop.querySelector('.imgdrop__placeholder');
+    var clearBtn = drop.querySelector('[data-imgdrop-clear]');
+    var aspect = parseFloat(drop.getAttribute('data-aspect')) || 0;
+    var format = drop.getAttribute('data-format') || 'png';
+    var originalSrc = img ? (img.getAttribute('src') || '') : '';
+
+    function showPreview(src) {
+      if (img) { img.src = src; img.hidden = !src; }
+      if (ph) ph.hidden = !!src;
+      if (clearBtn) clearBtn.hidden = !src;
+    }
+
+    function accept(file) {
+      if (!file || file.type.indexOf('image/') !== 0) return;
+      // SVG/Vektor: nicht zuschneiden, als Datei-Upload übernehmen.
+      if (file.type === 'image/svg+xml' || !hasCropper) {
+        dataInput.value = '';
+        try {
+          var dt = new DataTransfer();
+          dt.items.add(file);
+          fileInput.files = dt.files;
+        } catch (e) { /* Fallback: Datei bleibt im Input, falls per Dialog gewählt */ }
+        showPreview(URL.createObjectURL(file));
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function () {
+        openCropper(String(reader.result), aspect, format, function (out) {
+          dataInput.value = out;      // zugeschnittenes Ergebnis an den Server
+          fileInput.value = '';       // Roh-Datei nicht zusätzlich senden
+          showPreview(out);
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+
+    drop.addEventListener('click', function (e) {
+      if (e.target === clearBtn) return;
+      fileInput.click();
+    });
+    drop.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+    });
+    fileInput.addEventListener('change', function () {
+      if (fileInput.files && fileInput.files[0]) accept(fileInput.files[0]);
+    });
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('is-drag'); });
+    });
+    ['dragleave', 'dragend'].forEach(function (ev) {
+      drop.addEventListener(ev, function () { drop.classList.remove('is-drag'); });
+    });
+    drop.addEventListener('drop', function (e) {
+      e.preventDefault();
+      drop.classList.remove('is-drag');
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) accept(e.dataTransfer.files[0]);
+    });
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        dataInput.value = '';
+        fileInput.value = '';
+        showPreview(originalSrc);
+      });
+    }
+  }
+
+  drops.forEach(wire);
+})();

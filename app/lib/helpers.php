@@ -165,6 +165,112 @@ function human_size(int $bytes): string
     return round($n, $i ? 1 : 0) . ' ' . $u[$i];
 }
 
+/**
+ * Bild aus einem Formular speichern. Bevorzugt das im Browser zugeschnittene
+ * Ergebnis (Cropper) als Daten-URL im Feld „{field}_cropped"; fällt sonst auf
+ * den klassischen Datei-Upload $_FILES[field] zurück (z. B. ohne JavaScript
+ * oder bei Vektor-Logos/SVG, die nicht zugeschnitten werden).
+ *
+ * @param string $field  Formularfeld-Basisname (muss zu image_field() passen)
+ * @param string $prefix Dateinamen-Präfix (z. B. "sp", "sch", "usr")
+ * @param string $subdir Zielunterordner unter assets/uploads (z. B. "logos")
+ * @return string|null   Pfad relativ zu assets/ (z. B. "uploads/logos/x.png") oder null
+ */
+function save_image(string $field, string $prefix, string $subdir): ?string
+{
+    $maxBytes = (int) cfg('upload_max_bytes', 25 * 1024 * 1024);
+    $dir = ROOT_PATH . '/assets/uploads/' . $subdir;
+    $ensureDir = static function () use ($dir): bool {
+        if (!is_dir($dir)) { @mkdir($dir, 0775, true); }
+        return is_dir($dir);
+    };
+
+    // 1) Im Browser zugeschnittenes Bild (Daten-URL aus dem Cropper).
+    $cropped = (string) ($_POST[$field . '_cropped'] ?? '');
+    if ($cropped !== '' && preg_match('#^data:image/(png|jpeg|webp);base64,#', $cropped, $m)) {
+        $data = base64_decode(substr($cropped, strpos($cropped, ',') + 1), true);
+        if ($data === false || $data === '') {
+            flash('error', 'Bild konnte nicht verarbeitet werden.');
+            return null;
+        }
+        if (strlen($data) > $maxBytes) {
+            flash('error', 'Bild ist zu groß.');
+            return null;
+        }
+        if (!$ensureDir()) { flash('error', 'Upload-Ordner fehlt.'); return null; }
+        $ext = $m[1] === 'jpeg' ? 'jpg' : $m[1];
+        $stored = $prefix . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+        if (@file_put_contents($dir . '/' . $stored, $data) === false) {
+            flash('error', 'Bild konnte nicht gespeichert werden.');
+            return null;
+        }
+        return 'uploads/' . $subdir . '/' . $stored;
+    }
+
+    // 2) Klassischer Datei-Upload (Fallback ohne JS bzw. SVG/Vektor).
+    if (empty($_FILES[$field]['name']) || !is_uploaded_file($_FILES[$field]['tmp_name'] ?? '')) {
+        return null;
+    }
+    $f = $_FILES[$field];
+    if (($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || $f['size'] > $maxBytes) {
+        flash('error', 'Bild konnte nicht hochgeladen werden (zu groß?).');
+        return null;
+    }
+    $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
+    $allowed = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
+    if (!in_array($ext, $allowed, true)) {
+        flash('error', 'Nur Bilddateien (PNG, JPG, WEBP, GIF, SVG).');
+        return null;
+    }
+    if (!$ensureDir()) { flash('error', 'Upload-Ordner fehlt.'); return null; }
+    $ext = preg_replace('/[^a-z0-9]/', '', $ext);
+    $stored = $prefix . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+    if (!move_uploaded_file($f['tmp_name'], $dir . '/' . $stored)) {
+        flash('error', 'Bild-Upload fehlgeschlagen.');
+        return null;
+    }
+    return 'uploads/' . $subdir . '/' . $stored;
+}
+
+/**
+ * Drag-&-Drop-Bildfeld mit Zuschnitt (Zoom/Drehen/Crop). Das Verhalten liefert
+ * das JS in app.js über [data-imgdrop] und die data-Attribute. Die Formulare
+ * müssen enctype="multipart/form-data" tragen und über save_image() speichern.
+ *
+ * @param string      $field   Feld-Basisname (muss zu save_image() passen)
+ * @param string|null $current Aktueller Pfad relativ zu assets/ oder null
+ * @param array{aspect?:float|null,shape?:string,format?:string,label?:string,hint?:string} $opts
+ */
+function image_field(string $field, ?string $current = null, array $opts = []): string
+{
+    $aspect = array_key_exists('aspect', $opts) ? $opts['aspect'] : null; // null = frei
+    $shape  = ($opts['shape'] ?? 'rect') === 'round' ? 'round' : 'rect';
+    $format = ($opts['format'] ?? 'png') === 'jpeg' ? 'jpeg' : 'png';
+    $label  = (string) ($opts['label'] ?? 'Bild');
+    $hint   = (string) ($opts['hint']  ?? 'Bild hierher ziehen oder klicken – dann zuschneiden, zoomen, drehen.');
+    $curUrl = $current ? asset($current) : '';
+    $aspAttr = $aspect !== null ? (string) $aspect : '';
+
+    ob_start(); ?>
+    <div class="field">
+      <label><?= e($label) ?></label>
+      <div class="imgdrop imgdrop--<?= $shape ?>" data-imgdrop
+           data-field="<?= e($field) ?>" data-aspect="<?= e($aspAttr) ?>" data-format="<?= e($format) ?>"
+           tabindex="0" role="button" aria-label="<?= e($label) ?> hochladen">
+        <img class="imgdrop__img" src="<?= e($curUrl) ?>" alt=""<?= $curUrl ? '' : ' hidden' ?>>
+        <div class="imgdrop__placeholder"<?= $curUrl ? ' hidden' : '' ?>>
+          <span class="imgdrop__icon" aria-hidden="true">🖼️</span>
+          <span class="imgdrop__hint"><?= e($hint) ?></span>
+        </div>
+        <button type="button" class="imgdrop__clear" data-imgdrop-clear title="Auswahl verwerfen" aria-label="Auswahl verwerfen"<?= $curUrl ? '' : ' hidden' ?>>×</button>
+        <input type="file" class="imgdrop__file" name="<?= e($field) ?>" accept="image/*" hidden>
+        <input type="hidden" class="imgdrop__data" name="<?= e($field) ?>_cropped" value="">
+      </div>
+    </div>
+    <?php
+    return (string) ob_get_clean();
+}
+
 /** Label + CSS-Klasse fuer Team-Status. */
 function status_label(string $status): array
 {

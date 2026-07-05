@@ -64,13 +64,15 @@ if (is_post()) {
         redirect(url('jurors', $id ? ['edit' => $id] : []));
     }
 
+    $photo = save_image('photo', 'usr', 'avatars');
     if ($id > 0) {
         Database::run('UPDATE users SET role=?, name=?, email=?, specialty=?, phone=?, school_id=?, is_active=? WHERE id=?',
             [$role, $name, $email, $spec ?: null, $phone ?: null, $school, $active, $id]);
+        if ($photo) { Database::run('UPDATE users SET photo_path=? WHERE id=?', [$photo, $id]); }
         flash('success', 'Nutzer aktualisiert.');
     } else {
-        $id = Database::insert('INSERT INTO users (role,name,email,specialty,phone,school_id,is_active) VALUES (?,?,?,?,?,?,?)',
-            [$role, $name, $email, $spec ?: null, $phone ?: null, $school, $active]);
+        $id = Database::insert('INSERT INTO users (role,name,email,specialty,phone,school_id,is_active,photo_path) VALUES (?,?,?,?,?,?,?,?)',
+            [$role, $name, $email, $spec ?: null, $phone ?: null, $school, $active, $photo]);
         flash('success', 'Nutzer angelegt. Anmeldung erfolgt passwortlos per Login-Link an die E-Mail.');
     }
 
@@ -113,9 +115,14 @@ ob_start(); ?>
   <div class="card">
     <div class="card__head"><?= $edit ? 'Nutzer bearbeiten' : 'Neuer Nutzer' ?></div>
     <div class="card__body">
-      <form method="post" action="<?= url('jurors') ?>">
+      <form method="post" action="<?= url('jurors') ?>" enctype="multipart/form-data">
         <?= Csrf::field() ?>
         <input type="hidden" name="id" value="<?= (int) ($edit['id'] ?? 0) ?>">
+        <?= image_field('photo', $edit['photo_path'] ?? null, [
+            'label' => 'Porträtfoto' . ($edit ? ' (ersetzen)' : ''),
+            'aspect' => 1, 'shape' => 'round', 'format' => 'jpeg',
+            'hint' => 'Foto hierher ziehen oder klicken – quadratisch zuschneiden, zoomen, drehen.',
+        ]) ?>
         <div class="field"><label>Rolle *</label>
           <select name="role" id="roleSel">
             <?php foreach ($roles as $rk => $rl): ?>
@@ -167,9 +174,19 @@ ob_start(); ?>
         <tbody>
         <?php foreach ($users as $u): ?>
           <tr>
-            <td><strong><?= e($u['name']) ?></strong><br><span class="muted" style="font-size:13px"><?= e($u['email']) ?></span>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px">
+                <?php if (!empty($u['photo_path'])): ?>
+                  <img class="avatar" src="<?= asset($u['photo_path']) ?>" alt="">
+                <?php else: ?>
+                  <span class="avatar avatar--ph" aria-hidden="true"><?= e(mb_strtoupper(mb_substr((string) $u['name'], 0, 1))) ?></span>
+                <?php endif; ?>
+                <div><strong><?= e($u['name']) ?></strong><br><span class="muted" style="font-size:13px"><?= e($u['email']) ?></span>
               <?php if ($u['school_name']): ?><br><span class="pill muted"><?= e($u['school_name']) ?></span><?php endif; ?>
-              <?php if (!empty($userCycles[(int) $u['id']])): ?><br><span class="pill blue" title="Wettbewerbsjahre"><?= e(implode(', ', $userCycles[(int) $u['id']])) ?></span><?php endif; ?></td>
+              <?php if (!empty($userCycles[(int) $u['id']])): ?><br><span class="pill blue" title="Wettbewerbsjahre"><?= e(implode(', ', $userCycles[(int) $u['id']])) ?></span><?php endif; ?>
+                </div>
+              </div>
+            </td>
             <td><span class="pill <?= ['admin'=>'blue','lead'=>'blue','juror'=>'teal','teacher'=>'amber'][$u['role']] ?? 'muted' ?>"><?= e($roles[$u['role']] ?? $u['role']) ?></span></td>
             <td><?php if (!$u['is_active']): ?><span class="pill muted">inaktiv</span><?php else: ?><span class="pill teal">aktiv</span><?php endif; ?></td>
             <td style="white-space:nowrap;text-align:right">

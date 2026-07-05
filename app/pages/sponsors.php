@@ -10,32 +10,6 @@ $activeCycle  = Cycle::active();
 $activeCycleId = (int) ($activeCycle['id'] ?? 0);
 $activeLabel  = (string) ($activeCycle['year_label'] ?? '—');
 
-/** Bild-Upload verarbeiten → gibt logo_path (relativ zu assets/) zurück oder null. */
-$handleLogo = function (): ?string {
-    if (empty($_FILES['logo']['name']) || !is_uploaded_file($_FILES['logo']['tmp_name'])) {
-        return null;
-    }
-    $f = $_FILES['logo'];
-    if ($f['error'] !== UPLOAD_ERR_OK || $f['size'] > (int) cfg('upload_max_bytes')) {
-        flash('error', 'Logo konnte nicht hochgeladen werden (zu groß?).');
-        return null;
-    }
-    $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
-    $allowed = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
-    if (!in_array($ext, $allowed, true)) {
-        flash('error', 'Nur Bilddateien (PNG, JPG, WEBP, GIF, SVG).');
-        return null;
-    }
-    $dir = ROOT_PATH . '/assets/uploads/logos';
-    if (!is_dir($dir)) { @mkdir($dir, 0775, true); }
-    $stored = 'sp_' . bin2hex(random_bytes(8)) . '.' . preg_replace('/[^a-z0-9]/', '', $ext);
-    if (!move_uploaded_file($f['tmp_name'], $dir . '/' . $stored)) {
-        flash('error', 'Logo-Upload fehlgeschlagen.');
-        return null;
-    }
-    return 'uploads/logos/' . $stored;
-};
-
 if (is_post()) {
     Csrf::check();
     $action = (string) input('action');
@@ -48,7 +22,7 @@ if (is_post()) {
             $name, trim((string) input('address')) ?: null, trim((string) input('contact_name')) ?: null,
             trim((string) input('email')) ?: null, trim((string) input('website')) ?: null,
         ];
-        $logo = $handleLogo();
+        $logo = save_image('logo', 'sp', 'logos');
         if ($id > 0) {
             Database::run('UPDATE sponsors SET name=?, address=?, contact_name=?, email=?, website=? WHERE id=?',
                 array_merge($fields, [$id]));
@@ -122,9 +96,6 @@ ob_start(); ?>
     <div class="card">
       <div class="card__head"><?= $isNew ? 'Neuer Sponsor' : 'Sponsor bearbeiten' ?></div>
       <div class="card__body">
-        <?php if (!$isNew && $edit['logo_path']): ?>
-          <img src="<?= asset($edit['logo_path']) ?>" alt="" style="max-height:60px;margin-bottom:12px">
-        <?php endif; ?>
         <form method="post" action="<?= url('sponsors') ?>" enctype="multipart/form-data">
           <?= Csrf::field() ?><input type="hidden" name="action" value="save_sponsor"><input type="hidden" name="id" value="<?= (int) ($edit['id'] ?? 0) ?>">
           <div class="field"><label>Name *</label><input type="text" name="name" required value="<?= e($edit['name'] ?? '') ?>"></div>
@@ -134,7 +105,10 @@ ob_start(); ?>
             <div class="field"><label>E-Mail</label><input type="email" name="email" value="<?= e($edit['email'] ?? '') ?>"></div>
             <div class="field"><label>Website</label><input type="text" name="website" value="<?= e($edit['website'] ?? '') ?>"></div>
           </div>
-          <div class="field"><label>Logo <?= $isNew ? '' : '(ersetzen)' ?></label><input type="file" name="logo" accept="image/*"></div>
+          <?= image_field('logo', $isNew ? null : ($edit['logo_path'] ?? null), [
+              'label'  => 'Logo' . ($isNew ? '' : ' (ersetzen)'),
+              'aspect' => null, 'shape' => 'rect', 'format' => 'png',
+          ]) ?>
           <button class="btn btn--primary">Speichern</button>
           <a href="<?= url('sponsors') ?>" class="btn btn--ghost">Zurück</a>
         </form>

@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS users (
     school_id     INT UNSIGNED NULL,               -- fuer Lehrkraefte
     specialty     VARCHAR(190) NULL,               -- Spezialgebiet (Juroren)
     phone         VARCHAR(60)  NULL,
+    photo_path    VARCHAR(255) NULL,               -- Profil-/Porträtfoto (relativ zu assets/)
     is_active     TINYINT(1) NOT NULL DEFAULT 1,
     last_login_at DATETIME NULL,
     created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

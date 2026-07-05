@@ -7,6 +7,20 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-07-05
+### Hinzugefügt
+- **Bild-Ablage per Drag & Drop mit Zuschnitt** an allen Bild-Stellen: Datei per
+  Ziehen ablegen oder klicken, dann im Dialog **zuschneiden, zoomen und drehen**
+  (Cropper.js, lokal eingebunden – kein CDN). Umgesetzt für:
+  - **Sponsoren-Logo** (ersetzt den bisherigen einfachen Datei-Dialog),
+  - **Schul-Logo** (im Schul-Formular bisher gar nicht hochladbar – neu),
+  - **Jury-/Nutzer-Porträtfoto** (quadratisch, rund dargestellt) – Avatare
+    erscheinen zusätzlich in der Nutzerliste,
+  - **eigenes Profilfoto** unter „Mein Profil" (auch in der Topbar sichtbar).
+- **`photo_path`** an der `users`-Tabelle (Auto-Migration) für Porträtfotos.
+- Vektor-Logos (**SVG**) werden weiterhin unverändert übernommen; ohne
+  JavaScript bleibt der klassische Datei-Upload als Rückfallebene erhalten.
+
 ## [0.20.1] - 2026-07-05
 ### Behoben
 - Deaktivierte Buttons zeigten einen „Lade"-Cursor (wirkte wie hängender Spinner);

@@ -206,6 +206,12 @@ final class Migrator
                 'name'    => 'Sponsoren-Beiträge an Wettbewerbszyklus koppeln (year → cycle_id vereinheitlicht)',
                 'up'      => [self::class, 'sponsorCycle'],
             ],
+            [
+                'version' => '2026_07_15_user_photo',
+                'name'    => 'Profil-/Porträtfoto für Nutzer (Jury, Projektleitung)',
+                'up'      => 'ALTER TABLE users
+                    ADD COLUMN IF NOT EXISTS photo_path VARCHAR(255) NULL AFTER phone',
+            ],
         ];
     }
 

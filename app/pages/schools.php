@@ -16,15 +16,17 @@ if (is_post()) {
         $short = trim((string) input('short_name'));
         $city  = trim((string) input('city'));
         $note  = trim((string) input('note'));
+        $logo = save_image('logo', 'sch', 'logos');
         if ($name === '') {
             flash('error', 'Name ist erforderlich.');
         } elseif ($id > 0) {
             Database::run('UPDATE schools SET name=?, short_name=?, city=?, note=? WHERE id=?',
                 [$name, $short ?: null, $city ?: null, $note ?: null, $id]);
+            if ($logo) { Database::run('UPDATE schools SET logo_path=? WHERE id=?', [$logo, $id]); }
             flash('success', 'Schule aktualisiert.');
         } else {
-            Database::run('INSERT INTO schools (name, short_name, city, note) VALUES (?,?,?,?)',
-                [$name, $short ?: null, $city ?: null, $note ?: null]);
+            Database::run('INSERT INTO schools (name, short_name, city, note, logo_path) VALUES (?,?,?,?,?)',
+                [$name, $short ?: null, $city ?: null, $note ?: null, $logo]);
             flash('success', 'Schule angelegt.');
         }
     }
@@ -47,13 +49,17 @@ ob_start(); ?>
   <div class="card">
     <div class="card__head"><?= $edit ? 'Schule bearbeiten' : 'Neue Schule' ?></div>
     <div class="card__body">
-      <form method="post" action="<?= url('schools') ?>">
+      <form method="post" action="<?= url('schools') ?>" enctype="multipart/form-data">
         <?= Csrf::field() ?>
         <input type="hidden" name="id" value="<?= (int) ($edit['id'] ?? 0) ?>">
         <div class="field"><label>Name *</label><input type="text" name="name" required value="<?= e($edit['name'] ?? '') ?>"></div>
         <div class="field"><label>Kürzel</label><input type="text" name="short_name" value="<?= e($edit['short_name'] ?? '') ?>" placeholder="z. B. EGF"></div>
         <div class="field"><label>Ort</label><input type="text" name="city" value="<?= e($edit['city'] ?? '') ?>"></div>
         <div class="field"><label>Notiz</label><textarea name="note" rows="2"><?= e($edit['note'] ?? '') ?></textarea></div>
+        <?= image_field('logo', $edit['logo_path'] ?? null, [
+            'label' => 'Schul-Logo' . ($edit ? ' (ersetzen)' : ''),
+            'aspect' => null, 'shape' => 'rect', 'format' => 'png',
+        ]) ?>
         <button class="btn btn--primary"><?= $edit ? 'Speichern' : 'Anlegen' ?></button>
         <?php if ($edit): ?><a href="<?= url('schools') ?>" class="btn btn--ghost">Abbrechen</a><?php endif; ?>
       </form>
