@@ -215,7 +215,17 @@ ob_start(); ?>
       <tbody>
       <?php foreach ($teams as $t): ?>
         <tr>
-          <td><strong><?= e($t['name']) ?></strong><?php if ($t['idea_name']): ?><br><span class="muted" style="font-size:13px"><?= e($t['idea_name']) ?></span><?php endif; ?></td>
+          <td>
+            <?php if ($t['bp_id']): ?>
+              <a class="pdf-link" href="<?= url('bp_download', ['id' => $t['bp_id']]) ?>"
+                 data-pdf-url="<?= url('bp_download', ['id' => $t['bp_id']]) ?>"
+                 data-pdf-title="<?= e($t['name'] . ($t['idea_name'] ? ' – ' . $t['idea_name'] : '')) ?>"
+                 title="Businessplan-PDF ansehen"><strong><?= e($t['name']) ?></strong></a>
+            <?php else: ?>
+              <strong><?= e($t['name']) ?></strong>
+            <?php endif; ?>
+            <?php if ($t['idea_name']): ?><br><span class="muted" style="font-size:13px"><?= e($t['idea_name']) ?></span><?php endif; ?>
+          </td>
           <td><?= e($t['short_name'] ?: $t['school_name']) ?></td>
           <td>
             <?php if ($t['bp_id']): ?>

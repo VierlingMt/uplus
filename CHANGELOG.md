@@ -7,6 +7,18 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-07-05
+### Hinzugefügt
+- **PDF-Businesspläne im Modal ansehen**: Der Businessplan öffnet sich jetzt als
+  eingebettete Vorschau in einem großen Dialog, ohne die Seite zu verlassen.
+  - In der **Übersicht „Businesspläne"** ist der **Team-/Ideenname** anklickbar
+    (sofern ein Plan hochgeladen wurde) und öffnet die PDF-Vorschau.
+  - In der **Detailansicht** öffnet der neue Button **„PDF ansehen"** dieselbe
+    Vorschau; **„Herunterladen"** steht weiterhin daneben zur Verfügung.
+  - Der Dialog bietet zusätzlich **„Neuer Tab ↗"** und schließt per Klick auf den
+    Hintergrund oder mit **Escape**. Ohne JavaScript bleibt der Link ein normaler
+    PDF-Aufruf (Fallback).
+
 ## [0.21.0] - 2026-07-05
 ### Hinzugefügt
 - **Bild-Ablage per Drag & Drop mit Zuschnitt** an allen Bild-Stellen: Datei per

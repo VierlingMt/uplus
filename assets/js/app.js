@@ -413,6 +413,49 @@
     btn.addEventListener('click', function () { runBulk(btn); });
   });
 
+  // ---------------------------------------------------------------------------
+  // PDF-Vorschau im Modal (Businesspläne). Ausgelöst über [data-pdf-url].
+  // ---------------------------------------------------------------------------
+  (function initPdfModal() {
+    function openPdf(url, title) {
+      var ov = document.createElement('div');
+      ov.className = 'modal-overlay';
+      ov.innerHTML =
+        '<div class="modal modal--pdf">' +
+          '<div class="pdf-modal__head">' +
+            '<h3></h3>' +
+            '<div class="pdf-modal__actions">' +
+              '<a class="btn btn--ghost btn--sm no-spinner" target="_blank" rel="noopener" data-open>Neuer Tab ↗</a>' +
+              '<button type="button" class="btn btn--ghost btn--sm no-spinner" data-close>Schließen</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="pdf-modal__body"><iframe title="Businessplan (PDF)"></iframe></div>' +
+        '</div>';
+      ov.querySelector('h3').textContent = title || 'Businessplan';
+      ov.querySelector('[data-open]').href = url;
+      ov.querySelector('iframe').src = url;
+      document.body.appendChild(ov);
+      document.body.classList.add('modal-open');
+
+      function close() {
+        ov.remove();
+        document.body.classList.remove('modal-open');
+        document.removeEventListener('keydown', onKey);
+      }
+      function onKey(e) { if (e.key === 'Escape') close(); }
+      ov.querySelector('[data-close]').addEventListener('click', close);
+      ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+      document.addEventListener('keydown', onKey);
+    }
+
+    document.addEventListener('click', function (e) {
+      var trg = e.target.closest('[data-pdf-url]');
+      if (!trg) return;
+      e.preventDefault();
+      openPdf(trg.getAttribute('data-pdf-url'), trg.getAttribute('data-pdf-title'));
+    });
+  })();
+
   recalc();
 })();
 

@@ -42,7 +42,10 @@ ob_start(); ?>
       <?php if ($plan): ?>
         <p><span class="pill teal">Version <?= (int) $plan['version'] ?></span>
            <span class="muted"><?= e($plan['original_name']) ?> · <?= human_size((int) $plan['size_bytes']) ?> · <?= e(date('d.m.Y H:i', strtotime((string) $plan['created_at']))) ?></span></p>
-        <a class="btn btn--primary" href="<?= url('bp_download', ['id' => $plan['id']]) ?>">PDF herunterladen</a>
+        <a class="btn btn--primary" href="<?= url('bp_download', ['id' => $plan['id']]) ?>"
+           data-pdf-url="<?= url('bp_download', ['id' => $plan['id']]) ?>"
+           data-pdf-title="<?= e($team['name'] . ($team['idea_name'] ? ' – ' . $team['idea_name'] : '')) ?>">PDF ansehen</a>
+        <a class="btn btn--ghost" href="<?= url('bp_download', ['id' => $plan['id']]) ?>" download>Herunterladen</a>
         <?php if ($isAdmin): ?>
           <form method="post" action="<?= url('plans') ?>" style="display:inline" data-confirm="Diese Version löschen?">
             <?= Csrf::field() ?><input type="hidden" name="action" value="delete_plan"><input type="hidden" name="bp_id" value="<?= (int) $plan['id'] ?>">
