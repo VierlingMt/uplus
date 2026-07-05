@@ -67,6 +67,7 @@ ob_start(); ?>
           <td><?= e($s['city'] ?? '—') ?></td>
           <td><?= (int) $s['teams'] ?></td>
           <td style="white-space:nowrap;text-align:right">
+            <a href="<?= url('school_teachers', ['school' => $s['id']]) ?>" class="btn btn--ghost btn--sm">👩‍🏫 Projektlehrer (<?= (int) $s['teachers'] ?>)</a>
             <button type="button" class="btn btn--ghost btn--sm" data-modal-open="schoolModal" data-fill="<?= $fill($s) ?>"<?= $imgs($s) ? ' data-images="' . $imgs($s) . '"' : '' ?>>Bearbeiten</button>
             <form method="post" action="<?= url('schools') ?>" style="display:inline" data-confirm="Schule „<?= e($s['name']) ?>“ inkl. Teams wirklich löschen?">
               <?= Csrf::field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int) $s['id'] ?>">

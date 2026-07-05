@@ -75,6 +75,7 @@ try {
 
         // --- Module ---
         case 'schools':
+        case 'school_teachers':
         case 'teams':
         case 'cycles':
         case 'jurors':

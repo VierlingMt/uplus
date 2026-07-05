@@ -7,6 +7,18 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-07-05
+### Hinzugefügt
+- **Projektlehrer je Schule:** eigene Ansicht (aus der Schulliste über „Projektlehrer")
+  zum Anlegen/Bearbeiten von Lehrkräften mit Name, E-Mail und Mobilnummer. Sie melden
+  sich per Login-Link (E-Mail) an, laden für ihre Schule Businesspläne hoch und pflegen
+  Teams/Schüler – sehen aber **keine Bewertungen**.
+
+### Geändert
+- **Menü nach Rollen gruppiert** (Überschriften „Für alle", „Lehrkraft", „Jury",
+  „Verwaltung") – jede Gruppe erscheint nur, wenn die aktuelle Rolle mindestens einen
+  Punkt darin sieht. So ist transparent, wer was sieht.
+
 ## [0.23.0] - 2026-07-05
 ### Geändert
 - **Stammdaten-Verwaltung überarbeitet (Schulen, Jury & Nutzer, Wettbewerbsjahre,

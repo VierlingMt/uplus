@@ -57,6 +57,9 @@ img { max-width: 100%; }
 .nav a:hover { background: rgba(255,255,255,.09); color: #fff; }
 .nav a.active { background: var(--wj-teal); color: #04263f; font-weight: 700; }
 .nav a .ic { width: 18px; text-align: center; }
+.nav__group { padding: 13px 13px 4px; font-family: "Chivo", sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: #8098c6; }
+.nav > .nav__group:first-child { padding-top: 4px; }
+.app.nav-collapsed .nav__group { display: none; }
 .sidebar__foot { margin-top: auto; padding: 14px 16px; font-size: 12px; color: #9fb2d6; border-top: 1px solid rgba(255,255,255,.12); }
 
 .main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }

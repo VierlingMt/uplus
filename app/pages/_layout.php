@@ -6,17 +6,27 @@ $u = Auth::user();
 $role = Auth::role();
 $current = $_GET['r'] ?? 'dashboard';
 
-$nav = [
-    ['dashboard', 'Dashboard', '▦', ['admin', 'lead', 'teacher', 'juror']],
-    ['plans',     'Businesspläne', '📄', ['admin', 'lead', 'teacher', 'juror']],
-    ['ranking',   'Bewertung & Ranking', '★', ['admin', 'lead', 'juror']],
-    ['teams',     'Teams & Schüler', '👥', ['admin', 'lead', 'teacher']],
-    ['cycles',    'Wettbewerbsjahre', '🏆', ['admin', 'lead']],
-    ['schools',   'Schulen', '🏫', ['admin', 'lead']],
-    ['jurors',    'Jury & Nutzer', '⚖', ['admin', 'lead']],
-    ['sponsors',  'Sponsoren', '🤝', ['admin', 'lead']],
-    ['materials', 'Material & Vorlagen', '📎', ['admin', 'lead', 'teacher', 'juror']],
-    ['admin',     'Admin', '⚙', ['admin', 'lead']],
+// Menü nach Rollen gruppiert – jede Gruppe erscheint nur, wenn die aktuelle Rolle
+// mindestens einen Punkt darin sieht. So ist transparent, wer was sieht.
+$navGroups = [
+    ['Für alle', [
+        ['dashboard', 'Dashboard', '▦', ['admin', 'lead', 'teacher', 'juror']],
+        ['plans',     'Businesspläne', '📄', ['admin', 'lead', 'teacher', 'juror']],
+        ['materials', 'Material & Vorlagen', '📎', ['admin', 'lead', 'teacher', 'juror']],
+    ]],
+    ['Lehrkraft', [
+        ['teams', 'Teams & Schüler', '👥', ['admin', 'lead', 'teacher']],
+    ]],
+    ['Jury', [
+        ['ranking', 'Bewertung & Ranking', '★', ['admin', 'lead', 'juror']],
+    ]],
+    ['Verwaltung', [
+        ['cycles',   'Wettbewerbsjahre', '🏆', ['admin', 'lead']],
+        ['schools',  'Schulen', '🏫', ['admin', 'lead']],
+        ['jurors',   'Jury & Nutzer', '⚖', ['admin', 'lead']],
+        ['sponsors', 'Sponsoren', '🤝', ['admin', 'lead']],
+        ['admin',    'Admin', '⚙', ['admin', 'lead']],
+    ]],
 ];
 $roleLabel = ['admin' => 'Admin', 'lead' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 'Jury'][$role] ?? $role;
 ?>
@@ -43,9 +53,13 @@ $roleLabel = ['admin' => 'Admin', 'lead' => 'Projektleitung', 'teacher' => 'Lehr
       <span>Unternehmen<br>Plus</span>
     </div>
     <nav class="nav">
-      <?php foreach ($nav as [$r, $label, $ic, $roles]): ?>
-        <?php if (in_array($role, $roles, true)): ?>
-          <a href="<?= url($r) ?>" class="<?= $current === $r ? 'active' : '' ?>" title="<?= e($label) ?>"><span class="ic"><?= $ic ?></span><span class="lbl"><?= e($label) ?></span></a>
+      <?php foreach ($navGroups as [$groupLabel, $items]): ?>
+        <?php $visible = array_filter($items, fn($it) => in_array($role, $it[3], true)); ?>
+        <?php if ($visible): ?>
+          <div class="nav__group"><?= e($groupLabel) ?></div>
+          <?php foreach ($visible as [$r, $label, $ic, $roles]): ?>
+            <a href="<?= url($r) ?>" class="<?= $current === $r ? 'active' : '' ?>" title="<?= e($label) ?>"><span class="ic"><?= $ic ?></span><span class="lbl"><?= e($label) ?></span></a>
+          <?php endforeach; ?>
         <?php endif; ?>
       <?php endforeach; ?>
     </nav>
