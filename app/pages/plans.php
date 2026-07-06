@@ -249,7 +249,7 @@ ob_start(); ?>
         <select id="plansSort" style="padding:4px 8px">
           <option value="name">Name (A–Z)</option>
           <option value="struct">Struktur-Check (hoch → niedrig)</option>
-          <?php if ($showAiEval): ?><option value="ki">KI-Vorbewertung (hoch → niedrig)</option><?php endif; ?>
+          <?php if ($showAiEval): ?><option value="ki">Bewertung (hoch → niedrig)</option><?php endif; ?>
           <?php if ($isAdmin): ?><option value="jury">Jury-Bewertung (hoch → niedrig)</option><?php endif; ?>
         </select>
       </label>
@@ -259,7 +259,7 @@ ob_start(); ?>
 <div class="card">
   <div class="table-wrap">
     <table class="data data--compact hide-evaluated" id="plansTable">
-      <thead><tr><th>Team</th><th>Schule</th><th>Businessplan</th><?php if (!$isTeacher): ?><th>Struktur-Check</th><?php if ($showAiEval): ?><th>KI-Vorbewertung</th><?php endif; ?><?php if ($isAdmin): ?><th>Jury</th><?php endif; ?><?php endif; ?><th></th></tr></thead>
+      <thead><tr><th>Team</th><th>Schule</th><th>Businessplan</th><?php if (!$isTeacher): ?><th>Struktur-Check</th><?php if ($showAiEval): ?><th>Bewertung</th><?php endif; ?><?php if ($isAdmin): ?><th>Jury</th><?php endif; ?><?php endif; ?><th></th></tr></thead>
       <tbody>
       <?php foreach ($teams as $t):
           // Struktur-Check kompakt + „schwach"-Kennzeichnung (unter Mindeststandard)
@@ -275,9 +275,9 @@ ob_start(); ?>
           $aiZero  = ($t['ai_status'] === 'done') && (int) $t['ai_zero'] > 0;
           $kiShort = null;
           if ($t['bp_id']) {
-              if ($t['ai_status'] === 'done')       { $kiShort = 'KI ' . $fmt($t['ai_score']) . '/50' . ($aiZero ? ' *' : ''); }
-              elseif ($t['ai_status'] === 'error')  { $kiShort = 'KI: Fehler'; }
-              else                                  { $kiShort = 'KI offen'; }
+              if ($t['ai_status'] === 'done')       { $kiShort = 'Bewertung ' . $fmt($t['ai_score']) . '/50' . ($aiZero ? ' *' : ''); }
+              elseif ($t['ai_status'] === 'error')  { $kiShort = 'Bewertung: Fehler'; }
+              else                                  { $kiShort = 'Bewertung offen'; }
           }
           // Jury-Bewertung (Durchschnitt über alle Juror:innen)
           $juryCount = (int) $t['juror_count'];
@@ -322,7 +322,7 @@ ob_start(); ?>
             <?php else: ?><span class="pill muted">offen</span><?php endif; ?>
           </td>
           <?php if ($showAiEval): ?>
-          <td data-label="KI-Vorbewertung" class="hide-sm" data-sort="<?= $sortKi ?>">
+          <td data-label="Bewertung" class="hide-sm" data-sort="<?= $sortKi ?>">
             <?php if (!$t['bp_id']): ?>—
             <?php elseif ($t['ai_status'] === 'done'): ?><strong><?= $fmt($t['ai_score']) ?></strong> / 50<?php if ($aiZero): ?> <span title="Mindestens ein Kriterium wurde mit 0 Punkten bewertet – bitte prüfen (ggf. KI-Vorbewertung erneut ausführen)." style="color:var(--danger,#c0392b);font-weight:700;cursor:help">*</span><?php endif; ?>
             <?php elseif ($t['ai_status'] === 'error'): ?><span class="pill red">Fehler</span>

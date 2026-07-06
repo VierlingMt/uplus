@@ -7,6 +7,12 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.41.1] - 2026-07-06
+### Geändert
+- Businessplan-Übersicht: Die Ergebnis-Spalte der KI-Vorbewertung heißt in der
+  Anzeige (Spalte, Sortierung, Handy-Info-Zeile) jetzt einfach **„Bewertung"**.
+  Die Admin-Schaltflächen, die den KI-Lauf auslösen, bleiben als „KI-Vorbewertung".
+
 ## [0.41.0] - 2026-07-06
 ### Hinzugefügt
 - **PitchDay-Eventplanung (neues Modul „PitchDay" für die Verwaltung).** Der PitchDay
