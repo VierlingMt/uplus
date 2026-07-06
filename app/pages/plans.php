@@ -189,6 +189,7 @@ $teams = Database::all(
     "SELECT t.*, s.name AS school_name, s.short_name,
             bp.id AS bp_id, bp.version, bp.created_at AS uploaded_at, bp.sc_override,
             ai.total_score AS ai_score, ai.status AS ai_status,
+            (SELECT COUNT(*) FROM ai_evaluation_scores z WHERE z.ai_evaluation_id = ai.id AND z.score = 0) AS ai_zero,
             sc.meets_minimum AS sc_min, sc.status AS sc_status, sc.completeness_score AS sc_score,
             (SELECT COUNT(*) FROM evaluations e WHERE e.team_id = t.id AND e.juror_id = ? AND e.bp_submitted = 1) AS my_eval,
             (SELECT COUNT(*) FROM evaluations e WHERE e.team_id = t.id AND e.bp_submitted = 1) AS juror_count,
@@ -270,10 +271,11 @@ ob_start(); ?>
           elseif ($t['sc_status'] === 'done')  { $scShort = 'Struktur ' . ($t['sc_score'] !== null ? (int) $t['sc_score'] : '–') . '/10' . ($isWeak ? ' ⚠' : ''); }
           elseif ($t['sc_status'] === 'error') { $scShort = 'Struktur: Fehler'; }
           else                                 { $scShort = 'Struktur offen'; }
-          // KI-Vorbewertung kompakt
+          // KI-Vorbewertung kompakt; „*" wenn mind. ein Kriterium 0 Punkte hat (bitte prüfen)
+          $aiZero  = ($t['ai_status'] === 'done') && (int) $t['ai_zero'] > 0;
           $kiShort = null;
           if ($t['bp_id']) {
-              if ($t['ai_status'] === 'done')       { $kiShort = 'KI ' . $fmt($t['ai_score']) . '/50'; }
+              if ($t['ai_status'] === 'done')       { $kiShort = 'KI ' . $fmt($t['ai_score']) . '/50' . ($aiZero ? ' *' : ''); }
               elseif ($t['ai_status'] === 'error')  { $kiShort = 'KI: Fehler'; }
               else                                  { $kiShort = 'KI offen'; }
           }
@@ -322,7 +324,7 @@ ob_start(); ?>
           <?php if ($showAiEval): ?>
           <td data-label="KI-Vorbewertung" class="hide-sm" data-sort="<?= $sortKi ?>">
             <?php if (!$t['bp_id']): ?>—
-            <?php elseif ($t['ai_status'] === 'done'): ?><strong><?= $fmt($t['ai_score']) ?></strong> / 50
+            <?php elseif ($t['ai_status'] === 'done'): ?><strong><?= $fmt($t['ai_score']) ?></strong> / 50<?php if ($aiZero): ?> <span title="Mindestens ein Kriterium wurde mit 0 Punkten bewertet – bitte prüfen (ggf. KI-Vorbewertung erneut ausführen)." style="color:var(--danger,#c0392b);font-weight:700;cursor:help">*</span><?php endif; ?>
             <?php elseif ($t['ai_status'] === 'error'): ?><span class="pill red">Fehler</span>
             <?php else: ?><span class="pill muted">offen</span><?php endif; ?>
           </td>

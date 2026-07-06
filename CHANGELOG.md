@@ -7,6 +7,13 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.40.2] - 2026-07-05
+### Hinzugefügt
+- **Null-Punkte-Markierung in der Businessplan-Übersicht:** Hat die KI-Vorbewertung
+  mindestens einem Kriterium 0 Punkte gegeben, erscheint neben der KI-Note ein rotes
+  Sternchen (`*`) mit Hinweis-Tooltip – als Signal, den Plan von Hand zu prüfen bzw. die
+  Bewertung ggf. erneut auszuführen. Auch in der kompakten Handy-Ansicht sichtbar.
+
 ## [0.40.1] - 2026-07-05
 ### Behoben
 - **KI-Vorbewertung: „Finanzen 0 Punkte" trotz ausführlichem Inhalt.** Das Token-Limit
