@@ -290,7 +290,153 @@ final class Migrator
                     KEY idx_audit_entity (entity, entity_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             ],
+            [
+                'version' => '2026_07_25_pitchday_events',
+                'name'    => 'PitchDay-Eventplanung (Aufgaben, Gäste, Agenda, Budget) je Wettbewerbsjahr',
+                'up'      => [self::class, 'pitchdayEvents'],
+            ],
         ];
+    }
+
+    /**
+     * PitchDay-Eventplanung: Veranstaltung, Aufgaben-Checkliste, Gäste/VIPs,
+     * Ablaufplan und Budget – alles am Wettbewerbsjahr aufgehängt. Für das
+     * aktive Jahr wird direkt ein PitchDay mit dem Standard-Playbook und der
+     * Standard-Agenda vorbelegt (idempotent).
+     */
+    public static function pitchdayEvents(PDO $pdo): void
+    {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS events (
+                id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                cycle_id      INT UNSIGNED NOT NULL,
+                type          VARCHAR(40) NOT NULL DEFAULT 'pitchday',
+                title         VARCHAR(190) NOT NULL,
+                event_date    DATE NULL,
+                time_from     TIME NULL,
+                venue         VARCHAR(190) NULL,
+                venue_address VARCHAR(255) NULL,
+                notes         TEXT NULL,
+                created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_events_cycle (cycle_id),
+                CONSTRAINT fk_events_cycle FOREIGN KEY (cycle_id)
+                    REFERENCES competition_cycles(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS event_tasks (
+                id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                event_id    INT UNSIGNED NOT NULL,
+                category    VARCHAR(40) NOT NULL DEFAULT 'general',
+                title       VARCHAR(190) NOT NULL,
+                responsible VARCHAR(120) NULL,
+                status      ENUM('open','requested','confirmed','done') NOT NULL DEFAULT 'open',
+                due_date    DATE NULL,
+                offset_days INT NULL,
+                comment     VARCHAR(500) NULL,
+                sort_order  INT NOT NULL DEFAULT 0,
+                created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_tasks_event (event_id),
+                CONSTRAINT fk_tasks_event FOREIGN KEY (event_id)
+                    REFERENCES events(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS event_guests (
+                id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                event_id         INT UNSIGNED NOT NULL,
+                category         ENUM('jury','vip','press','sponsor','speaker') NOT NULL DEFAULT 'vip',
+                name             VARCHAR(190) NOT NULL,
+                org              VARCHAR(190) NULL,
+                position         VARCHAR(190) NULL,
+                email            VARCHAR(190) NULL,
+                invite_channel   VARCHAR(60) NULL,
+                status           ENUM('open','requested','confirmed','declined','substitute') NOT NULL DEFAULT 'open',
+                greeting         TINYINT(1) NOT NULL DEFAULT 0,
+                greeting_minutes INT NULL,
+                keynote          TINYINT(1) NOT NULL DEFAULT 0,
+                seat_reserved    TINYINT(1) NOT NULL DEFAULT 0,
+                notes            VARCHAR(500) NULL,
+                sort_order       INT NOT NULL DEFAULT 0,
+                created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_guests_event (event_id),
+                CONSTRAINT fk_guests_event FOREIGN KEY (event_id)
+                    REFERENCES events(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS event_agenda (
+                id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                event_id   INT UNSIGNED NOT NULL,
+                time_from  TIME NULL,
+                time_to    TIME NULL,
+                title      VARCHAR(190) NOT NULL,
+                note       VARCHAR(300) NULL,
+                sort_order INT NOT NULL DEFAULT 0,
+                PRIMARY KEY (id),
+                KEY idx_agenda_event (event_id),
+                CONSTRAINT fk_agenda_event FOREIGN KEY (event_id)
+                    REFERENCES events(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS event_budget_items (
+                id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                event_id   INT UNSIGNED NOT NULL,
+                kind       ENUM('cost','prize') NOT NULL DEFAULT 'cost',
+                label      VARCHAR(190) NOT NULL,
+                amount     DECIMAL(10,2) NULL,
+                place      INT NULL,
+                note       VARCHAR(300) NULL,
+                sort_order INT NOT NULL DEFAULT 0,
+                PRIMARY KEY (id),
+                KEY idx_budget_event (event_id),
+                CONSTRAINT fk_budget_event FOREIGN KEY (event_id)
+                    REFERENCES events(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+        // Für das aktive Wettbewerbsjahr direkt einen PitchDay vorbereiten,
+        // solange dort noch keiner existiert.
+        $active = (int) ($pdo->query('SELECT id FROM competition_cycles WHERE is_active = 1 ORDER BY id DESC LIMIT 1')->fetchColumn() ?: 0);
+        if (!$active) {
+            return;
+        }
+        $has = (int) $pdo->query("SELECT COUNT(*) FROM events WHERE cycle_id = $active AND type = 'pitchday'")->fetchColumn();
+        if ($has > 0) {
+            return;
+        }
+        $ins = $pdo->prepare(
+            "INSERT INTO events (cycle_id, type, title, venue) VALUES (?, 'pitchday', ?, ?)"
+        );
+        $ins->execute([$active, 'PitchDay', 'Stadthalle Ebermannstadt']);
+        $eventId = (int) $pdo->lastInsertId();
+
+        // Playbook-Aufgaben (ohne Event-Datum → Fälligkeiten werden gesetzt,
+        // sobald die Projektleitung das Datum einträgt).
+        $order = array_keys(PitchDay::TASK_CATEGORIES);
+        $t = $pdo->prepare(
+            'INSERT INTO event_tasks (event_id, category, title, status, offset_days, sort_order) VALUES (?,?,?,?,?,?)'
+        );
+        foreach (PitchDay::TEMPLATE_TASKS as $i => [$cat, $title, $offset]) {
+            $sort = (array_search($cat, $order, true) * 100) + $i;
+            $t->execute([$eventId, $cat, $title, 'open', $offset, $sort]);
+        }
+
+        // Standard-Agenda.
+        $a = $pdo->prepare(
+            'INSERT INTO event_agenda (event_id, time_from, time_to, title, sort_order) VALUES (?,?,?,?,?)'
+        );
+        foreach (PitchDay::AGENDA_TEMPLATE as $i => [$from, $to, $title]) {
+            $a->execute([$eventId, $from, $to, $title, ($i + 1) * 10]);
+        }
     }
 
     /** Alle hinterlegten Handynummern ins internationale Format ohne Leerzeichen bringen. */

@@ -92,6 +92,7 @@ try {
         case 'materials':
         case 'material_download':
         case 'sponsors':
+        case 'event':
         case 'audit':
         case 'plans':
         case 'bp_download':

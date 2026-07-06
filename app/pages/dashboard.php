@@ -45,6 +45,27 @@
   </div>
 </div>
 
+<?php if (!empty($pitchday)): ?>
+<a href="<?= url('event') ?>" style="text-decoration:none;color:inherit">
+  <div class="card mb">
+    <div class="card__head" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <span>🎤 <?= e($pitchday['title']) ?><?= $pitchday['date'] ? ' am ' . e(date('d.m.Y', strtotime($pitchday['date']))) : '' ?></span>
+      <?php if ($pitchday['days'] !== null && $pitchday['days'] >= 0): ?>
+        <span class="pill blue"><?= $pitchday['days'] === 0 ? 'heute!' : 'in ' . (int) $pitchday['days'] . ' Tagen' ?></span>
+      <?php endif; ?>
+    </div>
+    <div class="card__body">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <span class="pill muted"><?= (int) $pitchday['open'] ?> offene Aufgaben</span>
+        <?php if ($pitchday['overdue'] > 0): ?><span class="pill red"><?= (int) $pitchday['overdue'] ?> überfällig</span><?php endif; ?>
+        <?php if ($pitchday['soon'] > 0): ?><span class="pill amber"><?= (int) $pitchday['soon'] ?> fällig in ≤14 Tagen</span><?php endif; ?>
+        <?php if ($pitchday['date'] === null): ?><span class="pill amber">Datum eintragen</span><?php endif; ?>
+      </div>
+    </div>
+  </div>
+</a>
+<?php endif; ?>
+
 <div class="card">
   <div class="card__head">Partner &amp; Sponsoren <?= e((string) $year) ?></div>
   <div class="card__body">

@@ -7,6 +7,30 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-07-06
+### Hinzugefügt
+- **PitchDay-Eventplanung (neues Modul „PitchDay" für die Verwaltung).** Der PitchDay
+  – die Abschlussveranstaltung eines Wettbewerbsjahres – lässt sich jetzt wie ein kleines
+  Eventmanagement in der App abbilden. Alles hängt am Wettbewerbsjahr, sodass jeder
+  Jahrgang seine eigene Instanz bekommt und die Historie erhalten bleibt. Vier Bereiche:
+  - **Aufgaben & Checkliste:** ein wiederverwendbares Playbook der jährlich wiederkehrenden
+    To-dos (Location & Technik, Catering, VIPs & Einladungen, Presse, Sponsoren & Roll-Ups,
+    Preise & Urkunden, Tag-Vorbereitung). Jede Vorlagen-Aufgabe trägt einen Offset zum
+    Veranstaltungstag – trägt die Projektleitung das Event-Datum ein, werden die
+    **Fälligkeiten automatisch berechnet** („X Tage vorher"). Status je Aufgabe (offen,
+    angefragt, zugesagt, erledigt), verantwortliche Person und Kommentar. Überfällige und
+    bald fällige Aufgaben werden hervorgehoben.
+  - **Gäste & VIPs:** Einladungsmanagement für Jury, VIPs, Presse, Sponsoren und Redner mit
+    Status (angefragt/Zusage/Absage/Vertretung), Grußwort-/Keynote-Kennzeichnung inkl.
+    Redezeit, Sitzreservierung und Bemerkung. Die Jury des Wettbewerbsjahres lässt sich per
+    Klick übernehmen; eine Redner-Übersicht bündelt Grußworte und Keynote.
+  - **Ablaufplan:** die Agenda des Tages (Zeiten und Programmpunkte), inkl. einfügbarer
+    Standard-Agenda.
+  - **Budget:** Kosten- und Preisgeld-Positionen; die Einnahmen werden aus den
+    Sponsoren-Beiträgen des Jahres übernommen, Saldo automatisch berechnet.
+- **Dashboard-Kachel „PitchDay"** für die Verwaltung: Countdown bis zur Veranstaltung sowie
+  Anzahl offener, überfälliger und bald fälliger Aufgaben – mit direktem Sprung ins Modul.
+
 ## [0.40.2] - 2026-07-05
 ### Hinzugefügt
 - **Null-Punkte-Markierung in der Businessplan-Übersicht:** Hat die KI-Vorbewertung

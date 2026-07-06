@@ -262,6 +262,8 @@ table.data tr:hover td { background: #fafcfe; }
 .pill.teal  { background: #d9f6ec; color: var(--wj-teal-d); }
 .pill.amber { background: #fff2d6; color: #a9760a; }
 .pill.red   { background: #ffe1df; color: #c22c25; }
+.pill-select { border: 1px solid var(--line); border-radius: 20px; padding: 4px 10px; font-size: 12px; font-family: "Chivo",sans-serif; font-weight: 700; background: #fff; color: var(--wj-blue); cursor: pointer; }
+.pill-select:focus { outline: none; border-color: var(--wj-blue); box-shadow: 0 0 0 3px rgba(0,53,148,.12); }
 
 /* ---------- Flash ---------- */
 .flash { padding: 13px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; border: 1px solid; }
