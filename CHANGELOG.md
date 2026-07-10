@@ -7,7 +7,15 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
-## [0.42.1] - 2026-07-10
+## [0.42.2] - 2026-07-10
+### Geändert
+- **Admin zählt nicht mehr als Jurymitglied.** Die Rolle `admin` ist eine reine
+  Servicerolle und muss keine Businesspläne bewerten. Der Admin wird daher nicht
+  mehr als Bewertende:r gezählt: weder in der Gesamtzahl der Bewertenden noch im
+  Bewertungsstand (Coverage) im Modul „Bewertung & Ranking". Etwaige Bewertungen
+  eines Admin-Kontos fließen nicht mehr in die Jury-Mittelwerte und -Zählungen ein
+  (Ranking, Businessplan-Übersicht, Plan-Detailansicht). Projektleitung (`lead`) und
+  Jury (`juror`) bleiben unverändert Teil der Jury.
 ### Geändert
 - **Dashboard – Sponsoren farbig & einheitlich groß.** Die Partner-/Sponsoren-Logos
   werden jetzt in **Farbe** angezeigt (kein Graustufen-Filter mehr) und auf eine

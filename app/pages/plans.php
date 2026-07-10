@@ -192,8 +192,8 @@ $teams = Database::all(
             (SELECT COUNT(*) FROM ai_evaluation_scores z WHERE z.ai_evaluation_id = ai.id AND z.score = 0) AS ai_zero,
             sc.meets_minimum AS sc_min, sc.status AS sc_status, sc.completeness_score AS sc_score,
             (SELECT COUNT(*) FROM evaluations e WHERE e.team_id = t.id AND e.juror_id = ? AND e.bp_submitted = 1) AS my_eval,
-            (SELECT COUNT(*) FROM evaluations e WHERE e.team_id = t.id AND e.bp_submitted = 1) AS juror_count,
-            (SELECT AVG(e.bp_total) FROM evaluations e WHERE e.team_id = t.id AND e.bp_submitted = 1) AS juror_avg
+            (SELECT COUNT(*) FROM evaluations e JOIN users ju ON ju.id = e.juror_id WHERE e.team_id = t.id AND e.bp_submitted = 1 AND ju.role <> 'admin') AS juror_count,
+            (SELECT AVG(e.bp_total) FROM evaluations e JOIN users ju ON ju.id = e.juror_id WHERE e.team_id = t.id AND e.bp_submitted = 1 AND ju.role <> 'admin') AS juror_avg
      FROM teams t
      JOIN schools s ON s.id = t.school_id
      LEFT JOIN business_plans bp ON bp.team_id = t.id AND bp.is_current = 1

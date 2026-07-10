@@ -84,7 +84,7 @@ ob_start(); ?>
 // Jury-Bewertung – Kopfzahlen (Karte ganz oben, eingeklappt)
 $evals = Database::all(
     'SELECT e.*, u.name AS juror_name FROM evaluations e JOIN users u ON u.id=e.juror_id
-     WHERE e.team_id=? AND e.bp_submitted=1 ORDER BY u.name',
+     WHERE e.team_id=? AND e.bp_submitted=1 AND u.role<>\'admin\' ORDER BY u.name',
     [$tid]
 );
 $avgBp = $evals ? array_sum(array_map(fn($e) => (float) $e['bp_total'], $evals)) / count($evals) : null;
