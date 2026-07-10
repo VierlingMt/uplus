@@ -7,7 +7,17 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
-## [0.42.2] - 2026-07-10
+## [0.42.3] - 2026-07-10
+### Behoben
+- **Tabellen-Sortierung mit Kommazahlen korrigiert (grundlegend).** Spalten mit
+  einem maschinellen `data-sort`-Wert (z. B. „Jury" Ø-Punkte, KI-Bewertung,
+  Struktur-Check in der Businessplan-Übersicht) wurden fälschlich durch die
+  Deutsch-Zahl-Heuristik interpretiert: Ein Wert wie `34.333333` galt als
+  Tausenderzahl und wurde zu `34333` – Dezimalwerte landeten dadurch beim
+  Sortieren ganz oben. `data-sort` wird jetzt als reiner Maschinenwert behandelt
+  (Punkt = Dezimaltrenner, numerisch), Nicht-Zahlen (z. B. ISO-Zeitstempel im
+  Audit-Log) als Text – letzteres sortiert nun korrekt chronologisch. Die
+  Anzeige-Formatierung (deutsche Kommazahlen) bleibt unverändert.
 ### Geändert
 - **Admin zählt nicht mehr als Jurymitglied.** Die Rolle `admin` ist eine reine
   Servicerolle und muss keine Businesspläne bewerten. Der Admin wird daher nicht

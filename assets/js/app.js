@@ -221,7 +221,19 @@
 
   // Sortierwert einer Zelle bestimmen (Datum > Zahl > Text).
   function cellValue(td) {
-    var t = (td.getAttribute('data-sort') || td.textContent || '').trim();
+    // data-sort ist ein Maschinenwert (Punkt = Dezimaltrenner). Reine Zahlen
+    // werden numerisch verglichen, alles andere (z. B. ISO-Zeitstempel) als
+    // Text. NICHT durch die Deutsch-Zahl-Heuristik schicken – sonst würde etwa
+    // der Wert "34.333333" als Tausender gelesen und zu 34333 (Sortierfehler).
+    var ds = td.getAttribute('data-sort');
+    if (ds !== null) {
+      ds = ds.trim();
+      if (/^-?\d+(?:\.\d+)?$/.test(ds)) {
+        return { n: parseFloat(ds), s: ds.toLowerCase(), empty: false };
+      }
+      return { n: null, s: ds.toLowerCase(), empty: ds === '' };
+    }
+    var t = (td.textContent || '').trim();
     var low = t.toLowerCase();
     // Datum TT.MM.JJJJ [HH:MM]
     var d = t.match(/(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
