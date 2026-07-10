@@ -7,6 +7,18 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-07-10
+### Geändert
+- **Login mit nur einem Button.** Statt getrennter Schaltflächen für E-Mail-Link und
+  SMS-Code gibt es jetzt ein einziges Feld und einen „Anmelden"-Button. Anhand der
+  Eingabe entscheidet die App selbst: Eine **E-Mail-Adresse** bekommt den Magic-Link
+  per E-Mail, eine **Handynummer** einen Einmalcode per SMS. Auf der Bestätigungsseite
+  wird jetzt angezeigt, **wohin** der Link bzw. der Code geschickt wurde.
+- **PitchDay ohne Seitensprung.** Aktionen im PitchDay-Modul (Status einer Aufgabe
+  ändern, Aufgabe/Gast/Programmpunkt/Budget bearbeiten, löschen, Vorlagen einfügen)
+  werden jetzt per AJAX gespeichert. Die Seite lädt nicht mehr komplett neu und
+  springt nicht mehr nach oben – die Scroll-Position bleibt erhalten.
+
 ## [0.41.1] - 2026-07-06
 ### Geändert
 - Businessplan-Übersicht: Die Ergebnis-Spalte der KI-Vorbewertung heißt in der

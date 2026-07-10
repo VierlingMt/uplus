@@ -252,6 +252,8 @@
   }
 
   function enhanceTable(table) {
+    if (table.__enhanced) return; // Doppelte Aufbereitung (z. B. nach AJAX-Swap) vermeiden
+    table.__enhanced = true;
     var thead = table.tHead, tbody = table.tBodies[0];
     if (!thead || !tbody) return;
     var headRow = thead.rows[thead.rows.length - 1];
@@ -340,7 +342,54 @@
     });
   }
 
-  document.querySelectorAll('table.data').forEach(enhanceTable);
+  // Tabellen aufbereiten – global aufrufbar, damit nach einem AJAX-Inhaltswechsel
+  // (z. B. PitchDay) neu eingefügte Tabellen erneut Sortierung/Suche erhalten.
+  function enhanceTables(root) {
+    (root || document).querySelectorAll('table.data').forEach(enhanceTable);
+  }
+  window.UplusEnhanceTables = enhanceTables;
+  enhanceTables(document);
+
+  // ---------------------------------------------------------------------------
+  // PitchDay (event): Formulare per AJAX absenden – kein Seiten-Reload und
+  // damit kein Sprung nach oben nach „Status ändern" oder „Bearbeiten".
+  // Nur aktiv auf Seiten mit #event-page. Nach dem POST (Server antwortet per
+  // Redirect mit der frisch gerenderten Seite) wird der Inhalt ausgetauscht und
+  // die Scroll-Position beibehalten.
+  // ---------------------------------------------------------------------------
+  (function initEventAjax() {
+    var page = document.getElementById('event-page');
+    if (!page) return;
+    var content = page.closest('.content');
+    if (!content) return;
+
+    function swap(html) {
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      var fresh = doc.querySelector('.content');
+      if (!fresh || !fresh.querySelector('#event-page')) { location.reload(); return; }
+      var y = window.scrollY;
+      content.innerHTML = fresh.innerHTML;
+      document.body.classList.remove('modal-open'); // ein evtl. offenes Modal wurde ersetzt
+      enhanceTables(content);
+      window.scrollTo(0, y);
+    }
+
+    content.addEventListener('submit', function (e) {
+      var f = e.target;
+      if (!(f instanceof HTMLFormElement)) return;
+      if ((f.method || 'get').toLowerCase() !== 'post') return;   // GET (Jahr-Wechsel) normal lassen
+      if (f.matches('[data-confirm]') && !f.__confirmed) return;  // erst die Bestätigung abwarten
+      e.preventDefault();
+      var action = f.getAttribute('action') || location.href;
+      fetch(action, {
+        method: 'POST', body: new FormData(f), credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'fetch' }
+      })
+        .then(function (r) { return r.text(); })
+        .then(swap)
+        .catch(function () { location.reload(); });
+    });
+  })();
 
   // ---------------------------------------------------------------------------
   // Bulk-Verarbeitung mit Fortschrittsbalken (Struktur-Check / KI-Vorbewertung)

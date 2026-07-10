@@ -272,6 +272,7 @@ $cycleSwitcher = function () use ($cycles, $cycleId, $tab) {
 };
 
 ob_start(); ?>
+<div id="event-page" data-event-ajax>
 <div class="page-head">
   <h1>🎤 PitchDay<?= $cycle ? ' <span class="muted" style="font-weight:400;font-size:.7em">' . e($cycle['year_label']) . '</span>' : '' ?></h1>
   <?= $cycleSwitcher() ?>
@@ -414,7 +415,7 @@ ob_start(); ?>
                 <td data-label="Status">
                   <form method="post" action="<?= url('event') ?>" style="display:inline">
                     <?= Csrf::field() ?><input type="hidden" name="action" value="task_status"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="tab" value="tasks"><input type="hidden" name="id" value="<?= (int) $tk['id'] ?>">
-                    <select name="status" onchange="this.form.submit()" class="pill-select">
+                    <select name="status" onchange="if(this.form.requestSubmit){this.form.requestSubmit()}else{this.form.submit()}" class="pill-select">
                       <?php foreach (PitchDay::TASK_STATUS as $sk => [$sl]): ?>
                         <option value="<?= e($sk) ?>" <?= $tk['status'] === $sk ? 'selected' : '' ?>><?= e($sl) ?></option>
                       <?php endforeach; ?>
@@ -717,6 +718,7 @@ ob_start(); ?>
   </div>
 
 <?php endif; ?>
+</div><!-- /#event-page -->
 <?php
 $content = ob_get_clean();
 $title = 'PitchDay';
