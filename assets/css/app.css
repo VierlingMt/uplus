@@ -308,8 +308,9 @@ table.data tr:hover td { background: #fafcfe; }
 .muted { color: var(--muted); }
 .mt { margin-top: 18px; } .mb { margin-bottom: 18px; }
 .partner-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 22px; }
-.partner-bar img { height: 34px; width: auto; filter: grayscale(1); opacity: .7; }
-.partner-bar img:hover { filter: none; opacity: 1; }
+/* Sponsoren farbig (kein Graustufen-Filter) und einheitlich auf eine
+   maximale Box begrenzt – Seitenverhältnis bleibt erhalten. */
+.partner-bar img { max-height: 48px; max-width: 150px; width: auto; height: auto; object-fit: contain; }
 .empty { text-align: center; padding: 46px 20px; color: var(--muted); }
 .empty .ic { font-size: 34px; }
 

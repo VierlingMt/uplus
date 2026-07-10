@@ -7,6 +7,13 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.42.1] - 2026-07-10
+### Geändert
+- **Dashboard – Sponsoren farbig & einheitlich groß.** Die Partner-/Sponsoren-Logos
+  werden jetzt in **Farbe** angezeigt (kein Graustufen-Filter mehr) und auf eine
+  einheitliche Maximalgröße begrenzt (max. Breite 150 px, max. Höhe 48 px) – das
+  Seitenverhältnis bleibt erhalten.
+
 ## [0.42.0] - 2026-07-10
 ### Geändert
 - **Login mit nur einem Button.** Statt getrennter Schaltflächen für E-Mail-Link und
