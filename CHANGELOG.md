@@ -7,7 +7,17 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
-## [0.42.4] - 2026-07-10
+## [0.43.0] - 2026-07-10
+### Geändert
+- **E-Mail-Login jetzt mit 6-stelligem Code statt Magic-Link.** Der bisherige
+  Magic-Link konnte von E-Mail-Sicherheitsscannern „vorab geklickt" und dadurch
+  entwertet werden („Login-Link ungültig oder abgelaufen", obwohl gerade erhalten).
+  Stattdessen bekommt man jetzt – wie beim SMS-Login – einen **6-stelligen
+  Login-Code** per E-Mail, den man bequem kopieren/einfügen kann. E-Mail- und
+  SMS-Weg nutzen dieselbe Code-Eingabe; der Code wird auf einem eigenen Feld
+  eingegeben und daher nie als Telefonnummer fehlinterpretiert. Angezeigt wird,
+  wohin der Code geschickt wurde. Alte Magic-Links bleiben aus Kompatibilität bis
+  zum Ablauf weiterhin gültig.
 ### Geändert
 - **Login-Seite:** Der Untertitel nennt nicht mehr die „KI-Vorbewertung", sondern
   neutral „Bewertung" („… von der Einreichung über die Bewertung bis zum Pitch Day.").

@@ -1,13 +1,16 @@
 <?php
 /**
- * Login-Seite (oeffentlich) – passwortlos.
+ * Login-Seite (oeffentlich) – passwortlos, mit 6-stelligem Einmalcode.
  *
- * Zwei gleichwertige Anmeldewege (je ein Faktor):
- *   A) Magic-Link per E-Mail:  POST mode=email      -> Link gemailt
- *                              GET  ?r=login&token= -> Session, Weiterleitung
- *   B) Einmalcode per SMS:     POST mode=sms        -> 6-stelliger Code an Handy
- *                              POST mode=verify_sms -> Code prüfen, Session
- *   Der SMS-Weg erscheint nur, wenn ein seven.io-API-Key hinterlegt ist.
+ * Einheitlicher Ablauf (ein Faktor, ein Button):
+ *   1. Nutzer gibt E-Mail ODER Handynummer ein  (POST mode=auto)
+ *      - E-Mail      -> 6-stelliger Code per E-Mail
+ *      - Handynummer -> 6-stelliger Code per SMS (nur wenn seven.io-Key hinterlegt)
+ *   2. Nutzer gibt den Code ein                  (POST mode=verify) -> Session
+ *
+ * Der Code lässt sich bequem kopieren/einfügen und wird – anders als ein
+ * Magic-Link – nicht von E-Mail-Scannern „vorab geklickt" und dadurch entwertet.
+ * Alt-Magic-Links (GET ?token=…) werden aus Kompatibilität weiterhin eingelöst.
  */
 declare(strict_types=1);
 
@@ -15,15 +18,15 @@ if (Auth::check()) {
     redirect(url('dashboard'));
 }
 
-$error   = null;   // Fehlermeldung
-$sent    = false;  // true, nachdem ein E-Mail-Link angefordert wurde
-$devLink = null;   // ausserhalb der Produktion: Link direkt anzeigen
-$smsStep = false;  // true: Code-Eingabe (SMS) anzeigen
-$sentTo  = null;   // Ziel (E-Mail bzw. Handynummer), an das gesendet wurde – für die Info
+$error    = null;   // Fehlermeldung
+$codeStep = false;  // true: Code-Eingabe anzeigen
+$devCode  = null;   // ausserhalb der Produktion: Code direkt anzeigen
+$sentTo   = null;   // Ziel (E-Mail bzw. Handynummer), an das gesendet wurde
+$sentVia  = null;   // 'email' | 'sms' – bestimmt die Info-Formulierung
 $typedEmail = (string) input('email', '');
 $smsConfigured = Sms::isConfigured();
 
-// --- Magic-Link einloesen ----------------------------------------------------
+// --- Alt-Magic-Link einloesen (Rückwärtskompatibilität) ----------------------
 $token = (string) input('token', '');
 if ($token !== '') {
     $user = MagicLink::consume($token);
@@ -31,7 +34,7 @@ if ($token !== '') {
         Auth::login($user);
         redirect(url('dashboard'));
     }
-    $error = 'Dieser Login-Link ist ungültig oder abgelaufen. Bitte fordere einen neuen an.';
+    $error = 'Dieser Login-Link ist ungültig oder abgelaufen. Bitte fordere einen neuen Code an.';
     Audit::event('login.link_invalid', 'Ungültiger oder abgelaufener Login-Link aufgerufen');
 }
 
@@ -47,49 +50,57 @@ $resolveUser = static function () use ($looksEmail, $typedId, $normPhone): ?arra
     return $normPhone !== null ? Auth::findActiveByPhone($normPhone) : null;
 };
 
+/** 6-stelligen Code erzeugen und per E-Mail versenden. Gibt den Code zurück. */
+$sendEmailCode = static function (array $user): string {
+    $code = SmsCode::issue((int) $user['id']);
+    $ttl  = SmsCode::ttlMinutes();
+    $email = strtolower(trim((string) $user['email']));
+
+    $subject = 'Dein Login-Code für Unternehmen Plus';
+    $text =
+        "Hallo " . $user['name'] . ",\n\n" .
+        "dein Login-Code für Unternehmen Plus lautet:\n\n" .
+        "    " . $code . "\n\n" .
+        "Gib den Code auf der Anmeldeseite ein. Er ist " . $ttl . " Minuten gültig.\n\n" .
+        "Wenn du diese Anmeldung nicht angefordert hast, kannst du diese E-Mail ignorieren.\n\n" .
+        "Viele Grüße\nUnternehmen Plus – Wirtschaftsjunioren Forchheim\n";
+
+    $introHtml =
+        'Hallo ' . e($user['name']) . ',<br><br>'
+        . 'dein Login-Code für <strong>Unternehmen Plus</strong> lautet:'
+        . '<div style="margin:22px 0 4px;font-family:Arial,Helvetica,sans-serif;font-size:34px;'
+        . 'font-weight:bold;letter-spacing:10px;color:#003594;background:#eef2f7;'
+        . 'border-radius:12px;padding:18px 12px;text-align:center">' . e($code) . '</div>';
+    $footNote = 'Gib den Code auf der Anmeldeseite ein. Er ist ' . $ttl . ' Minuten gültig. '
+        . 'Falls du diese Anmeldung nicht angefordert hast, ignoriere diese E-Mail einfach.';
+    $html = Mailer::brandedHtml('Dein Login-Code', $introHtml, null, null, $footNote);
+
+    Mailer::send($email, $subject, $text, $html);
+    return $code;
+};
+
 if (is_post()) {
     Csrf::check();
-    $mode = (string) input('mode', 'email');
+    $mode = (string) input('mode', 'auto');
 
-    // --- B2) SMS-Code prüfen -------------------------------------------------
-    if ($mode === 'verify_sms') {
-        $uid  = (int) ($_SESSION['sms_uid'] ?? 0);
+    // --- Code prüfen (E-Mail- oder SMS-Code) ---------------------------------
+    if ($mode === 'verify') {
+        $uid  = (int) ($_SESSION['login_uid'] ?? 0);
         $code = (string) input('code', '');
         $user = $uid ? SmsCode::verify($uid, $code) : null;
         if ($user) {
-            unset($_SESSION['sms_uid']);
+            unset($_SESSION['login_uid'], $_SESSION['login_via'], $_SESSION['login_to']);
             Auth::login($user); // protokolliert login.success
             redirect(url('dashboard'));
         }
         $error = 'Der Code ist ungültig oder abgelaufen. Bitte fordere einen neuen an.';
-        Audit::event('login.sms_failed', 'SMS-Code falsch/abgelaufen', $uid ? Database::one('SELECT id,name,email FROM users WHERE id=?', [$uid]) : null);
-        $smsStep = true;
+        Audit::event('login.code_failed', 'Login-Code falsch/abgelaufen', $uid ? Database::one('SELECT id,name,email FROM users WHERE id=?', [$uid]) : null);
+        $codeStep = true;
+        $sentVia  = $_SESSION['login_via'] ?? null;
+        $sentTo   = $_SESSION['login_to'] ?? null;
 
-    // --- B1) SMS-Code (erneut) anfordern -------------------------------------
-    } elseif ($mode === 'sms') {
-        if (!$validId) {
-            $error = 'Bitte gib eine gültige E-Mail-Adresse oder Handynummer ein.';
-        } elseif (!$smsConfigured) {
-            $error = 'Der SMS-Login ist derzeit nicht verfügbar. Bitte nutze den E-Mail-Link.';
-        } else {
-            // Neutral: Ergebnis nach aussen unabhängig davon, ob es das Konto
-            // gibt oder eine Handynummer hinterlegt ist (kein User-Enumeration).
-            unset($_SESSION['sms_uid']);
-            $user = $resolveUser();
-            if ($user && trim((string) ($user['phone'] ?? '')) !== '') {
-                $code = SmsCode::issue((int) $user['id']);
-                $text = 'Unternehmen Plus: Dein Login-Code lautet ' . $code
-                      . ' (' . SmsCode::ttlMinutes() . ' Min. gültig).';
-                if (Sms::send((string) $user['phone'], $text)) {
-                    $_SESSION['sms_uid'] = (int) $user['id'];
-                }
-            }
-            Audit::event('login.sms_requested', 'SMS-Code angefordert' . ($user ? '' : ' (kein Treffer)'), $user ?: null, ['eingabe' => $typedId]);
-            $sentTo  = $looksEmail ? strtolower($typedId) : $normPhone;
-            $smsStep = true;
-        }
-
-    // --- A) Automatische Weiche: E-Mail -> Magic-Link, Handy -> SMS-Code ------
+    // --- Code anfordern: Kanal aus der Eingabe ableiten ----------------------
+    // (mode=auto beim ersten Absenden wie auch beim „Neuen Code anfordern")
     } else {
         if (!$validId) {
             $error = 'Bitte gib eine gültige E-Mail-Adresse oder Handynummer ein.';
@@ -99,58 +110,42 @@ if (is_post()) {
             if (!$smsConfigured) {
                 $error = 'Der SMS-Login ist derzeit nicht verfügbar. Bitte gib deine E-Mail-Adresse ein.';
             } else {
-                unset($_SESSION['sms_uid']);
+                // Neutral: Ergebnis unabhängig davon, ob es das Konto/die Nummer
+                // gibt (kein User-Enumeration).
+                unset($_SESSION['login_uid'], $_SESSION['login_via'], $_SESSION['login_to']);
                 $user = $resolveUser();
                 if ($user && trim((string) ($user['phone'] ?? '')) !== '') {
                     $code = SmsCode::issue((int) $user['id']);
                     $text = 'Unternehmen Plus: Dein Login-Code lautet ' . $code
                           . ' (' . SmsCode::ttlMinutes() . ' Min. gültig).';
                     if (Sms::send((string) $user['phone'], $text)) {
-                        $_SESSION['sms_uid'] = (int) $user['id'];
+                        $_SESSION['login_uid'] = (int) $user['id'];
+                        if (cfg('app_env') !== 'production') { $devCode = $code; }
                     }
                 }
-                Audit::event('login.sms_requested', 'SMS-Code angefordert' . ($user ? '' : ' (kein Treffer)'), $user ?: null, ['eingabe' => $typedId]);
+                Audit::event('login.code_requested', 'Login-Code (SMS) angefordert' . ($user ? '' : ' (kein Treffer)'), $user ?: null, ['eingabe' => $typedId]);
                 $sentTo  = $normPhone;
-                $smsStep = true;
+                $sentVia = 'sms';
+                $_SESSION['login_via'] = 'sms';
+                $_SESSION['login_to']  = $sentTo;
+                $codeStep = true;
             }
 
-        // E-Mail eingegeben -> Magic-Link
+        // E-Mail eingegeben -> Einmalcode per E-Mail
         } else {
+            unset($_SESSION['login_uid'], $_SESSION['login_via'], $_SESSION['login_to']);
             $user = $resolveUser();
             if ($user) {
-                $email = strtolower(trim((string) $user['email']));
-                $raw  = MagicLink::issue((int) $user['id']);
-                $link = abs_url('login', ['token' => $raw]);
-
-                $subject = 'Dein Login-Link für Unternehmen Plus';
-                $ttl = MagicLink::ttlMinutes();
-                $text =
-                    "Hallo " . $user['name'] . ",\n\n" .
-                    "hier ist dein persönlicher Login-Link für Unternehmen Plus:\n\n" .
-                    $link . "\n\n" .
-                    "Der Link ist " . $ttl . " Minuten gültig und kann nur einmal verwendet werden.\n\n" .
-                    "Wenn du diese Anmeldung nicht angefordert hast, kannst du diese E-Mail ignorieren.\n\n" .
-                    "Viele Grüße\nUnternehmen Plus – Wirtschaftsjunioren Forchheim\n";
-
-                $html = Mailer::brandedHtml(
-                    'Dein Login-Link',
-                    'Hallo ' . e($user['name']) . ',<br><br>'
-                    . 'tippe auf den Button, um dich passwortlos bei <strong>Unternehmen Plus</strong> anzumelden:',
-                    'Jetzt anmelden',
-                    $link,
-                    'Der Link ist ' . $ttl . ' Minuten gültig und kann nur einmal verwendet werden. '
-                    . 'Falls du diese Anmeldung nicht angefordert hast, ignoriere diese E-Mail einfach.'
-                );
-
-                Mailer::send($email, $subject, $text, $html);
-
-                if (cfg('app_env') !== 'production') {
-                    $devLink = $link;
-                }
+                $code = $sendEmailCode($user);
+                $_SESSION['login_uid'] = (int) $user['id'];
+                if (cfg('app_env') !== 'production') { $devCode = $code; }
             }
-            Audit::event('login.link_requested', 'Login-Link angefordert' . ($user ? '' : ' (kein Treffer)'), $user ?: null, ['eingabe' => $typedId]);
-            $sentTo = strtolower($typedId);
-            $sent   = true;
+            Audit::event('login.code_requested', 'Login-Code (E-Mail) angefordert' . ($user ? '' : ' (kein Treffer)'), $user ?: null, ['eingabe' => $typedId]);
+            $sentTo  = strtolower($typedId);
+            $sentVia = 'email';
+            $_SESSION['login_via'] = 'email';
+            $_SESSION['login_to']  = $sentTo;
+            $codeStep = true;
         }
     }
 }
@@ -180,16 +175,22 @@ if (is_post()) {
   </div>
   <div class="login-form">
     <div class="inner">
-      <?php if ($smsStep): ?>
+      <?php if ($codeStep): ?>
+        <?php $viaSms = $sentVia === 'sms'; ?>
         <h2>Code eingeben</h2>
-        <p class="sub">Wenn dazu ein Konto mit hinterlegter Handynummer besteht,
-           haben wir dir einen 6-stelligen Code per SMS<?= $sentTo ? ' an <strong>' . e($sentTo) . '</strong>' : '' ?> geschickt.</p>
+        <p class="sub">Wenn dazu ein Konto<?= $viaSms ? ' mit hinterlegter Handynummer' : '' ?> besteht,
+           haben wir dir einen 6-stelligen Login-Code
+           <?= $viaSms ? 'per SMS' : 'per E-Mail' ?><?= $sentTo ? ' an <strong>' . e($sentTo) . '</strong>' : '' ?> geschickt.
+           Gültig für <?= SmsCode::ttlMinutes() ?> Minuten.</p>
+        <?php if ($devCode): ?>
+          <div class="flash"><strong>Testmodus:</strong> Dein Code lautet <strong><?= e($devCode) ?></strong></div>
+        <?php endif; ?>
         <?php if ($error): ?><div class="flash error"><?= e($error) ?></div><?php endif; ?>
         <form method="post" action="<?= url('login') ?>">
           <?= Csrf::field() ?>
-          <input type="hidden" name="mode" value="verify_sms">
+          <input type="hidden" name="mode" value="verify">
           <div class="field">
-            <label for="code">SMS-Code</label>
+            <label for="code">Login-Code</label>
             <input type="text" id="code" name="code" required autofocus
                    inputmode="numeric" pattern="[0-9]*" maxlength="6"
                    autocomplete="one-time-code" placeholder="6-stellig">
@@ -198,23 +199,11 @@ if (is_post()) {
         </form>
         <form method="post" action="<?= url('login') ?>" style="margin-top:12px">
           <?= Csrf::field() ?>
-          <input type="hidden" name="mode" value="sms">
+          <input type="hidden" name="mode" value="auto">
           <input type="hidden" name="email" value="<?= e($typedEmail) ?>">
           <button type="submit" class="btn btn--ghost" style="width:100%;justify-content:center">Neuen Code anfordern</button>
         </form>
         <p style="margin-top:14px"><a href="<?= url('login') ?>">Zurück zur Anmeldung</a></p>
-
-      <?php elseif ($sent): ?>
-        <h2>E-Mail unterwegs</h2>
-        <p class="sub">Wenn dazu ein Konto besteht, haben wir dir einen Login-Link
-           <?= $sentTo ? 'an <strong>' . e($sentTo) . '</strong>' : 'an die hinterlegte E-Mail-Adresse' ?>
-           geschickt. Bitte schau in dein Postfach.</p>
-        <?php if ($devLink): ?>
-          <div class="flash" style="word-break:break-all">
-            <strong>Testmodus:</strong> <a href="<?= e($devLink) ?>">Jetzt anmelden</a>
-          </div>
-        <?php endif; ?>
-        <p style="margin-top:18px"><a href="<?= url('login') ?>">Zurück zur Anmeldung</a></p>
 
       <?php else: ?>
         <h2>Willkommen zurück</h2>
@@ -231,14 +220,9 @@ if (is_post()) {
           <button type="submit" class="btn btn--primary" style="width:100%;justify-content:center">Anmelden</button>
         </form>
         <p class="sub" style="margin-top:16px;font-size:13px">
-          <?php if ($smsConfigured): ?>
-            Kein Passwort nötig. Bei einer E-Mail-Adresse senden wir dir einen Login-Link
-            (<?= MagicLink::ttlMinutes() ?> Min. gültig), bei einer Handynummer einen SMS-Code
-            (<?= SmsCode::ttlMinutes() ?> Min. gültig).
-          <?php else: ?>
-            Kein Passwort nötig. Wir senden dir einen Login-Link per E-Mail
-            (<?= MagicLink::ttlMinutes() ?> Min. gültig).
-          <?php endif; ?>
+          Kein Passwort nötig. Wir senden dir einen 6-stelligen Login-Code
+          <?php if ($smsConfigured): ?>per E-Mail bzw. – bei einer Handynummer – per SMS<?php else: ?>per E-Mail<?php endif; ?>
+          (<?= SmsCode::ttlMinutes() ?> Min. gültig).
         </p>
       <?php endif; ?>
     </div>
