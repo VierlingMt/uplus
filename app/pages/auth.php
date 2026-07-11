@@ -176,7 +176,7 @@ if (is_post()) {
     <span class="login-hero__bar">Businessplanwettbewerb 2025/2026</span>
     <h1>Unternehmen Plus</h1>
     <p>Verwaltungs- und Bewertungsplattform der Wirtschaftsjunioren Forchheim –
-       von der Einreichung über die KI-Vorbewertung bis zum Pitch Day.</p>
+       von der Einreichung über die Bewertung bis zum Pitch Day.</p>
   </div>
   <div class="login-form">
     <div class="inner">

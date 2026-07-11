@@ -7,6 +7,11 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.42.4] - 2026-07-10
+### Geändert
+- **Login-Seite:** Der Untertitel nennt nicht mehr die „KI-Vorbewertung", sondern
+  neutral „Bewertung" („… von der Einreichung über die Bewertung bis zum Pitch Day.").
+
 ## [0.42.3] - 2026-07-10
 ### Behoben
 - **Tabellen-Sortierung mit Kommazahlen korrigiert (grundlegend).** Spalten mit
