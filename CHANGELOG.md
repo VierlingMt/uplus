@@ -7,6 +7,12 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.50.3] - 2026-07-12
+### Hinzugefügt
+- **Handout: Übersicht der nominierten Teams inkl. Nachrücker.** Neue Sektion
+  „Nominierte Teams (Pitches)" mit Geschäftsidee, Team- und Schulname sowie
+  Teammitgliedern (in Pitch-Reihenfolge), plus separater Liste der **Nachrücker**.
+
 ## [0.50.2] - 2026-07-12
 ### Hinzugefügt
 - **Dashboard: Klick auf den „Pitch Day"-Meilenstein öffnet das Handout-PDF**

@@ -131,6 +131,25 @@ else:
 
     $agenda = Database::all('SELECT * FROM event_agenda WHERE event_id=? ORDER BY sort_order, time_from, id', [$eventId]);
     $prizes = Database::all("SELECT * FROM event_budget_items WHERE event_id=? AND kind='prize' ORDER BY place IS NULL, place, sort_order, id", [$eventId]);
+
+    // Nominierte Teams (Pitches) + Nachrücker – für die Handout-Übersicht.
+    $pitchRows = Database::all(
+        "SELECT t.id, t.name, t.idea_name, t.status, t.pitch_order, s.short_name, s.name AS school_name
+         FROM teams t JOIN schools s ON s.id = t.school_id
+         WHERE t.status IN ('nominated','fallback')
+         ORDER BY FIELD(t.status,'nominated','fallback'), t.pitch_order IS NULL, t.pitch_order, s.short_name, t.name"
+    );
+    $pitchTeams    = array_values(array_filter($pitchRows, fn($t) => $t['status'] === 'nominated'));
+    $fallbackTeams = array_values(array_filter($pitchRows, fn($t) => $t['status'] === 'fallback'));
+    // Teammitglieder je Team (für die Anzeige).
+    $teamMembers = [];
+    if ($pitchRows) {
+        $ids = array_map(static fn($t) => (int) $t['id'], $pitchRows);
+        $in  = implode(',', array_fill(0, count($ids), '?'));
+        foreach (Database::all("SELECT team_id, name FROM students WHERE team_id IN ($in) ORDER BY name", $ids) as $st) {
+            $teamMembers[(int) $st['team_id']][] = $st['name'];
+        }
+    }
     $sponsors = Database::all(
         'SELECT s.name, s.logo_path FROM sponsor_contributions c JOIN sponsors s ON s.id = c.sponsor_id
          WHERE c.cycle_id = ? GROUP BY s.id, s.name, s.logo_path ORDER BY s.name',
@@ -247,6 +266,38 @@ else:
           </tr>
         <?php endforeach; ?>
       </table>
+    </section>
+    <?php endif; ?>
+
+    <?php if ($pitchTeams || $fallbackTeams): ?>
+    <section class="block">
+      <h2>Nominierte Teams (Pitches)</h2>
+      <?php if ($pitchTeams): ?>
+        <ol class="teams">
+          <?php foreach ($pitchTeams as $t): ?>
+            <li>
+              <strong><?= e($t['idea_name'] ?: $t['name']) ?></strong>
+              <?php if ($t['idea_name'] && $t['name'] && $t['idea_name'] !== $t['name']): ?><span class="role"><?= e($t['name']) ?></span><?php endif; ?>
+              <span class="role"><?= e($t['short_name'] ?: $t['school_name']) ?></span>
+              <?php if (!empty($teamMembers[(int) $t['id']])): ?>
+                <div class="members"><?= e(implode(', ', $teamMembers[(int) $t['id']])) ?></div>
+              <?php endif; ?>
+            </li>
+          <?php endforeach; ?>
+        </ol>
+      <?php endif; ?>
+      <?php if ($fallbackTeams): ?>
+        <div class="subgroup">Nachrücker</div>
+        <ul class="plain">
+          <?php foreach ($fallbackTeams as $t): ?>
+            <li>
+              <strong><?= e($t['idea_name'] ?: $t['name']) ?></strong>
+              <span class="role"><?= e($t['short_name'] ?: $t['school_name']) ?></span>
+              <?php if (!empty($teamMembers[(int) $t['id']])): ?><span class="members"> · <?= e(implode(', ', $teamMembers[(int) $t['id']])) ?></span><?php endif; ?>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+      <?php endif; ?>
     </section>
     <?php endif; ?>
 
@@ -427,6 +478,11 @@ header('Content-Type: text/html; charset=utf-8');
   ol.people .tag { display: inline-block; background: var(--blue); color: #fff; border-radius: 4px; padding: 0 6px; margin-right: 6px; font-size: 11px; vertical-align: middle; }
   .vertritt { color: var(--blue); font-weight: 600; }
   ol.people .vertritt { display: block; }
+  ol.teams { margin: 0; padding-left: 22px; }
+  ol.teams li { margin-bottom: 7px; }
+  ol.teams .role, ul.plain .role { color: var(--muted); font-size: 13px; }
+  ol.teams .role::before, ul.plain .role::before { content: " · "; }
+  .members { color: var(--muted); font-size: 12.5px; }
   table.agenda { width: 100%; border-collapse: collapse; }
   table.agenda td { padding: 4px 0; border-bottom: 1px solid #eef1f6; vertical-align: top; }
   .agenda__time { white-space: nowrap; font-weight: 700; color: var(--blue); width: 120px; padding-right: 12px; }
