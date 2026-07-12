@@ -7,6 +7,15 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.44.5] - 2026-07-12
+### Behoben
+- **Ranking-Filter ließ „Status setzen"-Zeilen der ausgefilterten Teams stehen.** Beim
+  Suchen/Filtern in „Bewertung & Ranking" blieben die Verwaltungs-Unterzeilen (Status
+  setzen) der nicht passenden Teams sichtbar. Ursache: Die Tabellen-Logik hielt eine
+  Unterzeile (eine einzelne `colspan`-Zelle) fälschlich für eine Platzhalter-Zeile und
+  übersprang sie beim Filtern. Unterzeilen werden jetzt korrekt ihrer Team-Zeile
+  zugeordnet – das behebt zugleich, dass sie beim Sortieren nach unten rutschten.
+
 ## [0.44.4] - 2026-07-12
 ### Behoben
 - **Handout „Teilnehmende": „rund" vor der Teamzahl entfernt.** Die Zahl ist der

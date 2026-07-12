@@ -253,10 +253,14 @@
   function buildGroups(tbody) {
     var groups = [], cur = null;
     Array.prototype.forEach.call(tbody.rows, function (tr) {
-      var placeholder = tr.cells.length === 1 && tr.cells[0].hasAttribute('colspan');
+      // Sub-Zeilen (z. B. „Status setzen") gehören zur laufenden Gruppe – auch wenn sie
+      // wie ein Platzhalter aus einer einzelnen colspan-Zelle bestehen. Deshalb VOR der
+      // Platzhalter-Prüfung behandeln, sonst würden sie beim Filtern/Sortieren als eigene
+      // (übersprungene) Platzhalter-Gruppe stehen bleiben.
       var sub = tr.classList.contains('admin-row') || tr.classList.contains('subrow');
-      if (placeholder) { groups.push({ rows: [tr], placeholder: true }); cur = null; return; }
       if (sub && cur) { cur.rows.push(tr); return; }
+      var placeholder = tr.cells.length === 1 && tr.cells[0].hasAttribute('colspan');
+      if (placeholder) { groups.push({ rows: [tr], placeholder: true }); cur = null; return; }
       cur = { rows: [tr], main: tr, placeholder: false };
       groups.push(cur);
     });

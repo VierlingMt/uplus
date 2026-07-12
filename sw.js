@@ -11,7 +11,7 @@
 
 'use strict';
 
-var VERSION = 'uplus-v0.14.0';
+var VERSION = 'uplus-v0.44.5';
 
 // Relativ zum SW-Standort (= App-Scope), damit es im Web-Root wie im
 // Unterordner (/uplus) funktioniert.
