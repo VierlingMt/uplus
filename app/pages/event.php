@@ -167,6 +167,50 @@ if (is_post()) {
             $parts ? 'Jury übernommen (' . implode(', ', $parts) . ').' : 'Keine Jury im Wettbewerbsjahr gefunden.');
         $back();
     }
+    if ($action === 'import_teachers') {
+        // Lehrkräfte der teilnehmenden Schulen des Wettbewerbsjahres als Gäste
+        // übernehmen – idempotent (wie bei der Jury). Ohne Lehrkräfte läuft das
+        // Projekt nicht; sie gehören auf die Gästeliste und ins Handout.
+        $teachers = Database::all(
+            "SELECT u.name, u.email, u.org, u.position, s.name AS school
+             FROM users u
+             JOIN user_roles ur ON ur.user_id = u.id AND ur.role = 'teacher'
+             JOIN schools s ON s.id = u.school_id
+             WHERE u.school_id IN (SELECT school_id FROM cycle_schools WHERE cycle_id = ?)
+             ORDER BY u.name",
+            [$cycleId]
+        );
+        $added = $updated = 0;
+        foreach ($teachers as $t) {
+            $org = ($t['org'] ?? '') !== '' ? $t['org'] : ($t['school'] ?: null);
+            $pos = ($t['position'] ?? '') !== '' ? $t['position'] : 'Projektlehrkraft';
+            $existingId = (int) Database::value(
+                "SELECT id FROM event_guests WHERE event_id=? AND category='teacher' AND name=? LIMIT 1",
+                [$eventId, $t['name']]
+            );
+            if ($existingId === 0) {
+                Database::insert(
+                    "INSERT INTO event_guests (event_id, category, name, org, position, email, status)
+                     VALUES (?, 'teacher', ?, ?, ?, ?, 'confirmed')",
+                    [$eventId, $t['name'], $org, $pos, $t['email'] ?: null]
+                );
+                $added++;
+            } else {
+                Database::run(
+                    "UPDATE event_guests SET org=?, position=?, email=? WHERE id=?",
+                    [$org, $pos, $t['email'] ?: null, $existingId]
+                );
+                $updated++;
+            }
+        }
+        Audit::log('event.import_teachers', "Lehrkräfte übernommen (neu $added, aktualisiert $updated)", 'event', $eventId);
+        $parts = [];
+        if ($added)   { $parts[] = "$added neu"; }
+        if ($updated) { $parts[] = "$updated aktualisiert"; }
+        flash($parts ? 'success' : 'error',
+            $parts ? 'Lehrkräfte übernommen (' . implode(', ', $parts) . ').' : 'Keine Lehrkräfte der teilnehmenden Schulen gefunden.');
+        $back();
+    }
     if ($action === 'save_guest') {
         $id      = (int) input('id');
         $cat     = array_key_exists((string) input('category'), PitchDay::GUEST_CATEGORIES) ? (string) input('category') : 'vip';
@@ -486,6 +530,10 @@ ob_start(); ?>
         <?= Csrf::field() ?><input type="hidden" name="action" value="import_jury"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="tab" value="guests">
         <button class="btn btn--ghost btn--sm" title="Jury des Wettbewerbsjahres aus „Jury & Nutzer" übernehmen – neue anlegen, vorhandene auffrischen">⚖ Jury &amp; Nutzer übernehmen</button>
       </form>
+      <form method="post" action="<?= url('event') ?>">
+        <?= Csrf::field() ?><input type="hidden" name="action" value="import_teachers"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="tab" value="guests">
+        <button class="btn btn--ghost btn--sm" title="Lehrkräfte der teilnehmenden Schulen übernehmen – neue anlegen, vorhandene auffrischen">👩‍🏫 Lehrkräfte übernehmen</button>
+      </form>
       <a class="btn btn--ghost btn--sm" target="_blank" rel="noopener"
          href="<?= e(url('event_print', ['cycle' => $cycleId, 'kind' => 'signs'])) ?>"
          data-signs-open="<?= e(url('event_print', ['cycle' => $cycleId, 'kind' => 'signs'])) ?>">🪧 Reserviert-Schilder (PDF)</a>
@@ -495,7 +543,7 @@ ob_start(); ?>
     </p>
 
     <?php
-      $guests = Database::all('SELECT * FROM event_guests WHERE event_id=? ORDER BY FIELD(category,\'speaker\',\'vip\',\'jury\',\'sponsor\',\'press\'), name', [$eventId]);
+      $guests = Database::all('SELECT * FROM event_guests WHERE event_id=? ORDER BY FIELD(category,\'speaker\',\'vip\',\'jury\',\'teacher\',\'sponsor\',\'press\'), name', [$eventId]);
       $speakers = array_filter($guests, fn($g) => (int) $g['greeting'] === 1 || (int) $g['keynote'] === 1);
     ?>
     <?php if ($speakers): ?>

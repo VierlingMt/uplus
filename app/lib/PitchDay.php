@@ -42,6 +42,7 @@ final class PitchDay
     public const GUEST_CATEGORIES = [
         'jury'    => 'Jury',
         'vip'     => 'VIP / Ehrengast',
+        'teacher' => 'Lehrkraft',
         'press'   => 'Presse',
         'sponsor' => 'Sponsor',
         'speaker' => 'Redner',

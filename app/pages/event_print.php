@@ -41,7 +41,7 @@ $wdays   = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'
 $weekday = fn(?string $d) => $d ? $wdays[(int) date('w', strtotime($d))] : null;
 
 $guests = Database::all(
-    "SELECT * FROM event_guests WHERE event_id=? ORDER BY FIELD(category,'speaker','vip','jury','sponsor','press'), name",
+    "SELECT * FROM event_guests WHERE event_id=? ORDER BY FIELD(category,'speaker','vip','jury','teacher','sponsor','press'), name",
     [$eventId]
 );
 
@@ -106,9 +106,10 @@ else:
     // Nur tatsächlich Teilnehmende – Absagen tauchen im Handout nicht auf
     // (weder in den Listen noch in den Zahlen).
     $attending = array_values(array_filter($guests, fn($g) => $g['status'] !== 'declined'));
-    $vips    = array_values(array_filter($attending, fn($g) => $g['category'] === 'vip'));
-    $jury    = array_values(array_filter($attending, fn($g) => $g['category'] === 'jury'));
-    $press   = array_values(array_filter($attending, fn($g) => $g['category'] === 'press'));
+    $vips     = array_values(array_filter($attending, fn($g) => $g['category'] === 'vip'));
+    $jury     = array_values(array_filter($attending, fn($g) => $g['category'] === 'jury'));
+    $teachers = array_values(array_filter($attending, fn($g) => $g['category'] === 'teacher'));
+    $press    = array_values(array_filter($attending, fn($g) => $g['category'] === 'press'));
     $speakers = array_values(array_filter($attending, fn($g) => (int) $g['greeting'] === 1 || (int) $g['keynote'] === 1));
     // Erst die Grußworte, die Keynote(s) ans Ende (stabile Sortierung ab PHP 8).
     usort($speakers, fn($a, $b) => ((int) $a['keynote']) <=> ((int) $b['keynote']));
@@ -138,6 +139,7 @@ else:
         $nTeams ? $nTeams . ' Teams' : '',
         $jury ? count($jury) . (count($jury) === 1 ? ' Jurymitglied' : ' Jurymitglieder') : '',
         $vips ? count($vips) . (count($vips) === 1 ? ' Ehrengast' : ' Ehrengäste') : '',
+        $teachers ? count($teachers) . (count($teachers) === 1 ? ' Lehrkraft' : ' Lehrkräfte') : '',
     ]);
 
     $eventDateLine = trim(implode(', ', array_filter([$weekday($event['event_date']), $dateFmt($event['event_date'])])));
@@ -190,6 +192,21 @@ else:
           <li>
             <strong><?= e($gd['name']) ?></strong>
             <?php $r = $roleLine($gd, $g['category']); if ($r && $r !== PitchDay::guestCategory('jury')): ?><span class="role"><?= e($r) ?></span><?php endif; ?>
+            <?php if ($gd['subline']): ?><span class="vertritt">↷ <?= e($gd['subline']) ?></span><?php endif; ?>
+          </li>
+        <?php endforeach; ?>
+      </ol>
+    </section>
+    <?php endif; ?>
+
+    <?php if ($teachers): ?>
+    <section class="block">
+      <h2>Lehrkräfte / Projektbetreuung</h2>
+      <ol class="people">
+        <?php foreach ($teachers as $g): $gd = PitchDay::guestDisplay($g); ?>
+          <li>
+            <strong><?= e($gd['name']) ?></strong>
+            <?php $r = $roleLine($gd, $g['category']); if ($r && $r !== PitchDay::guestCategory('teacher')): ?><span class="role"><?= e($r) ?></span><?php endif; ?>
             <?php if ($gd['subline']): ?><span class="vertritt">↷ <?= e($gd['subline']) ?></span><?php endif; ?>
           </li>
         <?php endforeach; ?>

@@ -7,6 +7,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.46.1] - 2026-07-12
+### Hinzugefügt
+- **Lehrkräfte im PitchDay & im Handout.** Neue Gäste-Kategorie „Lehrkraft" und
+  Button **„👩‍🏫 Lehrkräfte übernehmen"** (Lehrkräfte der teilnehmenden Schulen,
+  idempotent). Im Handout gibt es jetzt eine eigene Sektion **„Lehrkräfte /
+  Projektbetreuung"**, und sie zählen bei „Teilnehmende" mit – ohne sie würde das
+  Projekt nicht funktionieren.
+
 ## [0.46.0] - 2026-07-12
 ### Hinzugefügt
 - **Organisation & Position pflegbar – fließen in die Gästeliste.** Nutzer können
