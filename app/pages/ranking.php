@@ -8,6 +8,9 @@ $jurorId = (int) Auth::id();
 
 $pitchSlots = Settings::getInt('pitch_slots', 7);
 $fallbackSlots = Settings::getInt('fallback_slots', 2);
+// Faire Verteilung je Schule (damit keine Schule leer ausgeht).
+$fairPerSchool     = Settings::getInt('pitch_fair', 1) === 1;
+$fallbackPerSchool = Settings::getInt('fallback_per_school', 2);
 // KI-Vorbewertung nur für Verwaltung – oder für Jury, falls im Admin freigegeben.
 $showAiEval = $isAdmin || Settings::getInt('ai_eval_jurors', 0) === 1;
 $cols = $showAiEval ? 10 : 9;
@@ -15,7 +18,7 @@ $cols = $showAiEval ? 10 : 9;
 /** Ranking-Daten laden (inkl. Mittelwerte je Team). */
 $loadRows = function () use ($jurorId): array {
     $rows = Database::all(
-        "SELECT t.id, t.name, t.idea_name, t.status, t.pitch_order, s.short_name, s.name AS school_name,
+        "SELECT t.id, t.name, t.idea_name, t.status, t.pitch_order, t.school_id, s.short_name, s.name AS school_name,
                 (SELECT AVG(e.bp_total)   FROM evaluations e JOIN users ju ON ju.id=e.juror_id WHERE e.team_id=t.id AND e.bp_submitted=1    AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = ju.id AND ur.role IN ('lead','juror'))) AS avg_bp,
                 (SELECT COUNT(*)          FROM evaluations e JOIN users ju ON ju.id=e.juror_id WHERE e.team_id=t.id AND e.bp_submitted=1    AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = ju.id AND ur.role IN ('lead','juror'))) AS n_bp,
                 (SELECT AVG(e.pitch_total)FROM evaluations e JOIN users ju ON ju.id=e.juror_id WHERE e.team_id=t.id AND e.pitch_submitted=1 AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = ju.id AND ur.role IN ('lead','juror'))) AS avg_pitch,
@@ -43,20 +46,81 @@ if (is_post() && $isAdmin) {
     $action = (string) input('action');
 
     if ($action === 'auto_nominate') {
+        // Bewertete, nicht ausgeschiedene Teams – bereits nach Gesamt absteigend.
         $rows = array_values(array_filter($loadRows(), fn($r) => $r['status'] !== 'eliminated' && $r['n_bp'] > 0));
         Database::run("UPDATE teams SET status='submitted', pitch_order=NULL WHERE status IN ('nominated','fallback')");
-        $i = 0;
-        foreach ($rows as $r) {
-            if ($i < $pitchSlots) {
-                Database::run('UPDATE teams SET status=?, pitch_order=? WHERE id=?', ['nominated', $i + 1, $r['id']]);
-            } elseif ($i < $pitchSlots + $fallbackSlots) {
-                Database::run('UPDATE teams SET status=?, pitch_order=NULL WHERE id=?', ['fallback', $r['id']]);
-            } else {
-                break;
+
+        if (!$fairPerSchool) {
+            // Klassisch: globale Top-Liste (kann eine Schule ganz auslassen).
+            $i = 0;
+            foreach ($rows as $r) {
+                if ($i < $pitchSlots) {
+                    Database::run('UPDATE teams SET status=?, pitch_order=? WHERE id=?', ['nominated', $i + 1, $r['id']]);
+                } elseif ($i < $pitchSlots + $fallbackSlots) {
+                    Database::run('UPDATE teams SET status=?, pitch_order=NULL WHERE id=?', ['fallback', $r['id']]);
+                } else {
+                    break;
+                }
+                $i++;
             }
-            $i++;
+            flash('success', "Top {$pitchSlots} nominiert, {$fallbackSlots} Nachrücker gesetzt.");
+        } else {
+            // Faire Verteilung je Schule: jede Schule bekommt einen Grundstock an
+            // Plätzen (⌊Plätze/Schulen⌋); die Restplätze gehen an die Schule(n) mit
+            // den besten Businessplänen. So kommt keine Schule zu kurz.
+            $bySchool = [];
+            foreach ($rows as $r) { $bySchool[(int) $r['school_id']][] = $r; } // je Schule nach Gesamt absteigend
+            $S = count($bySchool);
+            if ($S === 0) {
+                flash('error', 'Keine bewerteten Teams gefunden.');
+                redirect(url('ranking'));
+            }
+            $perBase   = intdiv($pitchSlots, $S);
+            $remainder = $pitchSlots % $S;
+            // Schul-Stärke = Ø-Gesamt der besten (perBase+1) Teams der Schule.
+            $strength = [];
+            foreach ($bySchool as $sid => $teams) {
+                $topK = array_slice($teams, 0, max(1, $perBase + 1));
+                $strength[$sid] = array_sum(array_map(fn($t) => (float) $t['grand'], $topK)) / count($topK);
+            }
+            arsort($strength); // stärkste Schule zuerst
+            $byStrength = array_keys($strength);
+            // Platz-Kontingent je Schule (Restplätze an die stärksten Schulen).
+            $quota = [];
+            foreach (array_keys($bySchool) as $sid) { $quota[$sid] = $perBase; }
+            for ($k = 0; $k < $remainder; $k++) { $quota[$byStrength[$k % $S]]++; }
+
+            $used = [];
+            $nominated = [];
+            foreach ($bySchool as $sid => $teams) {
+                $take = min($quota[$sid], count($teams));
+                for ($j = 0; $j < $take; $j++) { $nominated[] = $teams[$j]; $used[(int) $teams[$j]['id']] = true; }
+            }
+            // Falls eine Schule zu wenige Teams hatte: mit den global Besten auffüllen.
+            if (count($nominated) < $pitchSlots) {
+                foreach ($rows as $r) {
+                    if (count($nominated) >= $pitchSlots) { break; }
+                    if (empty($used[(int) $r['id']])) { $nominated[] = $r; $used[(int) $r['id']] = true; }
+                }
+            }
+            // Pitch-Reihenfolge nach Gesamt (bestes Team zuerst).
+            usort($nominated, fn($a, $b) => ((float) $b['grand'] <=> (float) $a['grand']) ?: (($b['avg_bp'] ?? 0) <=> ($a['avg_bp'] ?? 0)));
+            $ord = 1;
+            foreach ($nominated as $t) {
+                Database::run('UPDATE teams SET status=?, pitch_order=? WHERE id=?', ['nominated', $ord++, $t['id']]);
+            }
+            // Nachrücker: je Schule die nächsten fallback_per_school Teams.
+            foreach ($bySchool as $sid => $teams) {
+                $c = 0;
+                foreach ($teams as $t) {
+                    if (!empty($used[(int) $t['id']])) { continue; }
+                    if ($c >= $fallbackPerSchool) { break; }
+                    Database::run("UPDATE teams SET status='fallback', pitch_order=NULL WHERE id=?", [(int) $t['id']]);
+                    $used[(int) $t['id']] = true; $c++;
+                }
+            }
+            flash('success', "Fair nominiert: {$pitchSlots} Plätze auf {$S} Schulen verteilt, je Schule {$fallbackPerSchool} Nachrücker.");
         }
-        flash('success', "Top {$pitchSlots} nominiert, {$fallbackSlots} Nachrücker gesetzt.");
     } elseif ($action === 'set_status') {
         $allowed = ['submitted', 'nominated', 'fallback', 'eliminated'];
         $st = (string) input('status');
@@ -107,9 +171,13 @@ ob_start(); ?>
 <div class="page-head">
   <h1>Bewertung &amp; Ranking</h1>
   <?php if ($isAdmin): ?>
-    <form method="post" action="<?= url('ranking') ?>" data-confirm="Automatisch Top <?= $pitchSlots ?> nominieren und <?= $fallbackSlots ?> Nachrücker setzen? Bestehende Nominierungen werden überschrieben.">
+    <form method="post" action="<?= url('ranking') ?>" data-confirm="<?= $fairPerSchool
+        ? e($pitchSlots . ' Plätze fair je Schule verteilen (Restplätze an die beste Schule) und je Schule ' . $fallbackPerSchool . ' Nachrücker setzen? Bestehende Nominierungen werden überschrieben.')
+        : e('Automatisch Top ' . $pitchSlots . ' nominieren und ' . $fallbackSlots . ' Nachrücker setzen? Bestehende Nominierungen werden überschrieben.') ?>">
       <?= Csrf::field() ?><input type="hidden" name="action" value="auto_nominate">
-      <button class="btn btn--teal">★ Top <?= $pitchSlots ?> (+<?= $fallbackSlots ?>) nominieren</button>
+      <button class="btn btn--teal">★ <?= $fairPerSchool
+        ? 'Fair nominieren (' . (int) $pitchSlots . ' Plätze je Schule)'
+        : 'Top ' . (int) $pitchSlots . ' (+' . (int) $fallbackSlots . ') nominieren' ?></button>
     </form>
   <?php endif; ?>
 </div>

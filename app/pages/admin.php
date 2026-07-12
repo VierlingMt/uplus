@@ -25,6 +25,8 @@ if (is_post()) {
     } elseif ($section === 'general') {
         Settings::set('pitch_slots', (string) max(1, (int) input('pitch_slots', 7)));
         Settings::set('fallback_slots', (string) max(0, (int) input('fallback_slots', 2)));
+        Settings::set('pitch_fair', input('pitch_fair') ? '1' : '0');
+        Settings::set('fallback_per_school', (string) max(0, (int) input('fallback_per_school', 2)));
         Settings::set('current_phase', (string) input('current_phase', 'evaluation'));
         Audit::log('settings.general', 'Allgemeine Einstellungen geändert (Phase: ' . (string) input('current_phase', 'evaluation') . ')');
         flash('success', 'Allgemeine Einstellungen gespeichert.');
@@ -188,8 +190,17 @@ ob_start(); ?>
           </select>
         </div>
         <div class="grid cols-2">
-          <div class="field"><label>Pitch-Plätze</label><input type="number" name="pitch_slots" min="1" value="<?= (int) Settings::getInt('pitch_slots', 7) ?>"></div>
-          <div class="field"><label>Nachrücker</label><input type="number" name="fallback_slots" min="0" value="<?= (int) Settings::getInt('fallback_slots', 2) ?>"></div>
+          <div class="field"><label>Pitch-Plätze (gesamt)</label><input type="number" name="pitch_slots" min="1" value="<?= (int) Settings::getInt('pitch_slots', 7) ?>"></div>
+          <div class="field"><label>Nachrücker gesamt (ohne faire Verteilung)</label><input type="number" name="fallback_slots" min="0" value="<?= (int) Settings::getInt('fallback_slots', 2) ?>"></div>
+        </div>
+        <div class="field" style="margin-top:4px">
+          <label style="font-weight:400;display:flex;gap:8px;align-items:center">
+            <input type="checkbox" name="pitch_fair" value="1" <?= Settings::getInt('pitch_fair', 1) === 1 ? 'checked' : '' ?>>
+            Faire Verteilung je Schule – die Pitch-Plätze werden gleichmäßig auf die Schulen verteilt; überzählige Plätze gehen an die Schule(n) mit den besten Businessplänen (so kommt keine Schule zu kurz).
+          </label>
+        </div>
+        <div class="grid cols-2">
+          <div class="field"><label>Nachrücker je Schule (bei fairer Verteilung)</label><input type="number" name="fallback_per_school" min="0" value="<?= (int) Settings::getInt('fallback_per_school', 2) ?>"></div>
         </div>
         <button class="btn btn--primary">Speichern</button>
       </form>

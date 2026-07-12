@@ -7,6 +7,16 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.51.0] - 2026-07-12
+### Hinzugefügt
+- **Faire Pitch-Verteilung je Schule.** Damit keine Schule leer ausgeht, verteilt
+  die automatische Nominierung die Pitch-Plätze jetzt gleichmäßig auf die Schulen;
+  überzählige Plätze gehen an die Schule(n) mit den besten Businessplänen (z. B.
+  bei 7 Plätzen: beste Schule 3, die anderen je 2). **Nachrücker je Schule**
+  (Standard 2). Neu einstellbar unter **Admin** (Schalter „Faire Verteilung je
+  Schule" + „Nachrücker je Schule"); ohne Schalter bleibt die klassische globale
+  Top-Liste. Die Pitch-Reihenfolge richtet sich weiterhin nach der Gesamtwertung.
+
 ## [0.50.3] - 2026-07-12
 ### Hinzugefügt
 - **Handout: Übersicht der nominierten Teams inkl. Nachrücker.** Neue Sektion
