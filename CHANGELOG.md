@@ -7,6 +7,15 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.51.1] - 2026-07-12
+### Geändert
+- **Bühnen-Reihenfolge der Pitches ist jetzt zufällig** (nicht die Punktereihenfolge).
+  Beim automatischen Nominieren wird die `pitch_order` gelost – so kann man die
+  Teams stumpf der Reihe nach aufrufen, ohne die Platzierung zu verraten.
+- **Handout „Nominierte Teams" zeigt die Jury-Punkte** (Jury-Ø Businessplan, max. 50,
+  nur Jury – kein KI) und erklärt in einer Unterüberschrift die zufällige
+  Reihenfolge sowie die faire Verteilung je Schule.
+
 ## [0.51.0] - 2026-07-12
 ### Hinzugefügt
 - **Faire Pitch-Verteilung je Schule.** Damit keine Schule leer ausgeht, verteilt

@@ -50,20 +50,20 @@ if (is_post() && $isAdmin) {
         $rows = array_values(array_filter($loadRows(), fn($r) => $r['status'] !== 'eliminated' && $r['n_bp'] > 0));
         Database::run("UPDATE teams SET status='submitted', pitch_order=NULL WHERE status IN ('nominated','fallback')");
 
+        $nomIds = [];   // nominierte Team-IDs (Auswahl nach Leistung)
+        $fbIds  = [];   // Nachrücker-IDs
+        $msg    = '';
+
         if (!$fairPerSchool) {
             // Klassisch: globale Top-Liste (kann eine Schule ganz auslassen).
             $i = 0;
             foreach ($rows as $r) {
-                if ($i < $pitchSlots) {
-                    Database::run('UPDATE teams SET status=?, pitch_order=? WHERE id=?', ['nominated', $i + 1, $r['id']]);
-                } elseif ($i < $pitchSlots + $fallbackSlots) {
-                    Database::run('UPDATE teams SET status=?, pitch_order=NULL WHERE id=?', ['fallback', $r['id']]);
-                } else {
-                    break;
-                }
+                if ($i < $pitchSlots) { $nomIds[] = (int) $r['id']; }
+                elseif ($i < $pitchSlots + $fallbackSlots) { $fbIds[] = (int) $r['id']; }
+                else { break; }
                 $i++;
             }
-            flash('success', "Top {$pitchSlots} nominiert, {$fallbackSlots} Nachrücker gesetzt.");
+            $msg = "Top {$pitchSlots} nominiert, {$fallbackSlots} Nachrücker gesetzt.";
         } else {
             // Faire Verteilung je Schule: jede Schule bekommt einen Grundstock an
             // Plätzen (⌊Plätze/Schulen⌋); die Restplätze gehen an die Schule(n) mit
@@ -91,23 +91,16 @@ if (is_post() && $isAdmin) {
             for ($k = 0; $k < $remainder; $k++) { $quota[$byStrength[$k % $S]]++; }
 
             $used = [];
-            $nominated = [];
             foreach ($bySchool as $sid => $teams) {
                 $take = min($quota[$sid], count($teams));
-                for ($j = 0; $j < $take; $j++) { $nominated[] = $teams[$j]; $used[(int) $teams[$j]['id']] = true; }
+                for ($j = 0; $j < $take; $j++) { $nomIds[] = (int) $teams[$j]['id']; $used[(int) $teams[$j]['id']] = true; }
             }
             // Falls eine Schule zu wenige Teams hatte: mit den global Besten auffüllen.
-            if (count($nominated) < $pitchSlots) {
+            if (count($nomIds) < $pitchSlots) {
                 foreach ($rows as $r) {
-                    if (count($nominated) >= $pitchSlots) { break; }
-                    if (empty($used[(int) $r['id']])) { $nominated[] = $r; $used[(int) $r['id']] = true; }
+                    if (count($nomIds) >= $pitchSlots) { break; }
+                    if (empty($used[(int) $r['id']])) { $nomIds[] = (int) $r['id']; $used[(int) $r['id']] = true; }
                 }
-            }
-            // Pitch-Reihenfolge nach Gesamt (bestes Team zuerst).
-            usort($nominated, fn($a, $b) => ((float) $b['grand'] <=> (float) $a['grand']) ?: (($b['avg_bp'] ?? 0) <=> ($a['avg_bp'] ?? 0)));
-            $ord = 1;
-            foreach ($nominated as $t) {
-                Database::run('UPDATE teams SET status=?, pitch_order=? WHERE id=?', ['nominated', $ord++, $t['id']]);
             }
             // Nachrücker: je Schule die nächsten fallback_per_school Teams.
             foreach ($bySchool as $sid => $teams) {
@@ -115,12 +108,23 @@ if (is_post() && $isAdmin) {
                 foreach ($teams as $t) {
                     if (!empty($used[(int) $t['id']])) { continue; }
                     if ($c >= $fallbackPerSchool) { break; }
-                    Database::run("UPDATE teams SET status='fallback', pitch_order=NULL WHERE id=?", [(int) $t['id']]);
-                    $used[(int) $t['id']] = true; $c++;
+                    $fbIds[] = (int) $t['id']; $used[(int) $t['id']] = true; $c++;
                 }
             }
-            flash('success', "Fair nominiert: {$pitchSlots} Plätze auf {$S} Schulen verteilt, je Schule {$fallbackPerSchool} Nachrücker.");
+            $msg = "Fair nominiert: {$pitchSlots} Plätze auf {$S} Schulen verteilt, je Schule {$fallbackPerSchool} Nachrücker.";
         }
+
+        // Bühnen-Reihenfolge bewusst ZUFÄLLIG (nicht die Punktereihenfolge), damit
+        // aus der Aufruf-Reihenfolge nicht auf die Platzierung geschlossen werden kann.
+        shuffle($nomIds);
+        $ord = 1;
+        foreach ($nomIds as $id) {
+            Database::run('UPDATE teams SET status=?, pitch_order=? WHERE id=?', ['nominated', $ord++, $id]);
+        }
+        foreach ($fbIds as $id) {
+            Database::run("UPDATE teams SET status='fallback', pitch_order=NULL WHERE id=?", [$id]);
+        }
+        flash('success', $msg . ' Bühnen-Reihenfolge zufällig gesetzt.');
     } elseif ($action === 'set_status') {
         $allowed = ['submitted', 'nominated', 'fallback', 'eliminated'];
         $st = (string) input('status');

@@ -133,8 +133,12 @@ else:
     $prizes = Database::all("SELECT * FROM event_budget_items WHERE event_id=? AND kind='prize' ORDER BY place IS NULL, place, sort_order, id", [$eventId]);
 
     // Nominierte Teams (Pitches) + Nachrücker – für die Handout-Übersicht.
+    // Jury-Ø (Businessplan, /50) nur aus Jury/Projektleitung (kein KI, kein Admin).
     $pitchRows = Database::all(
-        "SELECT t.id, t.name, t.idea_name, t.status, t.pitch_order, s.short_name, s.name AS school_name
+        "SELECT t.id, t.name, t.idea_name, t.status, t.pitch_order, s.short_name, s.name AS school_name,
+                (SELECT AVG(e.bp_total) FROM evaluations e JOIN users ju ON ju.id = e.juror_id
+                 WHERE e.team_id = t.id AND e.bp_submitted = 1
+                   AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = ju.id AND ur.role IN ('lead','juror'))) AS jury_bp
          FROM teams t JOIN schools s ON s.id = t.school_id
          WHERE t.status IN ('nominated','fallback')
          ORDER BY FIELD(t.status,'nominated','fallback'), t.pitch_order IS NULL, t.pitch_order, s.short_name, t.name"
@@ -270,8 +274,10 @@ else:
     <?php endif; ?>
 
     <?php if ($pitchTeams || $fallbackTeams): ?>
+    <?php $juryScore = fn($v) => $v === null ? null : number_format((float) $v, 1, ',', '.'); ?>
     <section class="block">
       <h2>Nominierte Teams (Pitches)</h2>
+      <p class="note-line">Die <strong>Reihenfolge ist die Aufruf-Reihenfolge auf der Bühne</strong> – bewusst <strong>zufällig</strong> gelost, <strong>nicht</strong> nach Punkten (so lässt sich aus der Reihenfolge nicht auf die Platzierung schließen). Auswahl per <strong>fairer Verteilung je Schule</strong>: jede Schule erhält einen Grundstock an Plätzen, überzählige Plätze gehen an die Schule mit den besten Businessplänen. Angegeben ist der <strong>Jury-Ø des Businessplans</strong> (nur Jury, max. 50 Punkte).</p>
       <?php if ($pitchTeams): ?>
         <ol class="teams">
           <?php foreach ($pitchTeams as $t): ?>
@@ -279,6 +285,7 @@ else:
               <strong><?= e($t['idea_name'] ?: $t['name']) ?></strong>
               <?php if ($t['idea_name'] && $t['name'] && $t['idea_name'] !== $t['name']): ?><span class="role"><?= e($t['name']) ?></span><?php endif; ?>
               <span class="role"><?= e($t['short_name'] ?: $t['school_name']) ?></span>
+              <?php if ($juryScore($t['jury_bp']) !== null): ?><span class="score">Jury-Ø <?= e($juryScore($t['jury_bp'])) ?> / 50</span><?php endif; ?>
               <?php if (!empty($teamMembers[(int) $t['id']])): ?>
                 <div class="members"><?= e(implode(', ', $teamMembers[(int) $t['id']])) ?></div>
               <?php endif; ?>
@@ -293,6 +300,7 @@ else:
             <li>
               <strong><?= e($t['idea_name'] ?: $t['name']) ?></strong>
               <span class="role"><?= e($t['short_name'] ?: $t['school_name']) ?></span>
+              <?php if ($juryScore($t['jury_bp']) !== null): ?><span class="score">Jury-Ø <?= e($juryScore($t['jury_bp'])) ?> / 50</span><?php endif; ?>
               <?php if (!empty($teamMembers[(int) $t['id']])): ?><span class="members"> · <?= e(implode(', ', $teamMembers[(int) $t['id']])) ?></span><?php endif; ?>
             </li>
           <?php endforeach; ?>
@@ -483,6 +491,9 @@ header('Content-Type: text/html; charset=utf-8');
   ol.teams .role, ul.plain .role { color: var(--muted); font-size: 13px; }
   ol.teams .role::before, ul.plain .role::before { content: " · "; }
   .members { color: var(--muted); font-size: 12.5px; }
+  .note-line { font-size: 12px; color: var(--muted); margin: 0 0 10px; line-height: 1.45; }
+  .score { color: var(--blue); font-weight: 700; font-size: 13px; }
+  ol.teams .score::before, ul.plain .score::before { content: " · "; color: var(--muted); font-weight: 400; }
   table.agenda { width: 100%; border-collapse: collapse; }
   table.agenda td { padding: 4px 0; border-bottom: 1px solid #eef1f6; vertical-align: top; }
   .agenda__time { white-space: nowrap; font-weight: 700; color: var(--blue); width: 120px; padding-right: 12px; }
