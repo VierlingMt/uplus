@@ -562,15 +562,18 @@ ob_start(); ?>
       $guests = Database::all(
         PitchDay::GUEST_SELECT . " WHERE g.event_id=?
          ORDER BY FIELD(g.category,'speaker','vip','jury','teacher','sponsor','press'),
-                  CASE WHEN g.category='teacher' THEN org END,
-                  SUBSTRING_INDEX(name,' ',-1), name",
+                  CASE WHEN g.category='teacher' THEN COALESCE(NULLIF(u.org,''), g.org) END,
+                  SUBSTRING_INDEX(COALESCE(NULLIF(u.name,''), g.name),' ',-1),
+                  COALESCE(NULLIF(u.name,''), g.name)",
         [$eventId]
       );
       // Grußworte & Keynote in der manuell festgelegten Reihenfolge (sort_order),
       // sonst Grußworte vor Keynote, dann Nachname.
       $speakers = Database::all(
         PitchDay::GUEST_SELECT . " WHERE g.event_id=? AND (g.greeting=1 OR g.keynote=1)
-         ORDER BY g.sort_order, g.keynote, SUBSTRING_INDEX(name,' ',-1), name",
+         ORDER BY g.sort_order, g.keynote,
+                  SUBSTRING_INDEX(COALESCE(NULLIF(u.name,''), g.name),' ',-1),
+                  COALESCE(NULLIF(u.name,''), g.name)",
         [$eventId]
       );
     ?>

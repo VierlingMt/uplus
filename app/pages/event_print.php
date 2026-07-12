@@ -41,7 +41,7 @@ $wdays   = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'
 $weekday = fn(?string $d) => $d ? $wdays[(int) date('w', strtotime($d))] : null;
 
 $guests = Database::all(
-    PitchDay::GUEST_SELECT . " WHERE g.event_id=? ORDER BY FIELD(g.category,'speaker','vip','jury','teacher','sponsor','press'), name",
+    PitchDay::GUEST_SELECT . " WHERE g.event_id=? ORDER BY FIELD(g.category,'speaker','vip','jury','teacher','sponsor','press'), COALESCE(NULLIF(u.name,''), g.name)",
     [$eventId]
 );
 
@@ -155,6 +155,7 @@ else:
         $jury ? count($jury) . (count($jury) === 1 ? ' Jurymitglied' : ' Jurymitglieder') : '',
         $vips ? count($vips) . (count($vips) === 1 ? ' Ehrengast' : ' Ehrengäste') : '',
         $teachers ? count($teachers) . (count($teachers) === 1 ? ' Lehrkraft' : ' Lehrkräfte') : '',
+        $press ? count($press) . ' Presse' : '',
     ]);
 
     $eventDateLine = trim(implode(', ', array_filter([$weekday($event['event_date']), $dateFmt($event['event_date'])])));

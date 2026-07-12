@@ -7,6 +7,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.49.2] - 2026-07-12
+### Behoben
+- **PitchDay „Gäste & VIPs" warf einen Fehler (500).** Durch die neue Live-
+  Verknüpfung (JOIN auf `users`) waren `name`/`org` in den Sortier-Ausdrücken
+  mehrdeutig. Die Sortierungen sind jetzt eindeutig qualifiziert – die Seite lädt
+  wieder.
+- **Handout „Teilnehmende": „Presse" ergänzt** (fehlte in der Aufzählung).
+
 ## [0.49.1] - 2026-07-12
 ### Geändert
 - **Import „Jury & Nutzer übernehmen" überspringt nur noch reine Admin-Konten.**
