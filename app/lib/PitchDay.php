@@ -48,6 +48,21 @@ final class PitchDay
         'speaker' => 'Redner',
     ];
 
+    /**
+     * SELECT für Gäste, das bei verknüpften Gästen (user_id) Name, Organisation,
+     * Position und E-Mail LIVE aus dem Nutzerkonto zieht (Kopie nur als Fallback).
+     * Caller hängen ` WHERE g.event_id = ? ORDER BY …` an; in ORDER BY dürfen die
+     * Alias-Spalten (name/org/position) verwendet werden.
+     */
+    public const GUEST_SELECT =
+        "SELECT g.*,
+                COALESCE(NULLIF(u.name, ''), g.name)         AS name,
+                COALESCE(NULLIF(u.org, ''), g.org)           AS org,
+                COALESCE(NULLIF(u.position, ''), g.position) AS position,
+                COALESCE(NULLIF(u.email, ''), g.email)       AS email
+         FROM event_guests g
+         LEFT JOIN users u ON u.id = g.user_id";
+
     /** Gäste-/Einladungs-Status → [Label, Pill-Klasse]. */
     public const GUEST_STATUS = [
         'open'       => ['Offen', 'muted'],

@@ -340,6 +340,11 @@ final class Migrator
                     NOT NULL DEFAULT 'juror'",
             ],
             [
+                'version' => '2026_07_32b_guest_user_link',
+                'name'    => 'PitchDay-Gäste mit Nutzerkonto verknüpfen (Live-Daten statt Kopie)',
+                'up'      => [self::class, 'guestUserLink'],
+            ],
+            [
                 'version' => '2026_07_33_webauthn_credentials',
                 'name'    => 'Passkeys / WebAuthn (geräte­gebundener Login per Fingerabdruck/Face-ID)',
                 'up'      => "CREATE TABLE IF NOT EXISTS webauthn_credentials (
@@ -699,6 +704,48 @@ final class Migrator
         if ($count === 0) {
             $pdo->exec('INSERT IGNORE INTO user_roles (user_id, role) SELECT id, role FROM users');
         }
+    }
+
+    /**
+     * PitchDay-Gäste mit dem Nutzerkonto verknüpfen. Ist `user_id` gesetzt, zieht
+     * die App Name/Organisation/Position/E-Mail live aus „Jury & Nutzer" – so
+     * wirken Profil-Änderungen sofort, ohne Neu-Import. Manuelle Gäste ohne Konto
+     * bleiben eine eigenständige Kopie. Backfill verknüpft bestehende Gäste per
+     * eindeutigem Namen (best effort).
+     */
+    public static function guestUserLink(PDO $pdo): void
+    {
+        $col = (bool) $pdo->query(
+            "SELECT COUNT(*) FROM information_schema.columns
+             WHERE table_schema = DATABASE() AND table_name = 'event_guests' AND column_name = 'user_id'"
+        )->fetchColumn();
+        if (!$col) {
+            $pdo->exec('ALTER TABLE event_guests ADD COLUMN user_id INT UNSIGNED NULL AFTER event_id');
+        }
+        $idx = (bool) $pdo->query(
+            "SELECT COUNT(*) FROM information_schema.statistics
+             WHERE table_schema = DATABASE() AND table_name = 'event_guests' AND index_name = 'idx_guests_user'"
+        )->fetchColumn();
+        if (!$idx) {
+            $pdo->exec('ALTER TABLE event_guests ADD KEY idx_guests_user (user_id)');
+        }
+        $fk = (bool) $pdo->query(
+            "SELECT COUNT(*) FROM information_schema.table_constraints
+             WHERE table_schema = DATABASE() AND table_name = 'event_guests' AND constraint_name = 'fk_guests_user'"
+        )->fetchColumn();
+        if (!$fk) {
+            $pdo->exec('ALTER TABLE event_guests
+                ADD CONSTRAINT fk_guests_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL');
+        }
+        // Bestehende Jury-/Lehrkraft-/VIP-Gäste per eindeutigem Namen verknüpfen.
+        $pdo->exec(
+            "UPDATE event_guests g
+             JOIN users u ON u.name = g.name
+             SET g.user_id = u.id
+             WHERE g.user_id IS NULL
+               AND g.category IN ('jury','teacher','vip')
+               AND (SELECT COUNT(*) FROM users u2 WHERE u2.name = g.name) = 1"
+        );
     }
 
     /** Alle hinterlegten Handynummern ins internationale Format ohne Leerzeichen bringen. */

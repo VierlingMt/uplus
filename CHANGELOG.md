@@ -7,6 +7,18 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.49.0] - 2026-07-12
+### Geändert
+- **Gästeliste zieht Stammdaten jetzt LIVE aus „Jury & Nutzer".** Übernommene
+  Gäste (Jury, Projektleitung, Lehrkräfte) werden fest mit dem Nutzerkonto
+  verknüpft (`user_id`); Name, Organisation, Position und E-Mail kommen direkt aus
+  dem Profil. Aktualisiert jemand sein Profil (oder wird in „Jury & Nutzer"
+  geändert), erscheint das **sofort** in Gäste-Übersicht, auf den Reserviert-
+  Schildern und im Handout – **ohne Neu-Import**. Manuelle Gäste (VIP/Presse ohne
+  Konto) bleiben eine eigenständige Kopie. Bestehende Gäste werden per Migration
+  anhand des Namens automatisch verknüpft; verknüpfte Einträge sind mit „🔗
+  verknüpft" gekennzeichnet.
+
 ## [0.48.0] - 2026-07-12
 ### Geändert
 - **„Jury & Nutzer übernehmen" ist jetzt EIN Button** und übernimmt alle am

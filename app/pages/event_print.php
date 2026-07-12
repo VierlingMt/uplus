@@ -41,7 +41,7 @@ $wdays   = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'
 $weekday = fn(?string $d) => $d ? $wdays[(int) date('w', strtotime($d))] : null;
 
 $guests = Database::all(
-    "SELECT * FROM event_guests WHERE event_id=? ORDER BY FIELD(category,'speaker','vip','jury','teacher','sponsor','press'), name",
+    PitchDay::GUEST_SELECT . " WHERE g.event_id=? ORDER BY FIELD(g.category,'speaker','vip','jury','teacher','sponsor','press'), name",
     [$eventId]
 );
 

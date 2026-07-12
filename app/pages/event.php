@@ -164,21 +164,31 @@ if (is_post()) {
                  : ($isTeacher ? ($p['school'] ?: null) : ($p['specialty'] ?: null));
             $pos = ($p['position'] ?? '') !== '' ? $p['position']
                  : ($isTeacher ? 'Projektlehrkraft' : null);
+            $uid = (int) $p['id'];
+            // Zuerst per Verknüpfung finden; sonst einen vorhandenen, noch nicht
+            // verknüpften Gast gleichen Namens „adoptieren".
             $existingId = (int) Database::value(
-                "SELECT id FROM event_guests WHERE event_id=? AND category=? AND name=? LIMIT 1",
-                [$eventId, $cat, $p['name']]
+                "SELECT id FROM event_guests WHERE event_id=? AND user_id=? LIMIT 1",
+                [$eventId, $uid]
             );
             if ($existingId === 0) {
+                $existingId = (int) Database::value(
+                    "SELECT id FROM event_guests WHERE event_id=? AND user_id IS NULL AND name=? LIMIT 1",
+                    [$eventId, $p['name']]
+                );
+            }
+            if ($existingId === 0) {
                 Database::insert(
-                    "INSERT INTO event_guests (event_id, category, name, org, position, email, status)
-                     VALUES (?, ?, ?, ?, ?, ?, 'confirmed')",
-                    [$eventId, $cat, $p['name'], $org, $pos, $p['email'] ?: null]
+                    "INSERT INTO event_guests (event_id, user_id, category, name, org, position, email, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, 'confirmed')",
+                    [$eventId, $uid, $cat, $p['name'], $org, $pos, $p['email'] ?: null]
                 );
                 $added++;
             } else {
+                // Verknüpfung + Fallback-Kopie auffrischen (Anzeige zieht live).
                 Database::run(
-                    "UPDATE event_guests SET org=?, position=?, email=? WHERE id=?",
-                    [$org, $pos, $p['email'] ?: null, $existingId]
+                    "UPDATE event_guests SET user_id=?, category=?, name=?, org=?, position=?, email=? WHERE id=?",
+                    [$uid, $cat, $p['name'], $org, $pos, $p['email'] ?: null, $existingId]
                 );
                 $updated++;
             }
@@ -198,8 +208,11 @@ if (is_post()) {
         $ids = array_map(
             static fn($r) => (int) $r['id'],
             Database::all(
-                "SELECT id FROM event_guests WHERE event_id=? AND (greeting=1 OR keynote=1)
-                 ORDER BY sort_order, keynote, SUBSTRING_INDEX(name,' ',-1), name",
+                "SELECT g.id FROM event_guests g LEFT JOIN users u ON u.id = g.user_id
+                 WHERE g.event_id=? AND (g.greeting=1 OR g.keynote=1)
+                 ORDER BY g.sort_order, g.keynote,
+                          SUBSTRING_INDEX(COALESCE(NULLIF(u.name,''), g.name),' ',-1),
+                          COALESCE(NULLIF(u.name,''), g.name)",
                 [$eventId]
             )
         );
@@ -544,19 +557,20 @@ ob_start(); ?>
     </p>
 
     <?php
-      // Gäste-Übersicht: nach Nachname; Lehrkräfte je Schule (Organisation) gruppiert.
+      // Gäste-Übersicht: nach Nachname; Lehrkräfte je Schule (Organisation)
+      // gruppiert. Verknüpfte Gäste ziehen ihre Stammdaten live aus dem Konto.
       $guests = Database::all(
-        "SELECT * FROM event_guests WHERE event_id=?
-         ORDER BY FIELD(category,'speaker','vip','jury','teacher','sponsor','press'),
-                  CASE WHEN category='teacher' THEN org END,
+        PitchDay::GUEST_SELECT . " WHERE g.event_id=?
+         ORDER BY FIELD(g.category,'speaker','vip','jury','teacher','sponsor','press'),
+                  CASE WHEN g.category='teacher' THEN org END,
                   SUBSTRING_INDEX(name,' ',-1), name",
         [$eventId]
       );
       // Grußworte & Keynote in der manuell festgelegten Reihenfolge (sort_order),
       // sonst Grußworte vor Keynote, dann Nachname.
       $speakers = Database::all(
-        "SELECT * FROM event_guests WHERE event_id=? AND (greeting=1 OR keynote=1)
-         ORDER BY sort_order, keynote, SUBSTRING_INDEX(name,' ',-1), name",
+        PitchDay::GUEST_SELECT . " WHERE g.event_id=? AND (g.greeting=1 OR g.keynote=1)
+         ORDER BY g.sort_order, g.keynote, SUBSTRING_INDEX(name,' ',-1), name",
         [$eventId]
       );
     ?>
@@ -606,6 +620,7 @@ ob_start(); ?>
             <tr>
               <td data-label="Schild"><input type="checkbox" class="js-sign-pick" value="<?= (int) $g['id'] ?>" <?= $g['status'] !== 'declined' ? 'checked' : '' ?> title="Reserviert-Schild für diesen Gast drucken"></td>
               <td data-label="Name"><strong><?= e($gd['name']) ?></strong>
+                <?= !empty($g['user_id']) ? ' <span class="pill blue" style="font-size:11px" title="Stammdaten kommen live aus „Jury & Nutzer“">🔗 verknüpft</span>' : '' ?>
                 <?= $gd['subline'] ? '<div class="muted" style="font-size:13px">↷ ' . e($gd['subline']) . '</div>' : '' ?>
                 <?= $g['notes'] ? '<div class="muted" style="font-size:13px">' . e($g['notes']) . '</div>' : '' ?></td>
               <td data-label="Kategorie"><?= e(PitchDay::guestCategory($g['category'])) ?></td>
