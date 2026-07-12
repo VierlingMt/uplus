@@ -130,7 +130,7 @@ else:
 
     $parts = array_filter([
         $nStudents ? $nStudents . ' Schüler:innen' : '',
-        $nTeams ? 'rund ' . $nTeams . ' Teams' : '',
+        $nTeams ? $nTeams . ' Teams' : '',
         $jury ? count($jury) . (count($jury) === 1 ? ' Jurymitglied' : ' Jurymitglieder') : '',
         $vips ? count($vips) . (count($vips) === 1 ? ' Ehrengast' : ' Ehrengäste') : '',
     ]);

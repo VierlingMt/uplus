@@ -7,6 +7,12 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.44.4] - 2026-07-12
+### Behoben
+- **Handout „Teilnehmende": „rund" vor der Teamzahl entfernt.** Die Zahl ist der
+  exakte Teams-Zählwert – das aus der Vorlage übernommene „rund" war irreführend
+  (z. B. „44 Teams" statt „rund 44 Teams").
+
 ## [0.44.3] - 2026-07-12
 ### Geändert
 - **„Ablaufplan / Handout (PDF)" liegt jetzt im Tab „Ablaufplan"** (statt bei
