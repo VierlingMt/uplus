@@ -166,19 +166,34 @@ if (is_post()) {
         $keynote = input('keynote') ? 1 : 0;
         $seat    = input('seat_reserved') ? 1 : 0;
         $notes   = trim((string) input('notes')) ?: null;
+        // Vertretung: nur speichern, wenn der Status „Vertretung" ist – so bleiben
+        // die Felder sauber, wenn jemand den Status wieder zurückstellt.
+        $subName = trim((string) input('sub_name'));
+        $subPos  = trim((string) input('sub_position'));
+        $subOrg  = trim((string) input('sub_org'));
+        if ($status !== 'substitute') {
+            $subName = $subPos = $subOrg = '';
+        }
+        $subName = $subName !== '' ? $subName : null;
+        $subPos  = $subPos  !== '' ? $subPos  : null;
+        $subOrg  = $subOrg  !== '' ? $subOrg  : null;
         if ($name !== '') {
             if ($id) {
                 Database::run(
                     'UPDATE event_guests SET category=?, name=?, org=?, position=?, email=?, invite_channel=?, status=?,
+                        sub_name=?, sub_position=?, sub_org=?,
                         greeting=?, greeting_minutes=?, keynote=?, seat_reserved=?, notes=? WHERE id=? AND event_id=?',
-                    [$cat, $name, $org, $pos, $email, $channel, $status, $greet, $greetM, $keynote, $seat, $notes, $id, $eventId]
+                    [$cat, $name, $org, $pos, $email, $channel, $status, $subName, $subPos, $subOrg,
+                     $greet, $greetM, $keynote, $seat, $notes, $id, $eventId]
                 );
             } else {
                 Database::insert(
                     'INSERT INTO event_guests (event_id, category, name, org, position, email, invite_channel, status,
+                        sub_name, sub_position, sub_org,
                         greeting, greeting_minutes, keynote, seat_reserved, notes)
-                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                    [$eventId, $cat, $name, $org, $pos, $email, $channel, $status, $greet, $greetM, $keynote, $seat, $notes]
+                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                    [$eventId, $cat, $name, $org, $pos, $email, $channel, $status, $subName, $subPos, $subOrg,
+                     $greet, $greetM, $keynote, $seat, $notes]
                 );
             }
             Audit::log('event.guest_save', 'Gast gespeichert: ' . $name, 'event', $eventId);
@@ -455,7 +470,15 @@ ob_start(); ?>
         <?= Csrf::field() ?><input type="hidden" name="action" value="import_jury"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="tab" value="guests">
         <button class="btn btn--ghost btn--sm">⚖ Jury übernehmen</button>
       </form>
+      <a class="btn btn--ghost btn--sm" target="_blank" rel="noopener"
+         href="<?= e(url('event_print', ['cycle' => $cycleId, 'kind' => 'signs'])) ?>"
+         data-signs-open="<?= e(url('event_print', ['cycle' => $cycleId, 'kind' => 'signs'])) ?>">🪧 Reserviert-Schilder (PDF)</a>
+      <a class="btn btn--ghost btn--sm" target="_blank" rel="noopener"
+         href="<?= e(url('event_print', ['cycle' => $cycleId, 'kind' => 'handout'])) ?>">📄 Ablaufplan / Handout (PDF)</a>
     </div>
+    <p class="muted" style="font-size:13px;margin:-6px 0 14px">
+      🪧 Die angehakten Gäste kommen aufs Reserviert-Schild (vorbelegt mit „Sitzplatz reserviert"). Bei einer <strong>Vertretung</strong> erscheint automatisch die vertretende Person – mit Hinweis, wen sie vertritt.
+    </p>
 
     <?php
       $guests = Database::all('SELECT * FROM event_guests WHERE event_id=? ORDER BY FIELD(category,\'speaker\',\'vip\',\'jury\',\'sponsor\',\'press\'), name', [$eventId]);
@@ -465,11 +488,12 @@ ob_start(); ?>
       <div class="card mb">
         <div class="card__head">Grußworte & Keynote</div>
         <div class="card__body">
-          <?php foreach ($speakers as $g): ?>
-            <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+          <?php foreach ($speakers as $g): $gd = PitchDay::guestDisplay($g); ?>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
               <?= (int) $g['keynote'] === 1 ? '<span class="pill blue">Keynote</span>' : '<span class="pill teal">Grußwort</span>' ?>
-              <strong><?= e($g['name']) ?></strong>
-              <span class="muted"><?= e($g['org'] ?? $g['position'] ?? '') ?></span>
+              <strong><?= e($gd['name']) ?></strong>
+              <span class="muted"><?= e($gd['org'] ?? $gd['position'] ?? '') ?></span>
+              <?php if ($gd['subline']): ?><span class="pill blue" title="Vertretung">↷ <?= e($gd['subline']) ?></span><?php endif; ?>
               <?php if ($g['greeting_minutes']): ?><span class="muted">· ca. <?= (int) $g['greeting_minutes'] ?> Min</span><?php endif; ?>
             </div>
           <?php endforeach; ?>
@@ -480,25 +504,29 @@ ob_start(); ?>
     <div class="card">
       <div class="table-wrap">
         <table class="data data--cards">
-          <thead><tr><th>Name</th><th>Kategorie</th><th>Organisation / Position</th><th>Einladung</th><th>Status</th><th>Rede</th><th>Sitz</th><th></th></tr></thead>
+          <thead><tr><th title="Für Reserviert-Schild auswählen">🪧</th><th>Name</th><th>Kategorie</th><th>Organisation / Position</th><th>Einladung</th><th>Status</th><th>Rede</th><th></th></tr></thead>
           <tbody>
           <?php foreach ($guests as $g):
             [$stLabel, $stCls] = PitchDay::guestStatus($g['status']);
+            $gd = PitchDay::guestDisplay($g);
             $fill = e(json_encode([
               'id' => (int) $g['id'], 'category' => $g['category'], 'name' => $g['name'], 'org' => $g['org'],
               'position' => $g['position'], 'email' => $g['email'], 'invite_channel' => $g['invite_channel'],
-              'status' => $g['status'], 'greeting' => (int) $g['greeting'], 'greeting_minutes' => $g['greeting_minutes'],
+              'status' => $g['status'], 'sub_name' => $g['sub_name'], 'sub_position' => $g['sub_position'],
+              'sub_org' => $g['sub_org'], 'greeting' => (int) $g['greeting'], 'greeting_minutes' => $g['greeting_minutes'],
               'keynote' => (int) $g['keynote'], 'seat_reserved' => (int) $g['seat_reserved'], 'notes' => $g['notes'],
             ], JSON_UNESCAPED_UNICODE));
           ?>
             <tr>
-              <td data-label="Name"><strong><?= e($g['name']) ?></strong><?= $g['notes'] ? '<div class="muted" style="font-size:13px">' . e($g['notes']) . '</div>' : '' ?></td>
+              <td data-label="Schild"><input type="checkbox" class="js-sign-pick" value="<?= (int) $g['id'] ?>" <?= (int) $g['seat_reserved'] === 1 ? 'checked' : '' ?> title="Reserviert-Schild für diesen Gast drucken"></td>
+              <td data-label="Name"><strong><?= e($gd['name']) ?></strong>
+                <?= $gd['subline'] ? '<div class="muted" style="font-size:13px">↷ ' . e($gd['subline']) . '</div>' : '' ?>
+                <?= $g['notes'] ? '<div class="muted" style="font-size:13px">' . e($g['notes']) . '</div>' : '' ?></td>
               <td data-label="Kategorie"><?= e(PitchDay::guestCategory($g['category'])) ?></td>
-              <td data-label="Organisation / Position"><?= e($g['org'] ?? '') ?><?= $g['position'] ? '<div class="muted" style="font-size:13px">' . e($g['position']) . '</div>' : '' ?></td>
+              <td data-label="Organisation / Position"><?= e($gd['org'] ?? '') ?><?= $gd['position'] ? '<div class="muted" style="font-size:13px">' . e($gd['position']) . '</div>' : '' ?></td>
               <td data-label="Einladung"><?= e($g['invite_channel'] ?? '—') ?></td>
               <td data-label="Status"><span class="pill <?= $stCls ?>"><?= e($stLabel) ?></span></td>
               <td data-label="Rede"><?= (int) $g['keynote'] === 1 ? '<span class="pill blue">Keynote</span>' : ((int) $g['greeting'] === 1 ? '<span class="pill teal">Grußwort</span>' : '<span class="muted">–</span>') ?></td>
-              <td data-label="Sitz"><?= (int) $g['seat_reserved'] === 1 ? '✓' : '<span class="muted">–</span>' ?></td>
               <td class="row-actions" style="white-space:nowrap;text-align:right">
                 <button type="button" class="btn btn--ghost btn--sm" data-modal-open="guestModal" data-fill="<?= $fill ?>">Bearbeiten</button>
                 <form method="post" action="<?= url('event') ?>" style="display:inline" data-confirm="Gast „<?= e($g['name']) ?>“ löschen?">
@@ -605,7 +633,7 @@ ob_start(); ?>
   <?php endif; ?>
 
   <!-- ===================== Modals ===================== -->
-  <div class="modal-overlay" id="eventModal" hidden>
+  <div class="modal-overlay" id="eventModal" data-modal-static hidden>
     <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="eventModalTitle">
       <div class="modal__head"><h3 id="eventModalTitle">Veranstaltung bearbeiten</h3><button type="button" class="modal__close" data-modal-close>&times;</button></div>
       <form method="post" action="<?= url('event') ?>" class="modal__body" data-modal-form>
@@ -623,7 +651,7 @@ ob_start(); ?>
     </div>
   </div>
 
-  <div class="modal-overlay" id="taskModal" hidden>
+  <div class="modal-overlay" id="taskModal" data-modal-static hidden>
     <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
       <div class="modal__head"><h3 id="taskModalTitle" data-modal-title data-title-new="Neue Aufgabe" data-title-edit="Aufgabe bearbeiten">Neue Aufgabe</h3><button type="button" class="modal__close" data-modal-close>&times;</button></div>
       <form method="post" action="<?= url('event') ?>" class="modal__body" data-modal-form>
@@ -647,7 +675,7 @@ ob_start(); ?>
     </div>
   </div>
 
-  <div class="modal-overlay" id="guestModal" hidden>
+  <div class="modal-overlay" id="guestModal" data-modal-static hidden>
     <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="guestModalTitle">
       <div class="modal__head"><h3 id="guestModalTitle" data-modal-title data-title-new="Neuer Gast" data-title-edit="Gast bearbeiten">Neuer Gast</h3><button type="button" class="modal__close" data-modal-close>&times;</button></div>
       <form method="post" action="<?= url('event') ?>" class="modal__body" data-modal-form>
@@ -664,6 +692,15 @@ ob_start(); ?>
         <div class="grid cols-2">
           <div class="field"><label>Organisation</label><input type="text" name="org"></div>
           <div class="field"><label>Position</label><input type="text" name="position"></div>
+        </div>
+        <!-- Vertretung: nur bei Status „Vertretung" sichtbar (Toggle via app.js) -->
+        <div data-substitute-block hidden style="border:1px solid var(--line,#e4e7ee);border-radius:10px;padding:12px;margin:0 0 14px;background:rgba(0,53,148,.03)">
+          <div class="muted" style="font-size:13px;margin-bottom:8px">↷ <strong>Vertretung</strong> – wer springt für die/den oben genannten Gast ein? Name & Position erscheinen auf dem Reserviert-Schild und in der VIP-Übersicht.</div>
+          <div class="field" style="margin-bottom:10px"><label>Name der Vertretung</label><input type="text" name="sub_name" placeholder="z. B. Max Mustermann"></div>
+          <div class="grid cols-2" style="margin:0">
+            <div class="field" style="margin:0"><label>Position</label><input type="text" name="sub_position" placeholder="z. B. stv. Bürgermeister"></div>
+            <div class="field" style="margin:0"><label>Organisation</label><input type="text" name="sub_org"></div>
+          </div>
         </div>
         <div class="grid cols-2">
           <div class="field"><label>E-Mail</label><input type="email" name="email"></div>
@@ -684,7 +721,7 @@ ob_start(); ?>
     </div>
   </div>
 
-  <div class="modal-overlay" id="agendaModal" hidden>
+  <div class="modal-overlay" id="agendaModal" data-modal-static hidden>
     <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="agendaModalTitle">
       <div class="modal__head"><h3 id="agendaModalTitle" data-modal-title data-title-new="Neuer Programmpunkt" data-title-edit="Programmpunkt bearbeiten">Neuer Programmpunkt</h3><button type="button" class="modal__close" data-modal-close>&times;</button></div>
       <form method="post" action="<?= url('event') ?>" class="modal__body" data-modal-form>
@@ -700,7 +737,7 @@ ob_start(); ?>
     </div>
   </div>
 
-  <div class="modal-overlay" id="budgetModal" hidden>
+  <div class="modal-overlay" id="budgetModal" data-modal-static hidden>
     <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="budgetModalTitle">
       <div class="modal__head"><h3 id="budgetModalTitle" data-modal-title data-title-new="Neue Position" data-title-edit="Position bearbeiten">Neue Position</h3><button type="button" class="modal__close" data-modal-close>&times;</button></div>
       <form method="post" action="<?= url('event') ?>" class="modal__body" data-modal-form>

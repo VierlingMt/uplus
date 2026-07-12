@@ -7,6 +7,29 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-07-12
+### Hinzugefügt
+- **PitchDay-Gäste: Vertretung hinterlegen.** Sagt eine eingeladene Person ab und
+  schickt eine Vertretung, lässt sich beim Status „Vertretung" jetzt eintragen,
+  **wer** vertritt (Name, Position, Organisation). Auf dem Reserviert-Schild und in
+  der VIP-/Gäste-Übersicht erscheint dann automatisch die vertretende Person – mit
+  dem Hinweis „vertritt …", für wen sie einspringt.
+- **Reserviert-Schilder als PDF (DIN A4).** Neue Funktion im PitchDay unter
+  „Gäste & VIPs": für die ausgewählten Gäste (Jury, VIP, Presse …) je ein
+  Reserviert-Schild pro A4-Seite zum Ausdrucken bzw. „Als PDF speichern". Die
+  Auswahl ist mit „Sitzplatz reserviert" vorbelegt und pro Gast anhakbar.
+- **Ablaufplan / Handout als PDF.** Ein komplettes Handout zum PitchDay (Eckdaten,
+  Ehrengäste, Jury, Ablauf, Grußworte, Preise, Presse, Sponsoren, Infos & Kontakt)
+  – zusammengesetzt aus den in der App gepflegten Daten, wie das bisher manuell
+  gepflegte PDF der Vorjahre. Beides ohne zusätzliche PDF-Bibliothek über die
+  Druckfunktion des Browsers.
+
+### Geändert
+- **PitchDay-Formulare schließen nicht mehr bei Klick daneben.** Die Dialoge
+  (Veranstaltung, Aufgabe, Gast, Programmpunkt, Budget) lassen sich nur noch über
+  „Abbrechen", „×" oder ESC schließen – so gehen begonnene Eingaben nicht mehr
+  durch einen versehentlichen Klick neben das Fenster verloren.
+
 ## [0.43.0] - 2026-07-10
 ### Geändert
 - **E-Mail-Login jetzt mit 6-stelligem Code statt Magic-Link.** Der bisherige

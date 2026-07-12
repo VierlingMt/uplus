@@ -295,6 +295,14 @@ final class Migrator
                 'name'    => 'PitchDay-Eventplanung (Aufgaben, Gäste, Agenda, Budget) je Wettbewerbsjahr',
                 'up'      => [self::class, 'pitchdayEvents'],
             ],
+            [
+                'version' => '2026_07_26_guest_substitute',
+                'name'    => 'PitchDay-Gäste: Vertretung (wer vertritt wen) hinterlegen',
+                'up'      => 'ALTER TABLE event_guests
+                    ADD COLUMN IF NOT EXISTS sub_name     VARCHAR(190) NULL AFTER status,
+                    ADD COLUMN IF NOT EXISTS sub_position VARCHAR(190) NULL AFTER sub_name,
+                    ADD COLUMN IF NOT EXISTS sub_org      VARCHAR(190) NULL AFTER sub_position',
+            ],
         ];
     }
 

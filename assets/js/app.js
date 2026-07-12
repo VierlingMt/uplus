@@ -701,6 +701,36 @@
   })();
 
   // ---------------------------------------------------------------------------
+  // PitchDay-Gäste: Vertretungs-Felder ein-/ausblenden und Reserviert-Schilder
+  // aus der aktuellen Auswahl öffnen. Die Listener hängen am document, damit sie
+  // den AJAX-Austausch der PitchDay-Seite (initEventAjax) überleben.
+  // ---------------------------------------------------------------------------
+  (function initPitchdayGuests() {
+    // Vertretungs-Block nur bei Status „Vertretung" zeigen. Beim Öffnen des
+    // Modals feuert das Formular-Prefill ein change-Event – so stimmt der Zustand
+    // auch beim Bearbeiten sofort.
+    document.addEventListener('change', function (e) {
+      var sel = e.target;
+      if (!sel || !sel.matches || !sel.matches('#guestModal select[name="status"]')) return;
+      var block = document.querySelector('#guestModal [data-substitute-block]');
+      if (block) block.hidden = sel.value !== 'substitute';
+    });
+
+    // „Reserviert-Schilder": angehakte Gäste an die Druckseite übergeben.
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest ? e.target.closest('[data-signs-open]') : null;
+      if (!btn) return;
+      e.preventDefault();
+      var scope = document.getElementById('event-page') || document;
+      var ids = [];
+      scope.querySelectorAll('.js-sign-pick:checked').forEach(function (c) { ids.push(c.value); });
+      var base = btn.getAttribute('data-signs-open');
+      var href = base + (ids.length ? '&ids=' + encodeURIComponent(ids.join(',')) : '');
+      window.open(href, '_blank', 'noopener');
+    });
+  })();
+
+  // ---------------------------------------------------------------------------
   // Autosave für Bewertungsformulare (form[data-autosave]) – speichert je
   // Feldänderung debounced per AJAX; kurze grüne Rückmeldung „gespeichert“.
   // ---------------------------------------------------------------------------

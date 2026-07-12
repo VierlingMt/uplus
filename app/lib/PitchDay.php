@@ -136,6 +136,49 @@ final class PitchDay
     }
 
     /**
+     * Anzeige-Auflösung eines Gasts unter Berücksichtigung einer Vertretung.
+     *
+     * Sagt eine eingeladene Person ab und schickt eine Vertretung (Status
+     * „substitute" mit hinterlegtem Vertreter-Namen), so wird die vertretende
+     * Person zur Hauptperson – ihr Name erscheint auf dem Reserviert-Schild und
+     * in der VIP-Übersicht. Die/der ursprünglich Eingeladene wird als
+     * „vertritt …" ergänzt, damit klar bleibt, für wen die Person einspringt.
+     *
+     * @param array<string,mixed> $g Datensatz aus event_guests
+     * @return array{name:string, subline:?string, org:?string, position:?string, is_substitute:bool}
+     */
+    public static function guestDisplay(array $g): array
+    {
+        $subName = trim((string) ($g['sub_name'] ?? ''));
+        $isSub   = ($g['status'] ?? '') === 'substitute' && $subName !== '';
+
+        if ($isSub) {
+            // Rolle der/des ursprünglich Eingeladenen für den „vertritt …"-Hinweis.
+            $origRole = trim(implode(' · ', array_filter([
+                trim((string) ($g['position'] ?? '')),
+                trim((string) ($g['org'] ?? '')),
+            ])));
+            $subline = 'vertritt ' . trim((string) $g['name'])
+                . ($origRole !== '' ? ' (' . $origRole . ')' : '');
+            return [
+                'name'          => $subName,
+                'subline'       => $subline,
+                'org'           => trim((string) ($g['sub_org'] ?? '')) ?: null,
+                'position'      => trim((string) ($g['sub_position'] ?? '')) ?: null,
+                'is_substitute' => true,
+            ];
+        }
+
+        return [
+            'name'          => (string) ($g['name'] ?? ''),
+            'subline'       => null,
+            'org'           => trim((string) ($g['org'] ?? '')) ?: null,
+            'position'      => trim((string) ($g['position'] ?? '')) ?: null,
+            'is_substitute' => false,
+        ];
+    }
+
+    /**
      * Fälligkeit aus Event-Datum + Offset (Tage) berechnen.
      * Liefert null, wenn kein Event-Datum bekannt ist.
      */
