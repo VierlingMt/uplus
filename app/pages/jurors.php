@@ -93,13 +93,44 @@ if (is_post()) {
 }
 
 $schools = Database::all('SELECT id, name FROM schools ORDER BY name');
-$users = Database::all(
-    'SELECT u.*, s.name AS school_name FROM users u LEFT JOIN schools s ON s.id = u.school_id
-     ORDER BY FIELD(u.role,"admin","lead","juror","teacher"), u.name'
-);
 
-// Wettbewerbsjahre (Zyklen) für die Zuordnung im Formular und die Übersicht
+// Wettbewerbsjahre (Zyklen) für Filter, Zuordnung im Formular und Übersicht.
 $cycles = Cycle::all();
+
+// Filter auf Wettbewerbsjahr – standardmäßig das aktive Jahr. „all" = alle Jahre.
+$activeCycleId = Cycle::activeId();
+$filterRaw = input('cycle', null);
+if ($filterRaw === null) {
+    $filterCycleId = $activeCycleId; // Standard: aktuelles Wettbewerbsjahr
+} elseif ($filterRaw === 'all') {
+    $filterCycleId = 0;
+} else {
+    $filterCycleId = (int) $filterRaw;
+    if ($filterCycleId > 0 && Cycle::find($filterCycleId) === null) {
+        $filterCycleId = $activeCycleId;
+    }
+}
+$filterCycle = $filterCycleId ? Cycle::find($filterCycleId) : null;
+
+if ($filterCycleId > 0) {
+    // Zum Jahr gehören: Mitglieder des Zyklus (Jury/Projektleitung), die
+    // Lehrkräfte der in dem Jahr teilnehmenden Schulen sowie – als
+    // jahresübergreifende Servicerolle – die Admin-Konten.
+    $users = Database::all(
+        'SELECT u.*, s.name AS school_name FROM users u
+         LEFT JOIN schools s ON s.id = u.school_id
+         WHERE u.role = "admin"
+            OR u.id IN (SELECT user_id FROM cycle_members WHERE cycle_id = ?)
+            OR (u.role = "teacher" AND u.school_id IN (SELECT school_id FROM cycle_schools WHERE cycle_id = ?))
+         ORDER BY FIELD(u.role,"admin","lead","juror","teacher"), u.name',
+        [$filterCycleId, $filterCycleId]
+    );
+} else {
+    $users = Database::all(
+        'SELECT u.*, s.name AS school_name FROM users u LEFT JOIN schools s ON s.id = u.school_id
+         ORDER BY FIELD(u.role,"admin","lead","juror","teacher"), u.name'
+    );
+}
 // Jahres-Labels + IDs je Nutzer (Labels für die Liste, IDs zum Vorbelegen des Modals)
 $userCycles = $userCycleIds = [];
 foreach (Database::all(
@@ -121,10 +152,24 @@ $imgs = fn(array $u) => !empty($u['photo_path']) ? e(json_encode(['photo' => ass
 ob_start(); ?>
 <div class="page-head">
   <h1>Jury &amp; Nutzer</h1>
-  <button type="button" class="btn btn--teal" data-modal-open="userModal">+ Neu</button>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <?php if ($cycles): ?>
+      <form method="get" action="<?= url('jurors') ?>" style="display:flex;align-items:center;gap:6px;margin:0">
+        <input type="hidden" name="r" value="jurors">
+        <label for="cycleFilter" class="muted" style="font-size:14px">Wettbewerbsjahr</label>
+        <select id="cycleFilter" name="cycle" onchange="this.form.submit()" style="min-width:130px">
+          <?php foreach ($cycles as $c): ?>
+            <option value="<?= (int) $c['id'] ?>" <?= $filterCycleId === (int) $c['id'] ? 'selected' : '' ?>><?= e($c['year_label']) ?><?= $c['is_active'] ? ' •' : '' ?></option>
+          <?php endforeach; ?>
+          <option value="all" <?= $filterCycleId === 0 ? 'selected' : '' ?>>Alle Jahre</option>
+        </select>
+      </form>
+    <?php endif; ?>
+    <button type="button" class="btn btn--teal" data-modal-open="userModal">+ Neu</button>
+  </div>
 </div>
 <div class="card">
-  <div class="card__head"><?= count($users) ?> Nutzer</div>
+  <div class="card__head"><?= count($users) ?> Nutzer<?= $filterCycle ? ' · Wettbewerbsjahr ' . e($filterCycle['year_label']) : ' · alle Jahre' ?></div>
   <div class="table-wrap">
     <table class="data data--cards">
       <thead><tr><th>Name</th><th>Rolle</th><th>Login</th><th></th></tr></thead>

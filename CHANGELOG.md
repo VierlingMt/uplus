@@ -7,6 +7,13 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.44.7] - 2026-07-12
+### Hinzugefügt
+- **„Jury & Nutzer": Filter nach Wettbewerbsjahr** – standardmäßig das aktuelle
+  Jahr. Zeigt die Mitwirkenden des Jahres (Jury/Projektleitung des Zyklus sowie
+  die Lehrkräfte der teilnehmenden Schulen); Admin-Konten als jahresübergreifende
+  Servicerolle immer. „Alle Jahre" zeigt wieder alle Nutzer.
+
 ## [0.44.6] - 2026-07-12
 ### Hinzugefügt
 - **Handout-Fußzeile mit Seitenzahlen:** unten rechts „Seite X / Y", unten links
