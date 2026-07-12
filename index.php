@@ -10,8 +10,9 @@ require __DIR__ . '/app/bootstrap.php';
 
 $route = (string) ($_GET['r'] ?? 'dashboard');
 
-// Oeffentliche Routen (ohne Login)
-$public = ['login', 'confirm_email'];
+// Oeffentliche Routen (ohne Login). Passkey-Endpunkte prüfen die Anmeldung
+// je Aktion selbst (login/login_options öffentlich, register* nur angemeldet).
+$public = ['login', 'confirm_email', 'passkey'];
 
 try {
     if (!in_array($route, $public, true)) {
@@ -32,6 +33,10 @@ try {
 
         case 'confirm_email':
             require APP_PATH . '/pages/confirm_email.php';
+            break;
+
+        case 'passkey':
+            require APP_PATH . '/pages/passkey.php';
             break;
 
         case 'logout':

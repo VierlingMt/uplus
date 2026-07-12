@@ -339,6 +339,26 @@ final class Migrator
                     MODIFY role_in_cycle ENUM('juror','project_lead','teacher')
                     NOT NULL DEFAULT 'juror'",
             ],
+            [
+                'version' => '2026_07_33_webauthn_credentials',
+                'name'    => 'Passkeys / WebAuthn (geräte­gebundener Login per Fingerabdruck/Face-ID)',
+                'up'      => "CREATE TABLE IF NOT EXISTS webauthn_credentials (
+                    id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    user_id       INT UNSIGNED NOT NULL,
+                    credential_id VARCHAR(512) NOT NULL,
+                    public_key    TEXT NOT NULL,
+                    sign_count    INT UNSIGNED NOT NULL DEFAULT 0,
+                    transports    VARCHAR(255) NULL,
+                    label         VARCHAR(120) NULL,
+                    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    last_used_at  DATETIME NULL,
+                    PRIMARY KEY (id),
+                    UNIQUE KEY uq_webauthn_cred (credential_id),
+                    KEY idx_webauthn_user (user_id),
+                    CONSTRAINT fk_webauthn_user FOREIGN KEY (user_id)
+                        REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ],
         ];
     }
 

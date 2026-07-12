@@ -108,12 +108,25 @@ if (is_post() && !$readonly) {
         }
         redirect(url('profile'));
     }
+
+    // --- Passkey entfernen ---------------------------------------------------
+    if ($action === 'passkey_delete') {
+        Database::run('DELETE FROM webauthn_credentials WHERE id = ? AND user_id = ?', [(int) input('id'), $uid]);
+        Audit::log('passkey.delete', 'Passkey entfernt', 'user', $uid);
+        flash('success', 'Passkey entfernt.');
+        redirect(url('profile'));
+    }
 }
 
 $u = Auth::user();
 $myRoles = Roles::forUser((int) $u['id']) ?: Roles::sanitize([$u['role']]);
 $pendingPhone = $readonly ? null : ContactChange::pendingPhone((int) Auth::id());
 $smsOk = Sms::isConfigured();
+$passkeys = $readonly ? [] : Database::all(
+    'SELECT id, label, created_at, last_used_at FROM webauthn_credentials WHERE user_id = ? ORDER BY id DESC',
+    [(int) Auth::id()]
+);
+$pkDate = fn(?string $d) => $d ? date('d.m.Y', strtotime($d)) : null;
 
 ob_start(); ?>
 <div class="page-head"><h1>Mein Profil</h1></div>
@@ -201,6 +214,50 @@ ob_start(); ?>
     <?php endif; ?>
   </div></div>
 </div>
+
+<div class="card mt"><div class="card__body">
+  <h3 style="margin-top:0">🔑 Passkeys &amp; Geräte-Login</h3>
+  <p class="muted" style="font-size:13px">Mit einem <strong>Passkey</strong> meldest du dich auf diesem Gerät
+    per Fingerabdruck, Face-ID oder Geräte-PIN an – ganz ohne Code. Der Login per E-Mail-/SMS-Code
+    bleibt als Rückfallweg (z. B. auf neuen Geräten) erhalten.</p>
+
+  <?php if (!$readonly): ?>
+    <div data-passkey-only hidden style="margin:12px 0 4px">
+      <button type="button" class="btn btn--teal btn--sm no-spinner"
+              data-passkey-register data-endpoint="<?= url('passkey') ?>" data-csrf="<?= e(Csrf::token()) ?>">+ Dieses Gerät hinzufügen</button>
+      <div class="flash" data-passkey-msg hidden style="margin-top:10px"></div>
+    </div>
+  <?php endif; ?>
+
+  <?php if ($passkeys): ?>
+    <div class="table-wrap" style="margin-top:12px">
+      <table class="data data--cards">
+        <thead><tr><th>Gerät</th><th>Hinzugefügt</th><th>Zuletzt genutzt</th><th></th></tr></thead>
+        <tbody>
+        <?php foreach ($passkeys as $pk): ?>
+          <tr>
+            <td data-label="Gerät"><strong><?= e($pk['label'] ?: 'Passkey') ?></strong></td>
+            <td data-label="Hinzugefügt"><?= e($pkDate($pk['created_at']) ?? '–') ?></td>
+            <td data-label="Zuletzt genutzt"><?= $pk['last_used_at'] ? e($pkDate($pk['last_used_at'])) : '<span class="muted">– noch nie –</span>' ?></td>
+            <td class="row-actions" style="text-align:right">
+              <?php if (!$readonly): ?>
+                <form method="post" action="<?= url('profile') ?>" style="display:inline" data-confirm="Diesen Passkey entfernen? Danach ist die Anmeldung damit nicht mehr möglich.">
+                  <?= Csrf::field() ?><input type="hidden" name="action" value="passkey_delete"><input type="hidden" name="id" value="<?= (int) $pk['id'] ?>">
+                  <button class="btn btn--danger btn--sm">Entfernen</button>
+                </form>
+              <?php endif; ?>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  <?php else: ?>
+    <p class="muted" style="margin-top:12px;font-size:13px">Noch kein Passkey hinterlegt.<?php if (!$readonly): ?> Tippe oben auf „Dieses Gerät hinzufügen", um dich künftig per Fingerabdruck/Face-ID anzumelden.<?php endif; ?></p>
+  <?php endif; ?>
+</div></div>
+
+<script src="<?= asset('js/webauthn.js') ?>"></script>
 <?php
 $content = ob_get_clean();
 $title = 'Mein Profil';

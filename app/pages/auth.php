@@ -219,15 +219,26 @@ if (is_post()) {
           </div>
           <button type="submit" class="btn btn--primary" style="width:100%;justify-content:center">Anmelden</button>
         </form>
+        <div data-passkey-only hidden style="margin-top:16px">
+          <div style="display:flex;align-items:center;gap:10px;color:var(--muted,#6b7785);font-size:12px;margin:0 0 12px">
+            <span style="flex:1;height:1px;background:#e2e8f0"></span>oder<span style="flex:1;height:1px;background:#e2e8f0"></span>
+          </div>
+          <button type="button" class="btn btn--ghost" style="width:100%;justify-content:center"
+                  data-passkey-login data-endpoint="<?= url('passkey') ?>" data-csrf="<?= e(Csrf::token()) ?>">🔑 Mit Passkey anmelden</button>
+          <div class="flash" data-passkey-msg hidden style="margin-top:12px"></div>
+        </div>
         <p class="sub" style="margin-top:16px;font-size:13px">
           Kein Passwort nötig. Wir senden dir einen 6-stelligen Login-Code
           <?php if ($smsConfigured): ?>per E-Mail bzw. – bei einer Handynummer – per SMS<?php else: ?>per E-Mail<?php endif; ?>
           (<?= SmsCode::ttlMinutes() ?> Min. gültig).
+          Auf diesem Gerät kannst du dich künftig auch per <strong>Passkey</strong> (Fingerabdruck/Face-ID) anmelden –
+          richte ihn nach der Anmeldung im Profil ein.
         </p>
       <?php endif; ?>
     </div>
   </div>
 </div>
 <script src="<?= asset('js/app.js') ?>"></script>
+<script src="<?= asset('js/webauthn.js') ?>"></script>
 </body>
 </html>

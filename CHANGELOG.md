@@ -7,6 +7,23 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-07-12
+### Hinzugefügt
+- **Passkeys / Geräte-Login (WebAuthn).** Man kann sich jetzt gerätegebunden per
+  **Fingerabdruck, Face-ID oder Geräte-PIN** anmelden – zusätzlich zum Login per
+  E-Mail-/SMS-Code (der als Rückfallweg für neue Geräte erhalten bleibt).
+  - Einrichtung im **Profil** unter „Passkeys & Geräte-Login" (nach Anmeldung per
+    Code): „Dieses Gerät hinzufügen". Mehrere Passkeys je Konto möglich, jederzeit
+    entfernbar; Liste mit „hinzugefügt/zuletzt genutzt".
+  - Auf der **Login-Seite** neuer Button „🔑 Mit Passkey anmelden" (nur sichtbar,
+    wenn der Browser Passkeys unterstützt; Anmeldung ohne Eingabe eines Kontos über
+    auffindbare Passkeys).
+  - Umsetzung **ohne externe Abhängigkeiten**: eigene, schlanke WebAuthn-Bibliothek
+    (`app/lib/WebAuthn.php`, CBOR-/COSE-Parsing, Signaturprüfung ES256 & RS256 über
+    openssl), neue Tabelle `webauthn_credentials`, JSON-Endpunkte unter `?r=passkey`.
+    Öffentliche Schlüssel werden serverseitig gespeichert, private Schlüssel bleiben
+    sicher auf dem Gerät.
+
 ## [0.46.1] - 2026-07-12
 ### Hinzugefügt
 - **Lehrkräfte im PitchDay & im Handout.** Neue Gäste-Kategorie „Lehrkraft" und
