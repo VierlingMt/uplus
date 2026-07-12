@@ -21,10 +21,11 @@ $navGroups = [
     ['Jury', [
         ['jury_feedback', 'Jury-Feedback', '🗣', ['admin', 'lead', 'juror']],
         ['ranking',       'Bewertung & Ranking', '★', ['admin', 'lead', 'juror']],
+        ['pitch',         'PitchDay', '🎤', ['admin', 'lead', 'juror']],
     ]],
     ['Verwaltung', [
         ['cycles',   'Wettbewerbsjahre', '🏆', ['admin', 'lead']],
-        ['event',    'PitchDay', '🎤', ['admin', 'lead']],
+        ['event',    'PitchDay-Orga', '🎤', ['admin', 'lead']],
         ['schools',  'Schulen', '🏫', ['admin', 'lead']],
         ['jurors',   'Jury & Nutzer', '⚖', ['admin', 'lead']],
         ['sponsors', 'Sponsoren', '🤝', ['admin', 'lead']],

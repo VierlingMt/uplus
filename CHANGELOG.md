@@ -7,6 +7,18 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.54.0] - 2026-07-12
+### Hinzugefügt
+- **Neuer Menüpunkt „PitchDay" (Jury).** Schlanke, fokussierte Seite nur mit den
+  Pitch-Teams: Mini-Ranking der nominierten Teams (Ø Businessplan, Ø Pitch,
+  Gesamt) mit Platz 1–X und Podest 🥇🥈🥉, Bühnenreihenfolge-Pill und direktem
+  „Bewerten"-Button je Team, darunter die Nachrücker. Sauber getrennt von
+  „Bewertung & Ranking" (dort weiterhin alle Teams) – ideal zum Abarbeiten am
+  Veranstaltungstag. Respektiert das Einfrieren (dann nur „Ansehen").
+### Geändert
+- Der Verwaltungs-Menüpunkt „PitchDay" (Orga: Gäste, Ablauf, Budget) heißt jetzt
+  **„PitchDay-Orga"**, um ihn klar von der neuen Jury-Seite abzugrenzen.
+
 ## [0.53.1] - 2026-07-12
 ### Geändert
 - **Freigeben nur noch als 15-Minuten-Notausstieg.** Ein eingefrorenes Ranking
