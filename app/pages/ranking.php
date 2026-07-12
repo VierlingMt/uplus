@@ -133,6 +133,14 @@ if (is_post() && $isAdmin) {
             Database::run('UPDATE teams SET status=?, pitch_order=? WHERE id=?', [$st, $ord, (int) input('team_id')]);
             flash('success', 'Status aktualisiert.');
         }
+    } elseif ($action === 'bp_freeze') {
+        Settings::set('bp_frozen', '1');
+        Audit::log('bp.freeze', 'Businessplan-Bewertung eingefroren.');
+        flash('success', 'Businessplan-Bewertung eingefroren – die Jury kann die BP-Punkte nicht mehr ändern. Jederzeit wieder freizugeben.');
+    } elseif ($action === 'bp_unfreeze') {
+        Settings::set('bp_frozen', '0');
+        Audit::log('bp.unfreeze', 'Businessplan-Bewertung wieder freigegeben.');
+        flash('success', 'Businessplan-Bewertung wieder freigegeben – die Jury kann die BP-Punkte wieder ändern.');
     } elseif ($action === 'freeze') {
         Settings::set('ranking_frozen', '1');
         Settings::set('ranking_frozen_at', date('Y-m-d H:i:s'));
@@ -155,6 +163,7 @@ if (is_post() && $isAdmin) {
 }
 
 $rows = $loadRows();
+$bpFrozen = Settings::getInt('bp_frozen', 0) === 1;
 $frozen = Settings::getInt('ranking_frozen', 0) === 1;
 // Freigabe (Rückgängig) nur innerhalb von 15 Minuten nach dem Einfrieren.
 $frozenAt = $frozen ? Settings::get('ranking_frozen_at') : null;
@@ -207,17 +216,30 @@ ob_start(); ?>
           ? 'Fair nominieren (' . (int) $pitchSlots . ' Plätze je Schule)'
           : 'Top ' . (int) $pitchSlots . ' (+' . (int) $fallbackSlots . ') nominieren' ?></button>
       </form>
+      <?php if (!$frozen): ?>
+        <?php if ($bpFrozen): ?>
+          <form method="post" action="<?= url('ranking') ?>" data-confirm="Businessplan-Bewertung wieder freigeben? Die Jury kann die BP-Punkte danach wieder ändern.">
+            <?= Csrf::field() ?><input type="hidden" name="action" value="bp_unfreeze">
+            <button class="btn btn--ghost">🔓 BP-Runde freigeben</button>
+          </form>
+        <?php else: ?>
+          <form method="post" action="<?= url('ranking') ?>" data-confirm="Businessplan-Bewertung jetzt einfrieren? Die Jury kann die BP-Punkte dann nicht mehr ändern (die Pitch-Bewertung am PitchDay bleibt möglich).">
+            <?= Csrf::field() ?><input type="hidden" name="action" value="bp_freeze">
+            <button class="btn btn--ghost">🔒 BP-Runde einfrieren</button>
+          </form>
+        <?php endif; ?>
+      <?php endif; ?>
       <?php if ($frozen): ?>
         <?php if ($canUnfreeze): ?>
-        <form method="post" action="<?= url('ranking') ?>" data-confirm="Bewertung wieder freigeben? Die Jury kann danach ihre Bewertungen wieder ändern.">
+        <form method="post" action="<?= url('ranking') ?>" data-confirm="Endergebnis wieder freigeben? Die Jury kann danach ihre Bewertungen wieder ändern.">
           <?= Csrf::field() ?><input type="hidden" name="action" value="unfreeze">
-          <button class="btn btn--ghost">🔓 Freigeben (noch <?= $unfreezeMinLeft ?> Min)</button>
+          <button class="btn btn--ghost">🔓 Endergebnis freigeben (noch <?= $unfreezeMinLeft ?> Min)</button>
         </form>
         <?php endif; ?>
       <?php else: ?>
-        <form method="post" action="<?= url('ranking') ?>" data-confirm="Bewertung jetzt einfrieren? Das Ranking wird festgeschrieben – nur die Verwaltung kann danach noch Änderungen vornehmen.">
+        <form method="post" action="<?= url('ranking') ?>" data-confirm="Endergebnis jetzt einfrieren? Das Ranking wird festgeschrieben – nur die Verwaltung kann danach noch Änderungen vornehmen.">
           <?= Csrf::field() ?><input type="hidden" name="action" value="freeze">
-          <button class="btn btn--ghost">🔒 Einfrieren</button>
+          <button class="btn btn--ghost">🔒 Endergebnis einfrieren</button>
         </form>
       <?php endif; ?>
     </div>
@@ -227,8 +249,16 @@ ob_start(); ?>
 <?php if ($frozen): ?>
 <div class="card" style="border-left:4px solid var(--wj-blue)"><div class="card__body" style="display:flex;align-items:center;gap:10px">
   <span style="font-size:20px">🔒</span>
-  <div><strong>Bewertung eingefroren – das Ranking ist festgeschrieben.</strong>
+  <div><strong>Endergebnis eingefroren – das Ranking ist festgeschrieben.</strong>
     <span class="muted"><?php if (!$isAdmin): ?>Deine Bewertungen sind gespeichert und können nicht mehr geändert werden.<?php elseif ($canUnfreeze): ?>Die Jury kann nichts mehr ändern. Verklickt? Noch <?= $unfreezeMinLeft ?> Minute<?= $unfreezeMinLeft === 1 ? '' : 'n' ?> lang oben wieder freizugeben; danach bleibt es endgültig festgeschrieben.<?php else: ?>Die Jury kann nichts mehr ändern. Das 15-Minuten-Fenster zum Freigeben ist abgelaufen – das Ranking bleibt endgültig festgeschrieben.<?php endif; ?></span></div>
+</div></div>
+<?php elseif ($bpFrozen): ?>
+<div class="card" style="border-left:4px solid var(--wj-blue)"><div class="card__body" style="display:flex;align-items:center;gap:10px">
+  <span style="font-size:20px">🔒</span>
+  <div><strong>Businessplan-Bewertung eingefroren.</strong>
+    <span class="muted"><?= $isAdmin
+      ? 'Die BP-Punkte sind festgeschrieben – die Jury kann sie nicht mehr ändern. Die Pitch-Bewertung am PitchDay bleibt möglich. Oben jederzeit wieder freizugeben.'
+      : 'Die Businessplan-Punkte sind gespeichert und können nicht mehr geändert werden.' ?></span></div>
 </div></div>
 <?php endif; ?>
 

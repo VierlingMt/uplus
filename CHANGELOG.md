@@ -7,6 +7,20 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.55.0] - 2026-07-12
+### Hinzugefügt
+- **Businessplan-Bewertungsrunde separat einfrierbar** (vor dem PitchDay). Über
+  „🔒 BP-Runde einfrieren" (Bewertung & Ranking) werden die Businessplan-Punkte
+  festgeschrieben – die Jury kann sie nicht mehr ändern, während die
+  Pitch-Bewertung am Veranstaltungstag weiterhin möglich bleibt. Von der
+  Verwaltung jederzeit wieder freizugeben. Unabhängig vom finalen
+  „Endergebnis einfrieren" (nach dem Pitch, mit 15-Minuten-Notausstieg).
+### Geändert
+- Bewertungsformular sperrt jetzt phasengenau: bei eingefrorener BP-Runde sind nur
+  die Businessplan-Kriterien schreibgeschützt, die Pitch-Kriterien bleiben
+  editierbar (bereits gespeicherte BP-Punkte werden dabei zuverlässig erhalten).
+- Der bisherige Freeze heißt zur Abgrenzung nun **„Endergebnis einfrieren"**.
+
 ## [0.54.0] - 2026-07-12
 ### Hinzugefügt
 - **Neuer Menüpunkt „PitchDay" (Jury).** Schlanke, fokussierte Seite nur mit den

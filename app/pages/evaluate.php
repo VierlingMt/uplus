@@ -15,10 +15,15 @@ if (!$team) { http_response_code(404); render('error', ['title' => 'Nicht gefund
 $isPitch = in_array($team['status'], ['nominated', 'fallback'], true);
 $plan = Database::one('SELECT id FROM business_plans WHERE team_id=? AND is_current=1', [$teamId]);
 
-// Ist die Bewertung eingefroren? Dann darf nur noch die Verwaltung (Admin/Leitung)
-// etwas ändern – für die Jury ist alles schreibgeschützt.
-$frozen = Settings::getInt('ranking_frozen', 0) === 1;
-$locked = $frozen && !Auth::isManager();
+// Zwei getrennte Sperren: die Businessplan-Runde (vor dem PitchDay) und das
+// Gesamt-/Endergebnis (nach dem Pitch). Die Verwaltung (Admin/Leitung) darf
+// jeweils weiter ändern; für die Jury ist die jeweilige Phase schreibgeschützt.
+$bpFrozen    = Settings::getInt('bp_frozen', 0) === 1;
+$finalFrozen = Settings::getInt('ranking_frozen', 0) === 1;
+$isManager   = Auth::isManager();
+$bpLocked    = ($bpFrozen || $finalFrozen) && !$isManager;  // Businessplan-Punkte gesperrt
+$pitchLocked = $finalFrozen && !$isManager;                 // Pitch-Punkte gesperrt
+$allLocked   = $bpLocked && (!$isPitch || $pitchLocked);    // gar nichts editierbar
 
 // Bestehende Bewertung + Scores laden
 $eval = Database::one('SELECT * FROM evaluations WHERE juror_id=? AND team_id=?', [$jurorId, $teamId]);
@@ -32,7 +37,7 @@ if ($eval) {
 if (is_post()) {
     Csrf::check();
 
-    if ($locked) {
+    if ($allLocked) {
         if (input('ajax') === '1') {
             http_response_code(423);
             header('Content-Type: application/json; charset=utf-8');
@@ -56,16 +61,25 @@ if (is_post()) {
          ON DUPLICATE KEY UPDATE points=VALUES(points), notes=VALUES(notes), phase=VALUES(phase)'
     );
 
-    $bpTotal = 0;
-    foreach (Criteria::BUSINESSPLAN as $k => $c) {
-        $p = max(0, min(10, (int) input('pts_' . $k, 0)));
-        $upsert->execute([$evalId, $k, 'businessplan', $p, trim((string) input('note_' . $k)) ?: null]);
-        $bpTotal += $p;
+    // Gesperrte Phasen NICHT neu schreiben: deren Felder sind im Formular
+    // deaktiviert und werden vom Browser gar nicht mitgeschickt – ein Neuberechnen
+    // würde die bestehenden Punkte mit 0 überbügeln. Darum bei Sperre die schon
+    // gespeicherten Werte beibehalten.
+    $bpTotal     = $eval['bp_total'] ?? 0;
+    $bpSubmitted = (int) ($eval['bp_submitted'] ?? 0);
+    if (!$bpLocked) {
+        $bpTotal = 0;
+        foreach (Criteria::BUSINESSPLAN as $k => $c) {
+            $p = max(0, min(10, (int) input('pts_' . $k, 0)));
+            $upsert->execute([$evalId, $k, 'businessplan', $p, trim((string) input('note_' . $k)) ?: null]);
+            $bpTotal += $p;
+        }
+        $bpSubmitted = 1;
     }
 
-    $pitchTotal = null;
-    $pitchSubmitted = 0;
-    if ($isPitch) {
+    $pitchTotal     = $eval['pitch_total'] ?? null;
+    $pitchSubmitted = (int) ($eval['pitch_submitted'] ?? 0);
+    if ($isPitch && !$pitchLocked) {
         $pitchTotal = 0;
         foreach (Criteria::PITCH as $k => $c) {
             $p = max(0, min(10, (int) input('pts_' . $k, 0)));
@@ -77,8 +91,8 @@ if (is_post()) {
 
     $grand = Criteria::grandTotal((float) $bpTotal, (float) ($pitchTotal ?? 0));
     Database::run(
-        'UPDATE evaluations SET bp_submitted=1, pitch_submitted=?, bp_total=?, pitch_total=?, grand_total=? WHERE id=?',
-        [$pitchSubmitted, $bpTotal, $pitchTotal, $grand, $evalId]
+        'UPDATE evaluations SET bp_submitted=?, pitch_submitted=?, bp_total=?, pitch_total=?, grand_total=? WHERE id=?',
+        [$bpSubmitted, $pitchSubmitted, $bpTotal, $pitchTotal, $grand, $evalId]
     );
 
     // Autosave: still speichern und als JSON antworten (keine Umleitung / kein Flash).
@@ -93,8 +107,8 @@ if (is_post()) {
     redirect(url('evaluate', ['team' => $teamId]));
 }
 
-$renderCriteria = function (array $group, string $phaseLabel) use ($scores, $locked) {
-    $dis = $locked ? ' disabled' : '';
+$renderCriteria = function (array $group, string $phaseLabel, bool $lock) use ($scores) {
+    $dis = $lock ? ' disabled' : '';
     foreach ($group as $k => $c) {
         $cur = $scores[$k]['points'] ?? '';
         $note = $scores[$k]['notes'] ?? '';
@@ -119,27 +133,34 @@ ob_start(); ?>
   <?php if ($plan): ?> · <a href="<?= url('bp_download', ['id' => $plan['id']]) ?>" target="_blank">Businessplan-PDF ↗</a><?php endif; ?>
 </p>
 
-<?php if ($frozen): ?>
+<?php if ($finalFrozen || $bpFrozen): ?>
   <div class="card mb" style="border-left:4px solid var(--wj-blue)"><div class="card__body" style="display:flex;align-items:center;gap:10px">
     <span style="font-size:20px">🔒</span>
-    <div><strong>Bewertung eingefroren.</strong>
-      <span class="muted"><?= $locked
-        ? 'Das Ranking ist festgeschrieben – Änderungen sind nicht mehr möglich (nur lesend).'
-        : 'Das Ranking ist festgeschrieben. Als Verwaltung kannst du hier noch Korrekturen vornehmen.' ?></span></div>
+    <div><?php if ($finalFrozen): ?>
+        <strong>Endergebnis eingefroren.</strong>
+        <span class="muted"><?= $isManager
+          ? 'Das Ranking ist festgeschrieben. Als Verwaltung kannst du hier noch Korrekturen vornehmen.'
+          : 'Das Ranking ist festgeschrieben – Änderungen sind nicht mehr möglich (nur lesend).' ?></span>
+      <?php else: ?>
+        <strong>Businessplan-Bewertung eingefroren.</strong>
+        <span class="muted"><?= $isManager
+          ? 'Die BP-Punkte sind festgeschrieben (Nominierung steht). Als Verwaltung kannst du noch korrigieren.'
+          : 'Die BP-Punkte sind festgeschrieben.' . ($isPitch ? ' Die Pitch-Bewertung am PitchDay ist weiterhin möglich.' : '') ?></span>
+      <?php endif; ?></div>
   </div></div>
 <?php endif; ?>
 
-<form method="post" action="<?= url('evaluate', ['team' => $teamId]) ?>"<?= $locked ? '' : ' data-autosave' ?>>
+<form method="post" action="<?= url('evaluate', ['team' => $teamId]) ?>"<?= $allLocked ? '' : ' data-autosave' ?>>
   <?= Csrf::field() ?>
   <div class="card mb">
-    <div class="card__head">Businessplan <span class="muted" style="font-weight:400">— Summe <span data-score-total>0</span>/50</span></div>
-    <div class="card__body eval-grid"><?php $renderCriteria(Criteria::BUSINESSPLAN, 'businessplan'); ?></div>
+    <div class="card__head">Businessplan <span class="muted" style="font-weight:400">— Summe <span data-score-total>0</span>/50<?= $bpLocked ? ' · 🔒 eingefroren' : '' ?></span></div>
+    <div class="card__body eval-grid"><?php $renderCriteria(Criteria::BUSINESSPLAN, 'businessplan', $bpLocked); ?></div>
   </div>
 
   <?php if ($isPitch): ?>
     <div class="card mb">
-      <div class="card__head">Pitch-Day <span class="muted" style="font-weight:400">(Team pitcht)</span></div>
-      <div class="card__body eval-grid"><?php $renderCriteria(Criteria::PITCH, 'pitch'); ?></div>
+      <div class="card__head">Pitch-Day <span class="muted" style="font-weight:400">(Team pitcht)<?= $pitchLocked ? ' · 🔒 eingefroren' : '' ?></span></div>
+      <div class="card__body eval-grid"><?php $renderCriteria(Criteria::PITCH, 'pitch', $pitchLocked); ?></div>
     </div>
   <?php else: ?>
     <p class="muted mb">Pitch-Kriterien erscheinen, sobald das Team für den Pitch-Day nominiert ist.</p>
@@ -151,7 +172,7 @@ ob_start(); ?>
       <span class="muted" style="font-size:13px">10 herausragend · 8–9 sehr gut · 6–7 gut · 4–5 ausbaufähig · 1–3 schwach · 0 unbewertbar</span>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
-      <?php if ($locked): ?>
+      <?php if ($allLocked): ?>
         <span class="muted">🔒 Eingefroren – schreibgeschützt</span>
       <?php else: ?>
         <span class="autosave-status" data-autosave-status aria-live="polite">✓ Automatisch gespeichert</span>
