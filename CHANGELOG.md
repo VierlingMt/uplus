@@ -7,6 +7,22 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-07-12
+### Hinzugefügt
+- **Mehrfachrollen je Nutzer.** Eine Person kann jetzt mehrere Rollen zugleich
+  haben – z. B. Jury **und** Projektleitung, oder zusätzlich Admin. In „Jury &
+  Nutzer" werden die Rollen als **Chips zur Mehrfachauswahl** gepflegt und in der
+  Liste als mehrere Chips angezeigt. Neue Tabelle `user_roles` (Backfill aus der
+  bisherigen Einzelrolle); `users.role` bleibt als „Hauptrolle" (höchste
+  Berechtigung) erhalten und wird synchron gehalten.
+### Geändert
+- **Alle rollenbasierten Auswertungen berücksichtigen die volle Rollenmenge:**
+  Navigation und Sichtbarkeiten, Jury-Zählungen und -Mittelwerte (ein Admin, der
+  zugleich Jury ist, zählt nun als Jury; reine Admin-Konten weiterhin nicht),
+  Zuordnungslisten der Wettbewerbsjahre, Projektleitung in Kontakt/Handout sowie
+  die Lehrkraft-Zuordnung der Schulen. Reine Lehrkräfte bleiben schulgebunden;
+  ist dieselbe Person auch Jury/Leitung, greift die weitergehende Berechtigung.
+
 ## [0.44.7] - 2026-07-12
 ### Hinzugefügt
 - **„Jury & Nutzer": Filter nach Wettbewerbsjahr** – standardmäßig das aktuelle

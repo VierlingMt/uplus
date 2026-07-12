@@ -165,8 +165,8 @@ $schoolCounts  = Cycle::schoolCounts();
 
 // Daten für die Zuordnung
 if ($sel) {
-    $allJurors = Database::all("SELECT id, name, email, specialty FROM users WHERE role = 'juror' ORDER BY name");
-    $allLeads  = Database::all("SELECT id, name, email FROM users WHERE role = 'lead' ORDER BY name");
+    $allJurors = Database::all("SELECT id, name, email, specialty FROM users u WHERE EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role = 'juror') ORDER BY name");
+    $allLeads  = Database::all("SELECT id, name, email FROM users u WHERE EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role = 'lead') ORDER BY name");
     $allSchools = Database::all('SELECT id, name, short_name FROM schools ORDER BY name');
     $memberRole = [];
     foreach (Database::all('SELECT user_id, role_in_cycle FROM cycle_members WHERE cycle_id = ?', [$sel['id']]) as $r) {

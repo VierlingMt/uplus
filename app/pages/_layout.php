@@ -31,7 +31,10 @@ $navGroups = [
         ['admin',    'Admin', '⚙', ['admin', 'lead']],
     ]],
 ];
-$roleLabel = ['admin' => 'Admin', 'lead' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 'Jury'][$role] ?? $role;
+// Alle Rollen des Nutzers als Label (Mehrfachrollen möglich).
+$roleLabel = class_exists('Roles') && Auth::roles()
+    ? implode(' · ', array_map([Roles::class, 'label'], Auth::roles()))
+    : (['admin' => 'Admin', 'lead' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 'Jury'][$role] ?? $role);
 ?>
 <!doctype html>
 <html lang="de" data-base="<?= e(rtrim(cfg('base_path', ''), '/')) ?>">
@@ -57,7 +60,7 @@ $roleLabel = ['admin' => 'Admin', 'lead' => 'Projektleitung', 'teacher' => 'Lehr
     </div>
     <nav class="nav">
       <?php foreach ($navGroups as [$groupLabel, $items]): ?>
-        <?php $visible = array_filter($items, fn($it) => in_array($role, $it[3], true)); ?>
+        <?php $visible = array_filter($items, fn($it) => (bool) array_intersect($it[3], Auth::roles())); ?>
         <?php if ($visible): ?>
           <div class="nav__group"><?= e($groupLabel) ?></div>
           <?php foreach ($visible as [$r, $label, $ic, $roles]): ?>

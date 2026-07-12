@@ -101,7 +101,7 @@ if (is_post() && !$readonly) {
 }
 
 $u = Auth::user();
-$roleLabel = ['admin' => 'Admin', 'lead' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 'Jury'][$u['role']] ?? $u['role'];
+$myRoles = Roles::forUser((int) $u['id']) ?: Roles::sanitize([$u['role']]);
 $pendingPhone = $readonly ? null : ContactChange::pendingPhone((int) Auth::id());
 $smsOk = Sms::isConfigured();
 
@@ -117,7 +117,7 @@ ob_start(); ?>
       <?php endif; ?>
       <div>
         <strong style="font-size:18px"><?= e($u['name']) ?></strong><br>
-        <span class="pill blue"><?= e($roleLabel) ?></span>
+        <?php foreach ($myRoles as $r): ?><span class="pill <?= Roles::pill($r) ?>" style="margin-right:4px"><?= e(Roles::label($r)) ?></span><?php endforeach; ?>
       </div>
     </div>
     <?php if (!$readonly): ?>

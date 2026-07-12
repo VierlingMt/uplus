@@ -7,7 +7,7 @@ $stats = [
     'schools' => (int) Database::value('SELECT COUNT(*) FROM schools'),
     'teams'   => (int) Database::value('SELECT COUNT(*) FROM teams'),
     'plans'   => (int) Database::value('SELECT COUNT(DISTINCT team_id) FROM business_plans WHERE is_current = 1'),
-    'jurors'  => (int) Database::value("SELECT COUNT(*) FROM users WHERE role = 'juror'"),
+    'jurors'  => (int) Database::value("SELECT COUNT(*) FROM user_roles WHERE role = 'juror'"),
 ];
 
 // Projektablauf: konfigurierbare Meilensteine des aktiven Wettbewerbsjahres.

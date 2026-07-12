@@ -44,7 +44,7 @@ if ($eid = (int) input('edit', 0)) {
 }
 $schools = Database::all(
     'SELECT s.*, (SELECT COUNT(*) FROM teams t WHERE t.school_id = s.id) AS teams,
-            (SELECT COUNT(*) FROM users u WHERE u.school_id = s.id AND u.role = "teacher") AS teachers
+            (SELECT COUNT(*) FROM users u JOIN user_roles ur ON ur.user_id = u.id AND ur.role = "teacher" WHERE u.school_id = s.id) AS teachers
      FROM schools s ORDER BY s.name'
 );
 

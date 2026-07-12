@@ -308,6 +308,11 @@ final class Migrator
                 'name'    => 'Jury-Bewertung von Martin Vierling (martin.vierling@vierling.de) an KI angelehnt',
                 'up'      => [self::class, 'seedMartinEvaluations'],
             ],
+            [
+                'version' => '2026_07_28_user_roles',
+                'name'    => 'Mehrfachrollen je Nutzer (user_roles) – Backfill aus users.role',
+                'up'      => [self::class, 'userRoles'],
+            ],
         ];
     }
 
@@ -591,6 +596,33 @@ final class Migrator
         );
         foreach (PitchDay::AGENDA_TEMPLATE as $i => [$from, $to, $title]) {
             $a->execute([$eventId, $from, $to, $title, ($i + 1) * 10]);
+        }
+    }
+
+    /**
+     * Mehrfachrollen je Nutzer. Bisher trug jeder Nutzer genau eine Rolle
+     * (`users.role`). Manche Personen sind aber zugleich z. B. Jury UND
+     * Projektleitung (und ggf. Admin). Diese Tabelle bildet die n:m-Beziehung ab;
+     * `users.role` bleibt als „Hauptrolle" (höchste Berechtigung) erhalten und
+     * wird beim Speichern synchron gehalten. Backfill übernimmt die bisherige
+     * Einzelrolle jedes Nutzers (nur beim ersten Lauf, wenn die Tabelle leer ist).
+     */
+    public static function userRoles(PDO $pdo): void
+    {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS user_roles (
+                user_id INT UNSIGNED NOT NULL,
+                role    ENUM('admin','lead','teacher','juror') NOT NULL,
+                PRIMARY KEY (user_id, role),
+                KEY idx_user_roles_role (role),
+                CONSTRAINT fk_user_roles_user FOREIGN KEY (user_id)
+                    REFERENCES users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+        $count = (int) $pdo->query('SELECT COUNT(*) FROM user_roles')->fetchColumn();
+        if ($count === 0) {
+            $pdo->exec('INSERT IGNORE INTO user_roles (user_id, role) SELECT id, role FROM users');
         }
     }
 

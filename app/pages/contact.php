@@ -8,8 +8,9 @@ $roles = ['lead' => 'Projektleitung'];
 // Das Admin/Super-Admin-Konto ist eine technische Rolle und erscheint hier nicht.
 $leads = Database::all(
     'SELECT id, name, email, phone, specialty, photo_path, role
-     FROM users
-     WHERE role = "lead" AND is_active = 1
+     FROM users u
+     WHERE u.is_active = 1
+       AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role = "lead")
      ORDER BY name'
 );
 
@@ -36,7 +37,7 @@ ob_start(); ?>
           <?php endif; ?>
           <div>
             <strong style="font-size:17px"><?= e($l['name']) ?></strong><br>
-            <span class="pill blue" style="margin-top:6px"><?= e($roles[$l['role']] ?? $l['role']) ?></span>
+            <span class="pill blue" style="margin-top:6px">Projektleitung</span>
           </div>
           <?php if (!empty($l['specialty'])): ?>
             <div class="muted" style="font-size:14px"><?= e($l['specialty']) ?></div>

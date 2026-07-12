@@ -16,10 +16,10 @@ $cols = $showAiEval ? 10 : 9;
 $loadRows = function () use ($jurorId): array {
     $rows = Database::all(
         "SELECT t.id, t.name, t.idea_name, t.status, t.pitch_order, s.short_name, s.name AS school_name,
-                (SELECT AVG(e.bp_total)   FROM evaluations e JOIN users ju ON ju.id=e.juror_id WHERE e.team_id=t.id AND e.bp_submitted=1    AND ju.role<>'admin') AS avg_bp,
-                (SELECT COUNT(*)          FROM evaluations e JOIN users ju ON ju.id=e.juror_id WHERE e.team_id=t.id AND e.bp_submitted=1    AND ju.role<>'admin') AS n_bp,
-                (SELECT AVG(e.pitch_total)FROM evaluations e JOIN users ju ON ju.id=e.juror_id WHERE e.team_id=t.id AND e.pitch_submitted=1 AND ju.role<>'admin') AS avg_pitch,
-                (SELECT COUNT(*)          FROM evaluations e JOIN users ju ON ju.id=e.juror_id WHERE e.team_id=t.id AND e.pitch_submitted=1 AND ju.role<>'admin') AS n_pitch,
+                (SELECT AVG(e.bp_total)   FROM evaluations e JOIN users ju ON ju.id=e.juror_id WHERE e.team_id=t.id AND e.bp_submitted=1    AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = ju.id AND ur.role IN ('lead','juror'))) AS avg_bp,
+                (SELECT COUNT(*)          FROM evaluations e JOIN users ju ON ju.id=e.juror_id WHERE e.team_id=t.id AND e.bp_submitted=1    AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = ju.id AND ur.role IN ('lead','juror'))) AS n_bp,
+                (SELECT AVG(e.pitch_total)FROM evaluations e JOIN users ju ON ju.id=e.juror_id WHERE e.team_id=t.id AND e.pitch_submitted=1 AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = ju.id AND ur.role IN ('lead','juror'))) AS avg_pitch,
+                (SELECT COUNT(*)          FROM evaluations e JOIN users ju ON ju.id=e.juror_id WHERE e.team_id=t.id AND e.pitch_submitted=1 AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = ju.id AND ur.role IN ('lead','juror'))) AS n_pitch,
                 (SELECT e.id FROM evaluations e WHERE e.team_id=t.id AND e.juror_id=? AND e.bp_submitted=1) AS my_eval,
                 bp.id AS bp_id,
                 ai.total_score AS ai_score
@@ -72,7 +72,7 @@ if (is_post() && $isAdmin) {
 $rows = $loadRows();
 $fmt = fn($n) => $n === null ? '–' : rtrim(rtrim(number_format((float) $n, 1, ',', ''), '0'), ',');
 // Admin ist eine reine Servicerolle und zählt NICHT als Jurymitglied.
-$totalJurors = (int) Database::value("SELECT COUNT(*) FROM users WHERE role IN ('lead','juror') AND is_active=1");
+$totalJurors = (int) Database::value("SELECT COUNT(*) FROM users u WHERE u.is_active=1 AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role IN ('lead','juror'))");
 $phaseLabels = ['submitted' => ['eingereicht', 'muted'], 'nominated' => ['Pitch', 'teal'], 'fallback' => ['Nachrücker', 'amber'], 'eliminated' => ['raus', 'muted'], 'draft' => ['Entwurf', 'muted']];
 $roleLabels  = ['admin' => 'Admin', 'lead' => 'Projektleitung', 'juror' => 'Jury'];
 
@@ -81,8 +81,8 @@ $coverage = [];
 $coverageDone = 0;
 if ($isAdmin) {
     $evaluators = Database::all(
-        "SELECT id, name, role FROM users WHERE role IN ('lead','juror') AND is_active=1
-         ORDER BY FIELD(role,'juror','lead'), name"
+        "SELECT u.id, u.name, u.role FROM users u WHERE u.is_active=1 AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role IN ('lead','juror'))
+         ORDER BY FIELD(u.role,'juror','lead'), u.name"
     );
     $planTeams = array_values(array_filter($rows, fn($r) => $r['bp_id'])); // nur Teams mit aktuellem Businessplan
     $doneSet = [];

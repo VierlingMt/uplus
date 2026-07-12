@@ -5,14 +5,17 @@ declare(strict_types=1);
 Auth::require();
 $me = Auth::user();
 $isAdmin = Auth::isManager(); // Admin oder Projektleitung = volle Verwaltung
-$isTeacher = Auth::is('teacher');
+// Reine Lehrkraft-Sicht (schulgebunden): nur wenn die Person NICHT zugleich
+// Verwaltung oder Jury ist – sonst hat die breitere Rolle Vorrang.
+$isTeacher = Auth::has('teacher') && !$isAdmin && !Auth::has('juror');
+$canTeach  = Auth::has('teacher'); // darf für die eigene Schule hochladen
 $mySchool = $me['school_id'] ? (int) $me['school_id'] : null;
 // KI-Vorbewertung nur für Verwaltung – oder für Jury, falls im Admin freigegeben.
 $showAiEval = $isAdmin || Settings::getInt('ai_eval_jurors', 0) === 1;
 
-$canUploadFor = function (array $team) use ($isAdmin, $isTeacher, $mySchool): bool {
+$canUploadFor = function (array $team) use ($isAdmin, $canTeach, $mySchool): bool {
     if ($isAdmin) return true;
-    if ($isTeacher) return (int) $team['school_id'] === $mySchool;
+    if ($canTeach) return (int) $team['school_id'] === $mySchool;
     return false;
 };
 

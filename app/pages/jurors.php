@@ -33,7 +33,7 @@ if (is_post()) {
     }
 
     // Anlegen / Bearbeiten
-    $role  = (string) input('role');
+    $selRoles = Roles::sanitize((array) input('roles', []));
     $name  = trim((string) input('name'));
     $email = strtolower(trim((string) input('email')));
     $spec  = trim((string) input('specialty'));
@@ -42,10 +42,11 @@ if (is_post()) {
     $phone = $phoneRaw === '' ? '' : (phone_normalize($phoneRaw) ?? $phoneRaw);
     $school = (int) input('school_id', 0) ?: null;
     $active = input('is_active') ? 1 : 0;
-    if ($role !== 'teacher') { $school = null; }
+    // Schule nur für Lehrkräfte.
+    if (!in_array('teacher', $selRoles, true)) { $school = null; }
 
-    if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !isset($roles[$role])) {
-        flash('error', 'Bitte Name, gültige E-Mail und Rolle angeben.');
+    if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !$selRoles) {
+        flash('error', 'Bitte Name, gültige E-Mail und mindestens eine Rolle angeben.');
         redirect(url('jurors'));
     }
     // E-Mail-Eindeutigkeit
@@ -57,37 +58,44 @@ if (is_post()) {
 
     // Rollen-Hierarchie absichern: nur der Eigentümer/Admin darf die Admin-Rolle
     // vergeben oder Admin-Konten bearbeiten; das dauerhafte Eigentümer-Konto
-    // bleibt immer Admin.
+    // bleibt immer Admin. (users.role trägt bei Admins immer „admin", da Admin
+    // die höchste Priorität hat.)
     $target = $id > 0 ? Database::one('SELECT role, email FROM users WHERE id = ?', [$id]) : null;
-    if ($target && strtolower((string) $target['email']) === PERMANENT_OWNER) {
-        $role = 'admin';
+    $targetIsAdmin = $target && $target['role'] === 'admin';
+    if ($target && strtolower((string) $target['email']) === PERMANENT_OWNER
+        && !in_array('admin', $selRoles, true)) {
+        $selRoles[] = 'admin';
+        $selRoles = Roles::sanitize($selRoles);
     }
-    if (!$isOwner && ($role === 'admin' || ($target && $target['role'] === 'admin'))) {
+    if (!$isOwner && (in_array('admin', $selRoles, true) || $targetIsAdmin)) {
         flash('error', 'Nur ein Admin kann Admin-Konten anlegen oder bearbeiten.');
         redirect(url('jurors'));
     }
 
+    $primary = Roles::primary($selRoles);
     $photo = save_image('photo', 'usr', 'avatars');
     if ($id > 0) {
-        Database::run('UPDATE users SET role=?, name=?, email=?, specialty=?, phone=?, school_id=?, is_active=? WHERE id=?',
-            [$role, $name, $email, $spec ?: null, $phone ?: null, $school, $active, $id]);
+        Database::run('UPDATE users SET name=?, email=?, specialty=?, phone=?, school_id=?, is_active=? WHERE id=?',
+            [$name, $email, $spec ?: null, $phone ?: null, $school, $active, $id]);
         if ($photo) { Database::run('UPDATE users SET photo_path=? WHERE id=?', [$photo, $id]); }
-        Audit::log('user.update', 'Nutzer bearbeitet: ' . $name . ' <' . $email . '> (' . $role . ')', 'user', $id);
+        Roles::setForUser($id, $selRoles); // pflegt user_roles + users.role (Hauptrolle)
+        Audit::log('user.update', 'Nutzer bearbeitet: ' . $name . ' <' . $email . '> (' . implode(', ', $selRoles) . ')', 'user', $id);
         flash('success', 'Nutzer aktualisiert.');
     } else {
         $id = Database::insert('INSERT INTO users (role,name,email,specialty,phone,school_id,is_active,photo_path) VALUES (?,?,?,?,?,?,?,?)',
-            [$role, $name, $email, $spec ?: null, $phone ?: null, $school, $active, $photo]);
-        Audit::log('user.create', 'Nutzer angelegt: ' . $name . ' <' . $email . '> (' . $role . ')', 'user', $id);
+            [$primary, $name, $email, $spec ?: null, $phone ?: null, $school, $active, $photo]);
+        Roles::setForUser($id, $selRoles);
+        Audit::log('user.create', 'Nutzer angelegt: ' . $name . ' <' . $email . '> (' . implode(', ', $selRoles) . ')', 'user', $id);
         flash('success', 'Nutzer angelegt. Anmeldung erfolgt passwortlos per Login-Link an die E-Mail.');
     }
 
     // Wettbewerbsjahre zuordnen (nur Jury & Projektleitung; Lehrkräfte hängen an ihrer Schule).
-    $roleInCycle = Cycle::roleFor($role);
+    $roleInCycle = Roles::cycleRole($selRoles);
     if ($roleInCycle !== null) {
         $cycleIds = array_map('intval', (array) input('cycles', []));
         Cycle::syncUser($id, $cycleIds, $roleInCycle);
     } else {
-        Cycle::syncUser($id, [], 'juror'); // Rolle zu Lehrkraft geändert → Zyklen entfernen
+        Cycle::syncUser($id, [], 'juror'); // nur Lehrkraft → keine Zyklus-Mitgliedschaft
     }
     redirect(url('jurors'));
 }
@@ -119,9 +127,10 @@ if ($filterCycleId > 0) {
     $users = Database::all(
         'SELECT u.*, s.name AS school_name FROM users u
          LEFT JOIN schools s ON s.id = u.school_id
-         WHERE u.role = "admin"
+         WHERE EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role = "admin")
             OR u.id IN (SELECT user_id FROM cycle_members WHERE cycle_id = ?)
-            OR (u.role = "teacher" AND u.school_id IN (SELECT school_id FROM cycle_schools WHERE cycle_id = ?))
+            OR (EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role = "teacher")
+                AND u.school_id IN (SELECT school_id FROM cycle_schools WHERE cycle_id = ?))
          ORDER BY FIELD(u.role,"admin","lead","juror","teacher"), u.name',
         [$filterCycleId, $filterCycleId]
     );
@@ -140,9 +149,16 @@ foreach (Database::all(
     $userCycleIds[(int) $r['user_id']][] = (int) $r['cycle_id'];
 }
 
-$fill = function (array $u) use ($userCycleIds): string {
+// Rollen je Nutzer (Mehrfachrollen) für Anzeige + Modal-Vorbelegung.
+$userRoles = [];
+foreach (Database::all('SELECT user_id, role FROM user_roles') as $r) {
+    $userRoles[(int) $r['user_id']][] = (string) $r['role'];
+}
+$rolesOf = fn(array $u) => Roles::sanitize($userRoles[(int) $u['id']] ?? [$u['role']]);
+
+$fill = function (array $u) use ($userCycleIds, $rolesOf): string {
     return e(json_encode([
-        'id' => (int) $u['id'], 'role' => $u['role'], 'name' => $u['name'], 'email' => $u['email'],
+        'id' => (int) $u['id'], 'roles' => $rolesOf($u), 'name' => $u['name'], 'email' => $u['email'],
         'school_id' => (int) ($u['school_id'] ?? 0) ?: '', 'specialty' => $u['specialty'], 'phone' => $u['phone'],
         'is_active' => (int) $u['is_active'], 'cycles' => $userCycleIds[(int) $u['id']] ?? [],
     ], JSON_UNESCAPED_UNICODE));
@@ -189,7 +205,9 @@ ob_start(); ?>
                 </div>
               </div>
             </td>
-            <td data-label="Rolle"><span class="pill <?= ['admin'=>'blue','lead'=>'blue','juror'=>'teal','teacher'=>'amber'][$u['role']] ?? 'muted' ?>"><?= e($roles[$u['role']] ?? $u['role']) ?></span></td>
+            <td data-label="Rolle"><span style="display:inline-flex;flex-wrap:wrap;gap:4px">
+              <?php foreach ($rolesOf($u) as $r): ?><span class="pill <?= Roles::pill($r) ?>"><?= e(Roles::label($r)) ?></span><?php endforeach; ?>
+            </span></td>
             <td data-label="Login"><?php if (!$u['is_active']): ?><span class="pill muted">inaktiv</span><?php else: ?><span class="pill teal">aktiv</span><?php endif; ?></td>
             <td class="row-actions" style="white-space:nowrap;text-align:right">
               <?php
@@ -229,13 +247,17 @@ ob_start(); ?>
           'label' => 'Porträtfoto', 'aspect' => 1, 'shape' => 'round', 'format' => 'jpeg',
           'hint' => 'Foto hierher ziehen oder klicken – quadratisch zuschneiden, zoomen, drehen.',
       ]) ?>
-      <div class="field"><label>Rolle *</label>
-        <select name="role" id="roleSel">
-          <?php foreach ($roles as $rk => $rl): ?>
+      <div class="field" id="rolesField"><label>Rollen * <span class="muted" style="font-weight:400">(Mehrfachauswahl)</span></label>
+        <div class="role-chips" data-role-chips>
+          <?php foreach (Roles::ALL as $rk): ?>
             <?php if ($rk === 'admin' && !$isOwner) { continue; } // Admin-Rolle nur für Eigentümer ?>
-            <option value="<?= $rk ?>" <?= $rk === 'juror' ? 'selected' : '' ?>><?= e($rl) ?></option>
+            <label class="role-chip">
+              <input type="checkbox" name="roles[]" value="<?= e($rk) ?>" <?= $rk === 'juror' ? 'checked' : '' ?>>
+              <span><?= e(Roles::label($rk)) ?></span>
+            </label>
           <?php endforeach; ?>
-        </select>
+        </div>
+        <div class="help">Eine Person kann mehrere Rollen haben – z. B. Jury <em>und</em> Projektleitung.</div>
       </div>
       <div class="field"><label>Name *</label><input type="text" name="name" required></div>
       <div class="field"><label>E-Mail *</label><input type="email" name="email" required></div>
@@ -273,14 +295,24 @@ ob_start(); ?>
     </form>
   </div>
 </div>
+<style>
+  .role-chips{display:flex;flex-wrap:wrap;gap:8px}
+  .role-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line,#d8dee9);
+    border-radius:999px;cursor:pointer;font-weight:500;user-select:none}
+  .role-chip input{margin:0}
+  .role-chip:has(input:checked){background:#003594;color:#fff;border-color:#003594}
+</style>
 <script>
 (function(){
-  var sel=document.getElementById('roleSel'), sf=document.getElementById('schoolField'), cf=document.getElementById('cyclesField');
+  var chips=document.querySelectorAll('#userModal input[name="roles[]"]');
+  var sf=document.getElementById('schoolField'), cf=document.getElementById('cyclesField');
+  function has(r){ for(var i=0;i<chips.length;i++){ if(chips[i].value===r && chips[i].checked) return true; } return false; }
   function upd(){
-    if(sf) sf.style.display = sel.value==='teacher' ? '' : 'none';
-    if(cf) cf.style.display = sel.value==='teacher' ? 'none' : '';
+    if(sf) sf.style.display = has('teacher') ? '' : 'none';
+    if(cf) cf.style.display = (has('admin')||has('lead')||has('juror')) ? '' : 'none';
   }
-  if(sel){ sel.addEventListener('change',upd); upd(); }
+  chips.forEach(function(c){ c.addEventListener('change',upd); });
+  upd();
 })();
 </script>
 <?php

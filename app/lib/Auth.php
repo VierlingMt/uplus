@@ -50,10 +50,27 @@ final class Auth
     {
         Database::run('UPDATE users SET last_login_at = NOW() WHERE id = ?', [$user['id']]);
         session_regenerate_id(true);
-        $_SESSION['uid']  = (int) $user['id'];
-        $_SESSION['role'] = $user['role'];
-        $_SESSION['name'] = $user['name'];
+        $_SESSION['uid']   = (int) $user['id'];
+        $_SESSION['roles'] = self::loadRoles((int) $user['id'], $user['role'] ?? null);
+        $_SESSION['role']  = Roles::primary($_SESSION['roles']) ?? ($user['role'] ?? null);
+        $_SESSION['name']  = $user['name'];
         Audit::event('login.success', 'Erfolgreich angemeldet', $user);
+    }
+
+    /**
+     * Rollenmenge eines Nutzers laden. Fällt – etwa unmittelbar nach der
+     * Migration oder bei Altbestand – auf die Einzelrolle zurück, damit nie eine
+     * leere Rollenmenge entsteht.
+     *
+     * @return string[]
+     */
+    private static function loadRoles(int $userId, ?string $fallback): array
+    {
+        $roles = Roles::forUser($userId);
+        if (!$roles && $fallback !== null) {
+            $roles = Roles::sanitize([$fallback]);
+        }
+        return $roles;
     }
 
     public static function logout(): void
@@ -77,26 +94,44 @@ final class Auth
         return isset($_SESSION['uid']) ? (int) $_SESSION['uid'] : null;
     }
 
+    /** Hauptrolle (höchste Berechtigung) – für Anzeige/Badges. */
     public static function role(): ?string
     {
         return $_SESSION['role'] ?? null;
     }
 
+    /** Alle Rollen des angemeldeten Nutzers. @return string[] */
+    public static function roles(): array
+    {
+        if (isset($_SESSION['roles']) && is_array($_SESSION['roles'])) {
+            return $_SESSION['roles'];
+        }
+        $r = self::role();
+        return $r !== null ? [$r] : [];
+    }
+
+    /** Hat der Nutzer mindestens eine der genannten Rollen? */
     public static function is(string ...$roles): bool
     {
-        return in_array(self::role(), $roles, true);
+        return (bool) array_intersect($roles, self::roles());
+    }
+
+    /** Hat genau diese Rolle (Mehrfachrollen berücksichtigt). */
+    public static function has(string $role): bool
+    {
+        return in_array($role, self::roles(), true);
     }
 
     /** Eigentümer/Super-Admin. */
     public static function isAdmin(): bool
     {
-        return self::role() === 'admin';
+        return self::has('admin');
     }
 
     /** Projektleitung. */
     public static function isLead(): bool
     {
-        return self::role() === 'lead';
+        return self::has('lead');
     }
 
     /** Volle Verwaltung: Admin oder Projektleitung. */
@@ -127,14 +162,16 @@ final class Auth
     {
         if (!isset($_SESSION['impersonator'])) {
             $_SESSION['impersonator'] = [
-                'uid'  => (int) $_SESSION['uid'],
-                'role' => $_SESSION['role'],
-                'name' => $_SESSION['name'],
+                'uid'   => (int) $_SESSION['uid'],
+                'role'  => $_SESSION['role'] ?? null,
+                'roles' => self::roles(),
+                'name'  => $_SESSION['name'],
             ];
         }
-        $_SESSION['uid']  = (int) $target['id'];
-        $_SESSION['role'] = $target['role'];
-        $_SESSION['name'] = $target['name'];
+        $_SESSION['uid']   = (int) $target['id'];
+        $_SESSION['roles'] = self::loadRoles((int) $target['id'], $target['role'] ?? null);
+        $_SESSION['role']  = Roles::primary($_SESSION['roles']) ?? ($target['role'] ?? null);
+        $_SESSION['name']  = $target['name'];
         self::$cached = null;
     }
 
@@ -142,9 +179,10 @@ final class Auth
     public static function stopImpersonation(): void
     {
         if (isset($_SESSION['impersonator'])) {
-            $_SESSION['uid']  = (int) $_SESSION['impersonator']['uid'];
-            $_SESSION['role'] = $_SESSION['impersonator']['role'];
-            $_SESSION['name'] = $_SESSION['impersonator']['name'];
+            $_SESSION['uid']   = (int) $_SESSION['impersonator']['uid'];
+            $_SESSION['role']  = $_SESSION['impersonator']['role'] ?? null;
+            $_SESSION['roles'] = $_SESSION['impersonator']['roles'] ?? ($_SESSION['role'] !== null ? [$_SESSION['role']] : []);
+            $_SESSION['name']  = $_SESSION['impersonator']['name'];
             unset($_SESSION['impersonator']);
             self::$cached = null;
         }

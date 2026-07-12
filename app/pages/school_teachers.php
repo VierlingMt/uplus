@@ -29,6 +29,7 @@ if (is_post()) {
                 'INSERT INTO users (role, name, email, phone, school_id, is_active) VALUES (?,?,?,?,?,1)',
                 ['teacher', $name, $email, $mobile ?: null, $schoolId]
             );
+            Roles::setForUser($tid, ['teacher']); // Mehrfachrollen-Tabelle pflegen
             Audit::log('teacher.create', 'Projektlehrer angelegt: ' . $name . ' (' . $school['name'] . ')', 'user', $tid);
             flash('success', 'Projektlehrer angelegt. Anmeldung per Login-Link an die E-Mail möglich.');
         }
@@ -37,7 +38,7 @@ if (is_post()) {
 
     if ($action === 'update_teacher') {
         $id = (int) input('id');
-        $t = Database::one('SELECT * FROM users WHERE id = ? AND role = "teacher" AND school_id = ?', [$id, $schoolId]);
+        $t = Database::one('SELECT * FROM users WHERE id = ? AND school_id = ? AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = users.id AND ur.role = "teacher")', [$id, $schoolId]);
         if ($t) {
             $name   = trim((string) input('name'));
             $email  = strtolower(trim((string) input('email')));
@@ -61,8 +62,8 @@ if (is_post()) {
 
     if ($action === 'delete_teacher') {
         $id = (int) input('id');
-        $tn = (string) Database::value('SELECT name FROM users WHERE id = ? AND role = "teacher" AND school_id = ?', [$id, $schoolId]);
-        Database::run('DELETE FROM users WHERE id = ? AND role = "teacher" AND school_id = ?', [$id, $schoolId]);
+        $tn = (string) Database::value('SELECT name FROM users WHERE id = ? AND school_id = ? AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = users.id AND ur.role = "teacher")', [$id, $schoolId]);
+        Database::run('DELETE FROM users WHERE id = ? AND school_id = ? AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = users.id AND ur.role = "teacher")', [$id, $schoolId]);
         Audit::log('teacher.delete', 'Projektlehrer entfernt: ' . ($tn ?: ('#' . $id)), 'user', $id);
         flash('success', 'Projektlehrer entfernt.');
         redirect(url('school_teachers', ['school' => $schoolId]));
@@ -70,7 +71,7 @@ if (is_post()) {
 }
 
 $teachers = Database::all(
-    'SELECT * FROM users WHERE role = "teacher" AND school_id = ? ORDER BY name',
+    'SELECT * FROM users WHERE school_id = ? AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = users.id AND ur.role = "teacher") ORDER BY name',
     [$schoolId]
 );
 

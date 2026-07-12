@@ -10,9 +10,10 @@ $bp = Database::one(
 );
 if (!$bp) { http_response_code(404); exit('Nicht gefunden.'); }
 
-// Lehrkräfte nur eigene Schule; Admin & Jury alles
+// Reine Lehrkräfte nur eigene Schule; Admin, Projektleitung & Jury alles.
 $me = Auth::user();
-if (Auth::is('teacher') && (int) $bp['school_id'] !== (int) ($me['school_id'] ?? 0)) {
+$teacherOnly = Auth::has('teacher') && !Auth::isManager() && !Auth::has('juror');
+if ($teacherOnly && (int) $bp['school_id'] !== (int) ($me['school_id'] ?? 0)) {
     http_response_code(403); exit('Kein Zugriff.');
 }
 

@@ -124,8 +124,10 @@ else:
     // „Kontakt" (contact.php). Das Admin/Super-Admin-Konto ist eine technische
     // Rolle und erscheint hier bewusst nicht.
     $leads = Database::all(
-        'SELECT name, email, phone, specialty FROM users
-         WHERE role = "lead" AND is_active = 1 ORDER BY name'
+        'SELECT name, email, phone, specialty FROM users u
+         WHERE u.is_active = 1
+           AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role = "lead")
+         ORDER BY name'
     );
 
     $nStudents = (int) Database::value('SELECT COUNT(*) FROM students');

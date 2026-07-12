@@ -110,9 +110,13 @@ if (is_post()) {
     redirect(url('materials'));
 }
 
-// Sichtbarkeit je Rolle
-$role = Auth::role();
-$visClause = $isAdmin ? '' : "WHERE visibility = 'all' OR visibility = " . Database::pdo()->quote($role);
+// Sichtbarkeit je Rolle – bei Mehrfachrollen zählt jede Rolle des Nutzers.
+if ($isAdmin) {
+    $visClause = '';
+} else {
+    $vals = array_map(static fn($r) => Database::pdo()->quote($r), array_merge(['all'], Auth::roles()));
+    $visClause = 'WHERE visibility IN (' . implode(', ', $vals) . ')';
+}
 $materials = Database::all("SELECT * FROM materials $visClause ORDER BY sort_order, id");
 
 /** YouTube-ID aus URL extrahieren. */
