@@ -137,6 +137,34 @@ final class PitchDay
     }
 
     /**
+     * Nachname (für die Sortierung) aus einem vollen Namen ableiten: das letzte
+     * Wort. Robust genug für „Vorname Nachname" und „Prof. Dr. Vorname Nachname".
+     */
+    public static function surname(string $name): string
+    {
+        $parts = preg_split('/\s+/', trim($name)) ?: [];
+        return $parts ? mb_strtolower((string) end($parts)) : '';
+    }
+
+    /**
+     * Gästeliste klassisch nach Nachname sortieren (Anzeigename berücksichtigt,
+     * also bei Vertretung nach der vertretenden Person). Sortiert in place-frei
+     * über eine Kopie und gibt sie zurück.
+     *
+     * @param array<int,array<string,mixed>> $guests
+     * @return array<int,array<string,mixed>>
+     */
+    public static function sortBySurname(array $guests): array
+    {
+        usort($guests, static function ($a, $b) {
+            $na = self::guestDisplay($a)['name'];
+            $nb = self::guestDisplay($b)['name'];
+            return [self::surname($na), mb_strtolower($na)] <=> [self::surname($nb), mb_strtolower($nb)];
+        });
+        return $guests;
+    }
+
+    /**
      * Anzeige-Auflösung eines Gasts unter Berücksichtigung einer Vertretung.
      *
      * Sagt eine eingeladene Person ab und schickt eine Vertretung (Status

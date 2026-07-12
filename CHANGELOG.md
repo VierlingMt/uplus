@@ -7,6 +7,20 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.48.0] - 2026-07-12
+### Geändert
+- **„Jury & Nutzer übernehmen" ist jetzt EIN Button** und übernimmt alle am
+  Wettbewerbsjahr Beteiligten (Jury, Projektleitung, Lehrkräfte) – **nie
+  Admin-Konten**. Idempotent (neue anlegen, vorhandene auffrischen). Der separate
+  „Lehrkräfte übernehmen"-Button entfällt. Rollen-Zuordnung: Jury → Jury,
+  Projektleitung → VIP/Gastgeber, Lehrkraft → Lehrkraft.
+- **Personen werden überall klassisch nach Nachname sortiert** (Ehrengäste, Jury,
+  Lehrkräfte, Presse) – in der Gäste-Übersicht, auf den Reserviert-Schildern und
+  im Handout. **Lehrkräfte** werden zusätzlich **je Schule gruppiert**.
+### Hinzugefügt
+- **Grußworte & Keynote: Reihenfolge festlegbar.** In der Gäste-Übersicht lässt
+  sich die Reihenfolge per ↑/↓ anpassen; sie wird ins Handout übernommen.
+
 ## [0.47.0] - 2026-07-12
 ### Hinzugefügt
 - **Passkeys / Geräte-Login (WebAuthn).** Man kann sich jetzt gerätegebunden per

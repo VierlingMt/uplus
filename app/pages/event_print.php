@@ -67,6 +67,11 @@ if ($kind === 'signs'):
         // Standard: alle Gäste/VIPs bis auf Absagen.
         $signs = array_values(array_filter($guests, fn($g) => $g['status'] !== 'declined'));
     }
+    // Innerhalb der Kategorie klassisch nach Nachname sortieren.
+    $catOrder = array_flip(array_keys(PitchDay::GUEST_CATEGORIES));
+    usort($signs, fn($a, $b) =>
+        [$catOrder[$a['category']] ?? 99, PitchDay::surname(PitchDay::guestDisplay($a)['name'])]
+        <=> [$catOrder[$b['category']] ?? 99, PitchDay::surname(PitchDay::guestDisplay($b)['name'])]);
     $eventLine = trim(implode(' · ', array_filter([
         $weekday($event['event_date']) . ($event['event_date'] ? ', ' . $dateFmt($event['event_date']) : ''),
         $event['time_from'] ? $timeFmt($event['time_from']) . ' Uhr' : '',
@@ -106,13 +111,23 @@ else:
     // Nur tatsächlich Teilnehmende – Absagen tauchen im Handout nicht auf
     // (weder in den Listen noch in den Zahlen).
     $attending = array_values(array_filter($guests, fn($g) => $g['status'] !== 'declined'));
-    $vips     = array_values(array_filter($attending, fn($g) => $g['category'] === 'vip'));
-    $jury     = array_values(array_filter($attending, fn($g) => $g['category'] === 'jury'));
-    $teachers = array_values(array_filter($attending, fn($g) => $g['category'] === 'teacher'));
-    $press    = array_values(array_filter($attending, fn($g) => $g['category'] === 'press'));
+    // Personenlisten klassisch nach Nachname sortieren.
+    $vips     = PitchDay::sortBySurname(array_filter($attending, fn($g) => $g['category'] === 'vip'));
+    $jury     = PitchDay::sortBySurname(array_filter($attending, fn($g) => $g['category'] === 'jury'));
+    $teachers = PitchDay::sortBySurname(array_filter($attending, fn($g) => $g['category'] === 'teacher'));
+    $press    = PitchDay::sortBySurname(array_filter($attending, fn($g) => $g['category'] === 'press'));
+    // Lehrkräfte zusätzlich je Schule (Organisation) gruppieren.
+    $teachersBySchool = [];
+    foreach ($teachers as $g) {
+        $teachersBySchool[trim((string) ($g['org'] ?? '')) ?: 'Weitere'][] = $g;
+    }
+    ksort($teachersBySchool, SORT_NATURAL | SORT_FLAG_CASE);
+    // Grußworte & Keynote: manuelle Reihenfolge aus der Übersicht (sort_order),
+    // sonst Grußworte vor Keynote, dann Nachname.
     $speakers = array_values(array_filter($attending, fn($g) => (int) $g['greeting'] === 1 || (int) $g['keynote'] === 1));
-    // Erst die Grußworte, die Keynote(s) ans Ende (stabile Sortierung ab PHP 8).
-    usort($speakers, fn($a, $b) => ((int) $a['keynote']) <=> ((int) $b['keynote']));
+    usort($speakers, fn($a, $b) =>
+        [(int) $a['sort_order'], (int) $a['keynote'], PitchDay::surname(PitchDay::guestDisplay($a)['name'])]
+        <=> [(int) $b['sort_order'], (int) $b['keynote'], PitchDay::surname(PitchDay::guestDisplay($b)['name'])]);
 
     $agenda = Database::all('SELECT * FROM event_agenda WHERE event_id=? ORDER BY sort_order, time_from, id', [$eventId]);
     $prizes = Database::all("SELECT * FROM event_budget_items WHERE event_id=? AND kind='prize' ORDER BY place IS NULL, place, sort_order, id", [$eventId]);
@@ -202,15 +217,18 @@ else:
     <?php if ($teachers): ?>
     <section class="block">
       <h2>Lehrkräfte / Projektbetreuung</h2>
-      <ol class="people">
-        <?php foreach ($teachers as $g): $gd = PitchDay::guestDisplay($g); ?>
-          <li>
-            <strong><?= e($gd['name']) ?></strong>
-            <?php $r = $roleLine($gd, $g['category']); if ($r && $r !== PitchDay::guestCategory('teacher')): ?><span class="role"><?= e($r) ?></span><?php endif; ?>
-            <?php if ($gd['subline']): ?><span class="vertritt">↷ <?= e($gd['subline']) ?></span><?php endif; ?>
-          </li>
-        <?php endforeach; ?>
-      </ol>
+      <?php foreach ($teachersBySchool as $school => $group): ?>
+        <div class="subgroup"><?= e($school) ?></div>
+        <ol class="people">
+          <?php foreach ($group as $g): $gd = PitchDay::guestDisplay($g); ?>
+            <li>
+              <strong><?= e($gd['name']) ?></strong>
+              <?php if ($gd['position']): ?><span class="role"><?= e($gd['position']) ?></span><?php endif; ?>
+              <?php if ($gd['subline']): ?><span class="vertritt">↷ <?= e($gd['subline']) ?></span><?php endif; ?>
+            </li>
+          <?php endforeach; ?>
+        </ol>
+      <?php endforeach; ?>
     </section>
     <?php endif; ?>
 
@@ -395,6 +413,8 @@ header('Content-Type: text/html; charset=utf-8');
   .doc__sub { color: var(--muted); font-size: 14px; }
   .block { margin: 0 0 18px; }
   .block h2 { font-size: 16px; color: var(--blue); border-bottom: 1px solid var(--line); padding-bottom: 5px; margin: 0 0 10px; }
+  .subgroup { font-weight: 700; color: var(--ink); font-size: 13px; margin: 10px 0 3px; }
+  .subgroup + ol.people { margin-top: 0; }
   .kv { width: 100%; border-collapse: collapse; }
   .kv th { text-align: left; width: 150px; vertical-align: top; color: var(--muted); font-weight: 600; padding: 3px 10px 3px 0; }
   .kv td { padding: 3px 0; }
