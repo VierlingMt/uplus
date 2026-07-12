@@ -510,6 +510,51 @@ body.modal-open { overflow: hidden; }
   .table-search { max-width: none; flex: 1 1 100%; }
 }
 
+/* Kompakte Karten-Variante (PitchDay + Ranking): statt „ein Label je Zeile"
+   wird jede Zeile zu einer dichten Karte – Kopf (Platz + Team), Schule,
+   Kennzahlen als Chips und ein schlanker Aktions-Button. Deutlich weniger
+   Höhe auf dem Handy. */
+@media (max-width: 680px) {
+  .data--tight tr:not(.admin-row) {
+    display: flex; flex-wrap: wrap; align-items: baseline;
+    gap: 2px 10px; padding: 10px 12px;
+  }
+  .data--tight td { padding: 0; border: 0; white-space: normal; }
+  .data--tight td[data-label]::before { display: none; }   /* Standard: Labels aus */
+
+  /* Kopfzeile: Platz/Bühne + Team (+ Pills) */
+  .data--tight td[data-label="Platz"],
+  .data--tight td[data-label="Bühne"] { order: 1; font-weight: 700; font-size: 15px; }
+  .data--tight td[data-label="Team"] { order: 2; flex: 1 1 55%; font-size: 15px; }
+  .data--tight td[data-label="Team"] .muted { font-size: 12px; }
+  .data--tight td[data-label="Schule"] { order: 3; flex: 1 1 100%; color: var(--muted); font-size: 12px; margin-top: -2px; }
+  .data--tight td[data-label="Status"] { order: 4; }
+
+  /* Kennzahlen als kompakte Chips mit Mini-Label */
+  .data--tight td[data-label="Jury"],
+  .data--tight td[data-label^="Ø"],
+  .data--tight td[data-label^="Gesamt"] { order: 5; font-size: 13px; }
+  .data--tight td[data-label="Jury"]::before,
+  .data--tight td[data-label^="Ø"]::before,
+  .data--tight td[data-label^="Gesamt"]::before {
+    content: attr(data-label); display: inline; margin-right: 3px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .2px; color: var(--muted);
+  }
+  .data--tight td[data-label="KI"] { display: none; }
+
+  /* Aktion: kompakter, voll tippbarer Button */
+  .data--tight td.row-actions { order: 6; flex: 1 1 100%; margin-top: 6px; padding: 0; border-top: 0; }
+  .data--tight td.row-actions .btn { min-height: 38px; }
+
+  /* Platzierungs-Medaille etwas kleiner */
+  .data--tight td.place { font-size: 15px; }
+  .data--tight .place__medal { font-size: 18px; }
+
+  /* Admin-Statuszeile bleibt eigener Block unter der Karte */
+  .data--tight tr.admin-row { display: block; }
+}
+
 /* Topbar mobil entschlacken: Titel steht ohnehin als H1 auf der Seite. */
 @media (max-width: 600px) {
   .topbar { padding: 0 12px; gap: 8px; }

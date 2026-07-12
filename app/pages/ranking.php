@@ -141,35 +141,15 @@ if (is_post() && $isAdmin) {
         Settings::set('bp_frozen', '0');
         Audit::log('bp.unfreeze', 'Businessplan-Bewertung wieder freigegeben.');
         flash('success', 'Businessplan-Bewertung wieder freigegeben – die Jury kann die BP-Punkte wieder ändern.');
-    } elseif ($action === 'freeze') {
-        Settings::set('ranking_frozen', '1');
-        Settings::set('ranking_frozen_at', date('Y-m-d H:i:s'));
-        Audit::log('ranking.freeze', 'Bewertung eingefroren – Ranking festgeschrieben.');
-        flash('success', 'Bewertung eingefroren – das Ranking ist festgeschrieben. Die Jury kann nichts mehr ändern. Versehentlich? Innerhalb von 15 Minuten noch rückgängig zu machen.');
-    } elseif ($action === 'unfreeze') {
-        // Freigabe nur als „Notausstieg" innerhalb von 15 Minuten nach dem
-        // Einfrieren (falls man sich verklickt hat). Danach bleibt es fix.
-        $frozenAt = Settings::get('ranking_frozen_at');
-        if ($frozenAt !== null && $frozenAt !== '' && (time() - strtotime((string) $frozenAt)) <= 900) {
-            Settings::set('ranking_frozen', '0');
-            Settings::set('ranking_frozen_at', null);
-            Audit::log('ranking.unfreeze', 'Bewertung wieder freigegeben (innerhalb 15-Minuten-Fenster).');
-            flash('success', 'Bewertung wieder freigegeben – die Jury kann wieder bewerten.');
-        } else {
-            flash('error', 'Freigabe nicht mehr möglich: Das 15-Minuten-Fenster ist abgelaufen. Das Ranking bleibt festgeschrieben.');
-        }
     }
+    // Das „Endergebnis einfrieren" (ranking_frozen) wird bewusst NUR im Menüpunkt
+    // PitchDay bedient (pitch.php) – hier geht es um die Businessplan-Runde.
     redirect(url('ranking'));
 }
 
 $rows = $loadRows();
 $bpFrozen = Settings::getInt('bp_frozen', 0) === 1;
 $frozen = Settings::getInt('ranking_frozen', 0) === 1;
-// Freigabe (Rückgängig) nur innerhalb von 15 Minuten nach dem Einfrieren.
-$frozenAt = $frozen ? Settings::get('ranking_frozen_at') : null;
-$unfreezeSecsLeft = ($frozenAt !== null && $frozenAt !== '') ? (900 - (time() - strtotime((string) $frozenAt))) : 0;
-$canUnfreeze = $frozen && $unfreezeSecsLeft > 0;
-$unfreezeMinLeft = (int) ceil($unfreezeSecsLeft / 60);
 $fmt = fn($n) => $n === null ? '–' : rtrim(rtrim(number_format((float) $n, 1, ',', ''), '0'), ',');
 // Admin ist eine reine Servicerolle und zählt NICHT als Jurymitglied.
 $totalJurors = (int) Database::value("SELECT COUNT(*) FROM users u WHERE u.is_active=1 AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role IN ('lead','juror'))");
@@ -229,19 +209,6 @@ ob_start(); ?>
           </form>
         <?php endif; ?>
       <?php endif; ?>
-      <?php if ($frozen): ?>
-        <?php if ($canUnfreeze): ?>
-        <form method="post" action="<?= url('ranking') ?>" data-confirm="Endergebnis wieder freigeben? Die Jury kann danach ihre Bewertungen wieder ändern.">
-          <?= Csrf::field() ?><input type="hidden" name="action" value="unfreeze">
-          <button class="btn btn--ghost">🔓 Endergebnis freigeben (noch <?= $unfreezeMinLeft ?> Min)</button>
-        </form>
-        <?php endif; ?>
-      <?php else: ?>
-        <form method="post" action="<?= url('ranking') ?>" data-confirm="Endergebnis jetzt einfrieren? Das Ranking wird festgeschrieben – nur die Verwaltung kann danach noch Änderungen vornehmen.">
-          <?= Csrf::field() ?><input type="hidden" name="action" value="freeze">
-          <button class="btn btn--ghost">🔒 Endergebnis einfrieren</button>
-        </form>
-      <?php endif; ?>
     </div>
   <?php endif; ?>
 </div>
@@ -250,7 +217,9 @@ ob_start(); ?>
 <div class="card" style="border-left:4px solid var(--wj-blue)"><div class="card__body" style="display:flex;align-items:center;gap:10px">
   <span style="font-size:20px">🔒</span>
   <div><strong>Endergebnis eingefroren – das Ranking ist festgeschrieben.</strong>
-    <span class="muted"><?php if (!$isAdmin): ?>Deine Bewertungen sind gespeichert und können nicht mehr geändert werden.<?php elseif ($canUnfreeze): ?>Die Jury kann nichts mehr ändern. Verklickt? Noch <?= $unfreezeMinLeft ?> Minute<?= $unfreezeMinLeft === 1 ? '' : 'n' ?> lang oben wieder freizugeben; danach bleibt es endgültig festgeschrieben.<?php else: ?>Die Jury kann nichts mehr ändern. Das 15-Minuten-Fenster zum Freigeben ist abgelaufen – das Ranking bleibt endgültig festgeschrieben.<?php endif; ?></span></div>
+    <span class="muted"><?= $isAdmin
+      ? 'Freigeben (falls nötig) im Menüpunkt PitchDay.'
+      : 'Deine Bewertungen sind gespeichert und können nicht mehr geändert werden.' ?></span></div>
 </div></div>
 <?php elseif ($bpFrozen): ?>
 <div class="card" style="border-left:4px solid var(--wj-blue)"><div class="card__body" style="display:flex;align-items:center;gap:10px">
@@ -262,60 +231,15 @@ ob_start(); ?>
 </div></div>
 <?php endif; ?>
 
-<?php
-// Finale Platzierung: nur die Pitch-Teams (Status „nominated"), nach Gesamt-
-// wertung absteigend – $rows ist bereits so sortiert. Alle Bühnen-Teams werden
-// gekürt (Platz 1 bis X); allein der Pitch ist schon eine super Leistung.
-$pitchTeams   = array_values(array_filter($rows, fn($r) => $r['status'] === 'nominated'));
-$pitchPending = 0;
-foreach ($pitchTeams as $pt) {
-    if ($totalJurors === 0 || (int) $pt['n_pitch'] < $totalJurors) { $pitchPending++; }
-}
-?>
-<?php if ($pitchTeams): ?>
-<div class="card placement">
-  <div class="card__head">
-    <span>🏆 Finale Platzierung <span class="muted" style="font-weight:400;font-size:13px">· Pitch-Teams nach Gesamtwertung · Platz 1–<?= count($pitchTeams) ?></span></span>
-  </div>
-  <?php if ($pitchPending): ?>
-    <div class="placement__hint">Noch vorläufig – bei <?= $pitchPending ?> von <?= count($pitchTeams) ?> Pitch-Team<?= count($pitchTeams) === 1 ? '' : 's' ?> fehlt mindestens eine Pitch-Bewertung. Endgültig, sobald alle Bewertungen vorliegen.</div>
-  <?php endif; ?>
-  <div class="table-wrap">
-    <table class="data data--cards">
-      <thead><tr>
-        <th style="width:70px">Platz</th><th>Team</th><th>Schule</th>
-        <th>Ø BP<br>/50</th><th>Ø Pitch<br>/40</th><th>Gesamt<br>/140</th>
-      </tr></thead>
-      <tbody>
-      <?php foreach ($pitchTeams as $i => $r): $place = $i + 1;
-          $medal = [1 => '🥇', 2 => '🥈', 3 => '🥉'][$place] ?? ''; ?>
-        <tr class="place-row<?= $place <= 3 ? ' place-row--podium' : '' ?>">
-          <td data-label="Platz" class="place">
-            <?php if ($medal): ?><span class="place__medal"><?= $medal ?></span><?php endif; ?><span class="place__num"><?= $place ?>.</span>
-          </td>
-          <td data-label="Team"><strong><?= e($r['name']) ?></strong><?php if ($r['idea_name']): ?><br><span class="muted" style="font-size:12px"><?= e($r['idea_name']) ?></span><?php endif; ?></td>
-          <td data-label="Schule"><?= e($r['short_name'] ?: $r['school_name']) ?></td>
-          <td data-label="Ø BP /50"><?= $fmt($r['avg_bp']) ?></td>
-          <td data-label="Ø Pitch /40"><?= $fmt($r['avg_pitch']) ?></td>
-          <td data-label="Gesamt /140"><strong style="color:var(--wj-blue)"><?= $fmt($r['grand']) ?></strong></td>
-        </tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
-  </div>
-</div>
-<?php endif; ?>
-
 <div class="card">
   <div class="card__head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
     <span>Ranking <span class="muted" style="font-weight:400;font-size:13px">· Gesamt = 2 × Businessplan + 1 × Pitch (max 140) · <?= $totalJurors ?> Bewertende</span></span>
     <span class="ranking-filters">
-      <label class="toggle-eval" style="font-weight:400"><input type="checkbox" id="pitchOnlyToggle"> Nur Pitch-Teams</label>
       <label class="toggle-eval" style="font-weight:400"><input type="checkbox" id="hideCompleteToggle"> Nur unvollständig bewertete</label>
     </span>
   </div>
   <div class="table-wrap">
-    <table class="data data--cards" id="rankingTable">
+    <table class="data data--cards data--tight" id="rankingTable">
       <thead><tr>
         <th style="width:40px">#</th><th>Team</th><th>Schule</th><th>Jury</th>
         <th>Ø BP<br>/50</th><th>Ø Pitch<br>/40</th><th>Gesamt<br>/140</th><?php if ($showAiEval): ?><th>KI</th><?php endif; ?><th>Status</th><th></th>
@@ -400,13 +324,7 @@ foreach ($pitchTeams as $pt) {
 <style>
 .admin-row td{border-bottom:2px solid var(--line)}.admin-row form{opacity:.75}.admin-row:hover form{opacity:1}
 table.hide-complete tr[data-complete="1"]{display:none}
-table.pitch-only tr[data-pitch="0"]{display:none}
 .ranking-filters{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
-.placement__hint{padding:8px 16px;color:#8a6d00;background:#fff8e1;font-size:13px;border-bottom:1px solid var(--line)}
-.place{white-space:nowrap;font-weight:700;font-size:15px}
-.place__medal{font-size:20px;margin-right:3px;vertical-align:middle}
-.place__num{color:var(--wj-blue)}
-.place-row--podium td{background:rgba(255,193,7,.06)}
 </style>
 <script>
 (function(){
@@ -423,7 +341,6 @@ table.pitch-only tr[data-pitch="0"]{display:none}
     });
   }
   wire('hideCompleteToggle','hide-complete','uplus_ranking_hide_complete');
-  wire('pitchOnlyToggle','pitch-only','uplus_ranking_pitch_only');
 })();
 </script>
 <?php

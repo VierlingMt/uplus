@@ -7,6 +7,18 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.56.0] - 2026-07-12
+### Geändert
+- **Deutlich kompaktere Mobil-Ansicht** für PitchDay und Bewertung & Ranking: Jede
+  Team-Zeile wird zu einer dichten Karte (Platz + Team in einer Kopfzeile, Schule
+  darunter, Kennzahlen als kompakte Chips, schlanker Bewerten-Button) statt jeder
+  Wert in einer eigenen Zeile – spart auf dem Handy sehr viel Höhe.
+- **Aufräumen der Bewertungsansicht:** Die „Finale Platzierung" erscheint jetzt
+  ausschließlich im Menüpunkt **PitchDay**, nicht mehr unter „Bewertung & Ranking".
+- **„Endergebnis einfrieren" nur noch im Menüpunkt PitchDay** (dort, wo die
+  Platzierung entsteht). Unter „Bewertung & Ranking" bleibt nur das Einfrieren der
+  Businessplan-Runde.
+
 ## [0.55.0] - 2026-07-12
 ### Hinzugefügt
 - **Businessplan-Bewertungsrunde separat einfrierbar** (vor dem PitchDay). Über

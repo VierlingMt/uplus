@@ -10,7 +10,38 @@ declare(strict_types=1);
 Auth::require('admin', 'lead', 'juror');
 $isAdmin = Auth::isManager();
 $jurorId = (int) Auth::id();
-$frozen  = Settings::getInt('ranking_frozen', 0) === 1;
+
+// „Endergebnis einfrieren" wird bewusst NUR hier (PitchDay) bedient – nach den
+// Pitches wird das Ranking festgeschrieben. Freigabe nur als 15-Minuten-
+// Notausstieg (Verklick). Nur Verwaltung (Admin/Projektleitung).
+if (is_post() && $isAdmin) {
+    Csrf::check();
+    $action = (string) input('action');
+    if ($action === 'freeze') {
+        Settings::set('ranking_frozen', '1');
+        Settings::set('ranking_frozen_at', date('Y-m-d H:i:s'));
+        Audit::log('ranking.freeze', 'Endergebnis eingefroren – Ranking festgeschrieben.');
+        flash('success', 'Endergebnis eingefroren – das Ranking ist festgeschrieben. Die Jury kann nichts mehr ändern. Versehentlich? Innerhalb von 15 Minuten noch rückgängig zu machen.');
+    } elseif ($action === 'unfreeze') {
+        $frozenAt = Settings::get('ranking_frozen_at');
+        if ($frozenAt !== null && $frozenAt !== '' && (time() - strtotime((string) $frozenAt)) <= 900) {
+            Settings::set('ranking_frozen', '0');
+            Settings::set('ranking_frozen_at', null);
+            Audit::log('ranking.unfreeze', 'Endergebnis wieder freigegeben (innerhalb 15-Minuten-Fenster).');
+            flash('success', 'Endergebnis wieder freigegeben – die Jury kann wieder bewerten.');
+        } else {
+            flash('error', 'Freigabe nicht mehr möglich: Das 15-Minuten-Fenster ist abgelaufen. Das Ranking bleibt festgeschrieben.');
+        }
+    }
+    redirect(url('pitch'));
+}
+
+$frozen = Settings::getInt('ranking_frozen', 0) === 1;
+// Freigabe (Rückgängig) nur innerhalb von 15 Minuten nach dem Einfrieren.
+$frozenAt = $frozen ? Settings::get('ranking_frozen_at') : null;
+$unfreezeSecsLeft = ($frozenAt !== null && $frozenAt !== '') ? (900 - (time() - strtotime((string) $frozenAt))) : 0;
+$canUnfreeze = $frozen && $unfreezeSecsLeft > 0;
+$unfreezeMinLeft = (int) ceil($unfreezeSecsLeft / 60);
 
 // Nur Pitch-Teams (nominiert + Nachrücker), inkl. Jury-Mittelwerte.
 // Ø nur aus Jury/Projektleitung (kein KI, kein reiner Admin), analog zum Ranking.
@@ -83,16 +114,29 @@ $rowHtml = function (array $r, ?int $place) use ($fmt, $frozen, $isAdmin) {
 ob_start(); ?>
 <div class="page-head">
   <h1>PitchDay</h1>
-  <a href="<?= url('ranking') ?>" class="btn btn--ghost">★ Ganzes Ranking</a>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <?php if ($isAdmin && ($nominated || $fallback)): ?>
+      <?php if (!$frozen): ?>
+        <form method="post" action="<?= url('pitch') ?>" data-confirm="Endergebnis jetzt einfrieren? Das Ranking wird festgeschrieben – nur die Verwaltung kann danach noch Änderungen vornehmen.">
+          <?= Csrf::field() ?><input type="hidden" name="action" value="freeze">
+          <button class="btn btn--ghost">🔒 Endergebnis einfrieren</button>
+        </form>
+      <?php elseif ($canUnfreeze): ?>
+        <form method="post" action="<?= url('pitch') ?>" data-confirm="Endergebnis wieder freigeben? Die Jury kann danach ihre Bewertungen wieder ändern.">
+          <?= Csrf::field() ?><input type="hidden" name="action" value="unfreeze">
+          <button class="btn btn--ghost">🔓 Freigeben (noch <?= $unfreezeMinLeft ?> Min)</button>
+        </form>
+      <?php endif; ?>
+    <?php endif; ?>
+    <a href="<?= url('ranking') ?>" class="btn btn--ghost">★ Ganzes Ranking</a>
+  </div>
 </div>
 
 <?php if ($frozen): ?>
 <div class="card" style="border-left:4px solid var(--wj-blue)"><div class="card__body" style="display:flex;align-items:center;gap:10px">
   <span style="font-size:20px">🔒</span>
-  <div><strong>Bewertung eingefroren.</strong>
-    <span class="muted"><?= $isAdmin
-      ? 'Das Ranking ist festgeschrieben. Als Verwaltung kannst du noch korrigieren.'
-      : 'Die Bewertungen sind gespeichert und können nicht mehr geändert werden.' ?></span></div>
+  <div><strong>Endergebnis eingefroren – das Ranking ist festgeschrieben.</strong>
+    <span class="muted"><?php if (!$isAdmin): ?>Die Bewertungen sind gespeichert und können nicht mehr geändert werden.<?php elseif ($canUnfreeze): ?>Die Jury kann nichts mehr ändern. Verklickt? Noch <?= $unfreezeMinLeft ?> Minute<?= $unfreezeMinLeft === 1 ? '' : 'n' ?> lang oben wieder freizugeben; danach bleibt es endgültig festgeschrieben.<?php else: ?>Die Jury kann nichts mehr ändern. Das 15-Minuten-Fenster zum Freigeben ist abgelaufen – das Endergebnis bleibt festgeschrieben.<?php endif; ?></span></div>
 </div></div>
 <?php endif; ?>
 
@@ -111,7 +155,7 @@ ob_start(); ?>
     <div class="pitch__hint">Mini-Ranking noch vorläufig – bei <?= $pitchPending ?> von <?= count($nominated) ?> Team<?= count($nominated) === 1 ? '' : 's' ?> fehlt noch mindestens eine Pitch-Bewertung.</div>
   <?php endif; ?>
   <div class="table-wrap">
-    <table class="data data--cards">
+    <table class="data data--cards data--tight">
       <thead><tr>
         <th style="width:64px">Platz</th><th>Team</th><th>Schule</th>
         <th>Ø BP<br>/50</th><th>Ø Pitch<br>/40</th><th>Gesamt<br>/140</th><th></th>
@@ -127,7 +171,7 @@ ob_start(); ?>
 <div class="card">
   <div class="card__head">Nachrücker <span class="muted" style="font-weight:400;font-size:13px">· springen ein, falls ein Team ausfällt</span></div>
   <div class="table-wrap">
-    <table class="data data--cards">
+    <table class="data data--cards data--tight">
       <thead><tr>
         <th style="width:64px">Bühne</th><th>Team</th><th>Schule</th>
         <th>Ø BP<br>/50</th><th>Ø Pitch<br>/40</th><th>Gesamt<br>/140</th><th></th>
