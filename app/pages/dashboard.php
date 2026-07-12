@@ -26,12 +26,19 @@
   <div class="card__body">
     <?php if (!empty($timeline)): ?>
       <div class="timeline">
-        <?php foreach ($timeline as [$phase, $date, $state]): ?>
-          <div class="tl-step <?= e($state) ?>">
+        <?php foreach ($timeline as [$phase, $date, $state]):
+          // „Pitch Day"-Meilenstein öffnet das Handout-PDF (nur Verwaltung mit
+          // angelegtem PitchDay).
+          $pitchLink = (stripos($phase, 'pitch') !== false && !empty($pitchday) && !empty($activeCycleId))
+            ? url('event_print', ['cycle' => $activeCycleId, 'kind' => 'handout']) : null;
+        ?>
+          <?php if ($pitchLink): ?><a href="<?= e($pitchLink) ?>" target="_blank" rel="noopener" class="tl-step-link" style="text-decoration:none;color:inherit" title="Ablaufplan / Handout als PDF öffnen"><?php endif; ?>
+          <div class="tl-step <?= e($state) ?><?= $pitchLink ? ' tl-step--link' : '' ?>">
             <?php if ($state === 'done'): ?><span class="tick">✓</span><?php endif; ?>
-            <div class="ph"><?= e($phase) ?></div>
+            <div class="ph"><?= e($phase) ?><?= $pitchLink ? ' 📄' : '' ?></div>
             <div class="dt"><?= e($date) ?></div>
           </div>
+          <?php if ($pitchLink): ?></a><?php endif; ?>
         <?php endforeach; ?>
       </div>
     <?php else: ?>

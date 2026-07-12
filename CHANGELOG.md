@@ -7,6 +7,12 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.50.2] - 2026-07-12
+### Hinzugefügt
+- **Dashboard: Klick auf den „Pitch Day"-Meilenstein öffnet das Handout-PDF**
+  (neuer Tab). Sichtbar/klickbar für die Verwaltung, sobald ein PitchDay angelegt
+  ist (kleines 📄-Symbol als Hinweis).
+
 ## [0.50.1] - 2026-07-12
 ### Geändert
 - **Menü Jury:** „Jury-Feedback" steht jetzt **vor** „Bewertung & Ranking" –

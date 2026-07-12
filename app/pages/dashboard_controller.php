@@ -47,4 +47,7 @@ if (Auth::isManager() && $activeCycle) {
     }
 }
 
-render('dashboard', ['stats' => $stats, 'timeline' => $timeline, 'sponsors' => $sponsors, 'year' => $year, 'pitchday' => $pitchday]);
+render('dashboard', [
+    'stats' => $stats, 'timeline' => $timeline, 'sponsors' => $sponsors, 'year' => $year,
+    'pitchday' => $pitchday, 'activeCycleId' => (int) ($activeCycle['id'] ?? 0),
+]);

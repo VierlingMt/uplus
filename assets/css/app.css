@@ -280,6 +280,9 @@ table.data tr:hover td { background: #fafcfe; }
 .tl-step.active { border-left: 4px solid var(--wj-blue); background: #f2f7ff; }
 .tl-step.upcoming { border-left: 4px solid var(--wj-grey); opacity: .8; }
 .tl-step .tick { position: absolute; top: 10px; right: 12px; font-size: 12px; color: var(--wj-teal-d); }
+.tl-step-link { display: block; flex: 1 1 120px; }
+.tl-step-link .tl-step { height: 100%; cursor: pointer; transition: box-shadow .15s, transform .15s; }
+.tl-step-link:hover .tl-step { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
 
 /* ---------- Login ---------- */
 .login-wrap { min-height: 100vh; display: grid; grid-template-columns: 1.1fr 1fr; }
