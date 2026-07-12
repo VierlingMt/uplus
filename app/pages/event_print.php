@@ -203,9 +203,8 @@ else:
       <table class="kv">
         <tr><th>Veranstaltung</th><td><?= e($event['title'] ?: 'PitchDay Unternehmen Plus') ?></td></tr>
         <tr><th>Veranstalter</th><td>Wirtschaftsjunioren Forchheim</td></tr>
-        <?php if ($event['venue'] || $event['venue_address']): ?>
-          <tr><th>Ort</th><td><?= e(trim(implode(', ', array_filter([$event['venue'], $event['venue_address']])))) ?></td></tr>
-        <?php endif; ?>
+        <?php if ($event['venue']): ?><tr><th>Ort</th><td><?= e($event['venue']) ?></td></tr><?php endif; ?>
+        <?php if ($event['venue_address']): ?><tr><th>Anschrift</th><td><?= e($event['venue_address']) ?></td></tr><?php endif; ?>
         <?php if ($eventDateLine): ?><tr><th>Datum</th><td><?= e($eventDateLine) ?></td></tr><?php endif; ?>
         <?php if ($timeLine): ?><tr><th>Uhrzeit</th><td><?= e($timeLine) ?></td></tr><?php endif; ?>
         <?php if ($parts): ?><tr><th>Teilnehmende</th><td><?= e(implode(' · ', $parts)) ?></td></tr><?php endif; ?>

@@ -7,6 +7,23 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.53.0] - 2026-07-12
+### Hinzugefügt
+- **Finale Platzierung der Pitch-Teams.** Neue Karte „🏆 Finale Platzierung" im
+  Ranking: alle nominierten (auf der Bühne stehenden) Teams werden nach der
+  Gesamtwertung (2 × Businessplan + 1 × Pitch) auf **Platz 1 bis X** gesetzt –
+  Podest mit 🥇🥈🥉. Solange noch Pitch-Bewertungen fehlen, weist ein Hinweis auf
+  den vorläufigen Stand hin.
+- **Filter „Nur Pitch-Teams"** in der Ranking-Tabelle, um während des Pitch-Days
+  gezielt nur die Bühnenteams zu sehen.
+- **Bewertung einfrieren.** Verwaltung kann das Ranking per „🔒 Einfrieren"
+  festschreiben: Die Jury kann ihre Bewertungen dann nicht mehr ändern
+  (schreibgeschützt inkl. Hinweisbanner). Nur Admin/Projektleitung können noch
+  korrigieren oder per „🔓 Freigeben" wieder öffnen.
+### Geändert
+- **Handout: Anschrift des Veranstaltungsorts** wird als eigene Zeile „Anschrift"
+  unter dem Ort ausgegeben.
+
 ## [0.52.0] - 2026-07-12
 ### Geändert
 - **Handout folgt jetzt dem Ablauf der Moderationskärtchen.** Die Infos sind nach

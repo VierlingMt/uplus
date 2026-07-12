@@ -133,11 +133,20 @@ if (is_post() && $isAdmin) {
             Database::run('UPDATE teams SET status=?, pitch_order=? WHERE id=?', [$st, $ord, (int) input('team_id')]);
             flash('success', 'Status aktualisiert.');
         }
+    } elseif ($action === 'freeze') {
+        Settings::set('ranking_frozen', '1');
+        Audit::log('ranking.freeze', 'Bewertung eingefroren – Ranking festgeschrieben.');
+        flash('success', 'Bewertung eingefroren – das Ranking ist festgeschrieben. Die Jury kann nichts mehr ändern.');
+    } elseif ($action === 'unfreeze') {
+        Settings::set('ranking_frozen', '0');
+        Audit::log('ranking.unfreeze', 'Bewertung wieder freigegeben.');
+        flash('success', 'Bewertung wieder freigegeben – die Jury kann wieder bewerten.');
     }
     redirect(url('ranking'));
 }
 
 $rows = $loadRows();
+$frozen = Settings::getInt('ranking_frozen', 0) === 1;
 $fmt = fn($n) => $n === null ? '–' : rtrim(rtrim(number_format((float) $n, 1, ',', ''), '0'), ',');
 // Admin ist eine reine Servicerolle und zählt NICHT als Jurymitglied.
 $totalJurors = (int) Database::value("SELECT COUNT(*) FROM users u WHERE u.is_active=1 AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role IN ('lead','juror'))");
@@ -175,21 +184,91 @@ ob_start(); ?>
 <div class="page-head">
   <h1>Bewertung &amp; Ranking</h1>
   <?php if ($isAdmin): ?>
-    <form method="post" action="<?= url('ranking') ?>" data-confirm="<?= $fairPerSchool
-        ? e($pitchSlots . ' Plätze fair je Schule verteilen (Restplätze an die beste Schule) und je Schule ' . $fallbackPerSchool . ' Nachrücker setzen? Bestehende Nominierungen werden überschrieben.')
-        : e('Automatisch Top ' . $pitchSlots . ' nominieren und ' . $fallbackSlots . ' Nachrücker setzen? Bestehende Nominierungen werden überschrieben.') ?>">
-      <?= Csrf::field() ?><input type="hidden" name="action" value="auto_nominate">
-      <button class="btn btn--teal">★ <?= $fairPerSchool
-        ? 'Fair nominieren (' . (int) $pitchSlots . ' Plätze je Schule)'
-        : 'Top ' . (int) $pitchSlots . ' (+' . (int) $fallbackSlots . ') nominieren' ?></button>
-    </form>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <form method="post" action="<?= url('ranking') ?>" data-confirm="<?= $fairPerSchool
+          ? e($pitchSlots . ' Plätze fair je Schule verteilen (Restplätze an die beste Schule) und je Schule ' . $fallbackPerSchool . ' Nachrücker setzen? Bestehende Nominierungen werden überschrieben.')
+          : e('Automatisch Top ' . $pitchSlots . ' nominieren und ' . $fallbackSlots . ' Nachrücker setzen? Bestehende Nominierungen werden überschrieben.') ?>">
+        <?= Csrf::field() ?><input type="hidden" name="action" value="auto_nominate">
+        <button class="btn btn--teal"<?= $frozen ? ' disabled title="Erst freigeben, um neu zu nominieren."' : '' ?>>★ <?= $fairPerSchool
+          ? 'Fair nominieren (' . (int) $pitchSlots . ' Plätze je Schule)'
+          : 'Top ' . (int) $pitchSlots . ' (+' . (int) $fallbackSlots . ') nominieren' ?></button>
+      </form>
+      <?php if ($frozen): ?>
+        <form method="post" action="<?= url('ranking') ?>" data-confirm="Bewertung wieder freigeben? Die Jury kann danach ihre Bewertungen wieder ändern.">
+          <?= Csrf::field() ?><input type="hidden" name="action" value="unfreeze">
+          <button class="btn btn--ghost">🔓 Freigeben</button>
+        </form>
+      <?php else: ?>
+        <form method="post" action="<?= url('ranking') ?>" data-confirm="Bewertung jetzt einfrieren? Das Ranking wird festgeschrieben – nur die Verwaltung kann danach noch Änderungen vornehmen.">
+          <?= Csrf::field() ?><input type="hidden" name="action" value="freeze">
+          <button class="btn btn--ghost">🔒 Einfrieren</button>
+        </form>
+      <?php endif; ?>
+    </div>
   <?php endif; ?>
 </div>
+
+<?php if ($frozen): ?>
+<div class="card" style="border-left:4px solid var(--wj-blue)"><div class="card__body" style="display:flex;align-items:center;gap:10px">
+  <span style="font-size:20px">🔒</span>
+  <div><strong>Bewertung eingefroren – das Ranking ist festgeschrieben.</strong>
+    <span class="muted"><?= $isAdmin
+      ? 'Die Jury kann nichts mehr ändern. Als Verwaltung kannst du bei Bedarf noch korrigieren oder oben wieder freigeben.'
+      : 'Deine Bewertungen sind gespeichert und können nicht mehr geändert werden.' ?></span></div>
+</div></div>
+<?php endif; ?>
+
+<?php
+// Finale Platzierung: nur die Pitch-Teams (Status „nominated"), nach Gesamt-
+// wertung absteigend – $rows ist bereits so sortiert. Alle Bühnen-Teams werden
+// gekürt (Platz 1 bis X); allein der Pitch ist schon eine super Leistung.
+$pitchTeams   = array_values(array_filter($rows, fn($r) => $r['status'] === 'nominated'));
+$pitchPending = 0;
+foreach ($pitchTeams as $pt) {
+    if ($totalJurors === 0 || (int) $pt['n_pitch'] < $totalJurors) { $pitchPending++; }
+}
+?>
+<?php if ($pitchTeams): ?>
+<div class="card placement">
+  <div class="card__head">
+    <span>🏆 Finale Platzierung <span class="muted" style="font-weight:400;font-size:13px">· Pitch-Teams nach Gesamtwertung · Platz 1–<?= count($pitchTeams) ?></span></span>
+  </div>
+  <?php if ($pitchPending): ?>
+    <div class="placement__hint">Noch vorläufig – bei <?= $pitchPending ?> von <?= count($pitchTeams) ?> Pitch-Team<?= count($pitchTeams) === 1 ? '' : 's' ?> fehlt mindestens eine Pitch-Bewertung. Endgültig, sobald alle Bewertungen vorliegen.</div>
+  <?php endif; ?>
+  <div class="table-wrap">
+    <table class="data data--cards">
+      <thead><tr>
+        <th style="width:70px">Platz</th><th>Team</th><th>Schule</th>
+        <th>Ø BP<br>/50</th><th>Ø Pitch<br>/40</th><th>Gesamt<br>/140</th>
+      </tr></thead>
+      <tbody>
+      <?php foreach ($pitchTeams as $i => $r): $place = $i + 1;
+          $medal = [1 => '🥇', 2 => '🥈', 3 => '🥉'][$place] ?? ''; ?>
+        <tr class="place-row<?= $place <= 3 ? ' place-row--podium' : '' ?>">
+          <td data-label="Platz" class="place">
+            <?php if ($medal): ?><span class="place__medal"><?= $medal ?></span><?php endif; ?><span class="place__num"><?= $place ?>.</span>
+          </td>
+          <td data-label="Team"><strong><?= e($r['name']) ?></strong><?php if ($r['idea_name']): ?><br><span class="muted" style="font-size:12px"><?= e($r['idea_name']) ?></span><?php endif; ?></td>
+          <td data-label="Schule"><?= e($r['short_name'] ?: $r['school_name']) ?></td>
+          <td data-label="Ø BP /50"><?= $fmt($r['avg_bp']) ?></td>
+          <td data-label="Ø Pitch /40"><?= $fmt($r['avg_pitch']) ?></td>
+          <td data-label="Gesamt /140"><strong style="color:var(--wj-blue)"><?= $fmt($r['grand']) ?></strong></td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+</div>
+<?php endif; ?>
 
 <div class="card">
   <div class="card__head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
     <span>Ranking <span class="muted" style="font-weight:400;font-size:13px">· Gesamt = 2 × Businessplan + 1 × Pitch (max 140) · <?= $totalJurors ?> Bewertende</span></span>
-    <label class="toggle-eval" style="font-weight:400"><input type="checkbox" id="hideCompleteToggle"> Nur unvollständig bewertete</label>
+    <span class="ranking-filters">
+      <label class="toggle-eval" style="font-weight:400"><input type="checkbox" id="pitchOnlyToggle"> Nur Pitch-Teams</label>
+      <label class="toggle-eval" style="font-weight:400"><input type="checkbox" id="hideCompleteToggle"> Nur unvollständig bewertete</label>
+    </span>
   </div>
   <div class="table-wrap">
     <table class="data data--cards" id="rankingTable">
@@ -199,8 +278,9 @@ ob_start(); ?>
       </tr></thead>
       <tbody>
       <?php foreach ($rows as $i => $r): [$sl, $sc] = $phaseLabels[$r['status']] ?? [$r['status'], 'muted'];
-          $complete = $totalJurors > 0 && (int) $r['n_bp'] >= $totalJurors ? 1 : 0; ?>
-        <tr data-complete="<?= $complete ?>">
+          $complete = $totalJurors > 0 && (int) $r['n_bp'] >= $totalJurors ? 1 : 0;
+          $isPitchRow = $r['status'] === 'nominated' ? 1 : 0; ?>
+        <tr data-complete="<?= $complete ?>" data-pitch="<?= $isPitchRow ?>">
           <td data-label="Platz"><strong><?= $i + 1 ?></strong><?php if ($r['pitch_order']): ?> <span class="pill teal" title="Pitch-Reihenfolge">P<?= (int) $r['pitch_order'] ?></span><?php endif; ?></td>
           <td data-label="Team">
             <?php if ($r['bp_id']): ?>
@@ -225,7 +305,7 @@ ob_start(); ?>
           </td>
         </tr>
         <?php if ($isAdmin): ?>
-        <tr class="admin-row" data-complete="<?= $complete ?>"><td colspan="<?= $cols ?>" style="padding-top:0">
+        <tr class="admin-row" data-complete="<?= $complete ?>" data-pitch="<?= $isPitchRow ?>"><td colspan="<?= $cols ?>" style="padding-top:0">
           <form method="post" action="<?= url('ranking') ?>" style="display:flex;gap:8px;align-items:center;justify-content:flex-end">
             <?= Csrf::field() ?><input type="hidden" name="action" value="set_status"><input type="hidden" name="team_id" value="<?= (int) $r['id'] ?>">
             <span class="muted" style="font-size:12px">Status setzen:</span>
@@ -276,19 +356,30 @@ ob_start(); ?>
 <style>
 .admin-row td{border-bottom:2px solid var(--line)}.admin-row form{opacity:.75}.admin-row:hover form{opacity:1}
 table.hide-complete tr[data-complete="1"]{display:none}
+table.pitch-only tr[data-pitch="0"]{display:none}
+.ranking-filters{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.placement__hint{padding:8px 16px;color:#8a6d00;background:#fff8e1;font-size:13px;border-bottom:1px solid var(--line)}
+.place{white-space:nowrap;font-weight:700;font-size:15px}
+.place__medal{font-size:20px;margin-right:3px;vertical-align:middle}
+.place__num{color:var(--wj-blue)}
+.place-row--podium td{background:rgba(255,193,7,.06)}
 </style>
 <script>
 (function(){
-  var t=document.getElementById('hideCompleteToggle'), tbl=document.getElementById('rankingTable');
-  if(!t||!tbl) return;
-  var KEY='uplus_ranking_hide_complete';
-  var saved=null; try{saved=localStorage.getItem(KEY);}catch(e){}
-  var on=saved==='1';
-  t.checked=on; tbl.classList.toggle('hide-complete',on);
-  t.addEventListener('change',function(){
-    try{localStorage.setItem(KEY,t.checked?'1':'0');}catch(e){}
-    tbl.classList.toggle('hide-complete',t.checked);
-  });
+  var tbl=document.getElementById('rankingTable');
+  if(!tbl) return;
+  function wire(id,cls,key){
+    var t=document.getElementById(id); if(!t) return;
+    var saved=null; try{saved=localStorage.getItem(key);}catch(e){}
+    var on=saved==='1';
+    t.checked=on; tbl.classList.toggle(cls,on);
+    t.addEventListener('change',function(){
+      try{localStorage.setItem(key,t.checked?'1':'0');}catch(e){}
+      tbl.classList.toggle(cls,t.checked);
+    });
+  }
+  wire('hideCompleteToggle','hide-complete','uplus_ranking_hide_complete');
+  wire('pitchOnlyToggle','pitch-only','uplus_ranking_pitch_only');
 })();
 </script>
 <?php

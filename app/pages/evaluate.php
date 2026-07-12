@@ -15,6 +15,11 @@ if (!$team) { http_response_code(404); render('error', ['title' => 'Nicht gefund
 $isPitch = in_array($team['status'], ['nominated', 'fallback'], true);
 $plan = Database::one('SELECT id FROM business_plans WHERE team_id=? AND is_current=1', [$teamId]);
 
+// Ist die Bewertung eingefroren? Dann darf nur noch die Verwaltung (Admin/Leitung)
+// etwas ändern – für die Jury ist alles schreibgeschützt.
+$frozen = Settings::getInt('ranking_frozen', 0) === 1;
+$locked = $frozen && !Auth::isManager();
+
 // Bestehende Bewertung + Scores laden
 $eval = Database::one('SELECT * FROM evaluations WHERE juror_id=? AND team_id=?', [$jurorId, $teamId]);
 $scores = [];
@@ -26,6 +31,17 @@ if ($eval) {
 
 if (is_post()) {
     Csrf::check();
+
+    if ($locked) {
+        if (input('ajax') === '1') {
+            http_response_code(423);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'locked' => true, 'error' => 'Die Bewertung ist eingefroren.']);
+            exit;
+        }
+        flash('error', 'Die Bewertung ist eingefroren – Änderungen sind nicht mehr möglich.');
+        redirect(url('evaluate', ['team' => $teamId]));
+    }
 
     // Bewertung (Kopf) sicherstellen
     if (!$eval) {
@@ -77,18 +93,19 @@ if (is_post()) {
     redirect(url('evaluate', ['team' => $teamId]));
 }
 
-$renderCriteria = function (array $group, string $phaseLabel) use ($scores) {
+$renderCriteria = function (array $group, string $phaseLabel) use ($scores, $locked) {
+    $dis = $locked ? ' disabled' : '';
     foreach ($group as $k => $c) {
         $cur = $scores[$k]['points'] ?? '';
         $note = $scores[$k]['notes'] ?? '';
         echo '<div class="crit">';
         echo '<div class="crit__head">';
         echo '<span style="display:inline-flex;align-items:center;gap:8px;min-width:0"><strong>' . e($c['title']) . '</strong><span class="crit__saved" hidden>✓ gespeichert</span></span>';
-        echo '<div class="crit__pts"><input type="number" name="pts_' . e($k) . '" min="0" max="10" step="1" data-score value="' . e((string) $cur) . '"> <span class="muted">/10</span></div></div>';
+        echo '<div class="crit__pts"><input type="number" name="pts_' . e($k) . '" min="0" max="10" step="1" data-score value="' . e((string) $cur) . '"' . $dis . '> <span class="muted">/10</span></div></div>';
         echo '<ul class="crit__hints">';
         foreach ($c['points'] as $h) { echo '<li>' . e($h) . '</li>'; }
         echo '</ul>';
-        echo '<textarea name="note_' . e($k) . '" rows="2" placeholder="Notizen (optional)">' . e((string) $note) . '</textarea>';
+        echo '<textarea name="note_' . e($k) . '" rows="2" placeholder="Notizen (optional)"' . $dis . '>' . e((string) $note) . '</textarea>';
         echo '</div>';
     }
 };
@@ -102,7 +119,17 @@ ob_start(); ?>
   <?php if ($plan): ?> · <a href="<?= url('bp_download', ['id' => $plan['id']]) ?>" target="_blank">Businessplan-PDF ↗</a><?php endif; ?>
 </p>
 
-<form method="post" action="<?= url('evaluate', ['team' => $teamId]) ?>" data-autosave>
+<?php if ($frozen): ?>
+  <div class="card mb" style="border-left:4px solid var(--wj-blue)"><div class="card__body" style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:20px">🔒</span>
+    <div><strong>Bewertung eingefroren.</strong>
+      <span class="muted"><?= $locked
+        ? 'Das Ranking ist festgeschrieben – Änderungen sind nicht mehr möglich (nur lesend).'
+        : 'Das Ranking ist festgeschrieben. Als Verwaltung kannst du hier noch Korrekturen vornehmen.' ?></span></div>
+  </div></div>
+<?php endif; ?>
+
+<form method="post" action="<?= url('evaluate', ['team' => $teamId]) ?>"<?= $locked ? '' : ' data-autosave' ?>>
   <?= Csrf::field() ?>
   <div class="card mb">
     <div class="card__head">Businessplan <span class="muted" style="font-weight:400">— Summe <span data-score-total>0</span>/50</span></div>
@@ -124,8 +151,12 @@ ob_start(); ?>
       <span class="muted" style="font-size:13px">10 herausragend · 8–9 sehr gut · 6–7 gut · 4–5 ausbaufähig · 1–3 schwach · 0 unbewertbar</span>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
-      <span class="autosave-status" data-autosave-status aria-live="polite">✓ Automatisch gespeichert</span>
-      <button class="btn btn--primary">Speichern</button>
+      <?php if ($locked): ?>
+        <span class="muted">🔒 Eingefroren – schreibgeschützt</span>
+      <?php else: ?>
+        <span class="autosave-status" data-autosave-status aria-live="polite">✓ Automatisch gespeichert</span>
+        <button class="btn btn--primary">Speichern</button>
+      <?php endif; ?>
     </div>
   </div></div>
 </form>
