@@ -7,6 +7,11 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.50.1] - 2026-07-12
+### Geändert
+- **Menü Jury:** „Jury-Feedback" steht jetzt **vor** „Bewertung & Ranking" –
+  entspricht der chronologischen Reihenfolge im Ablauf.
+
 ## [0.50.0] - 2026-07-12
 ### Hinzugefügt
 - **Neuer Menüpunkt „Jury-Feedback" (Gruppe Jury).** Skizziert je Schule einen

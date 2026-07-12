@@ -19,8 +19,8 @@ $navGroups = [
         ['teams', 'Teams & Schüler', '👥', ['admin', 'lead', 'teacher']],
     ]],
     ['Jury', [
-        ['ranking',       'Bewertung & Ranking', '★', ['admin', 'lead', 'juror']],
         ['jury_feedback', 'Jury-Feedback', '🗣', ['admin', 'lead', 'juror']],
+        ['ranking',       'Bewertung & Ranking', '★', ['admin', 'lead', 'juror']],
     ]],
     ['Verwaltung', [
         ['cycles',   'Wettbewerbsjahre', '🏆', ['admin', 'lead']],
