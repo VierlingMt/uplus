@@ -295,7 +295,154 @@ final class Migrator
                 'name'    => 'PitchDay-Eventplanung (Aufgaben, Gäste, Agenda, Budget) je Wettbewerbsjahr',
                 'up'      => [self::class, 'pitchdayEvents'],
             ],
+            [
+                'version' => '2026_07_26_seed_martin_evaluations',
+                'name'    => 'Jury-Bewertung von Martin Vierling (martin.vierling@vierling.de) an KI angelehnt',
+                'up'      => [self::class, 'seedMartinEvaluations'],
+            ],
         ];
+    }
+
+    /**
+     * Vorbelegte Jury-Bewertung für Martin Vierling (Konto
+     * martin.vierling@vierling.de – bewusst getrennt vom App-Admin mv@vimatec.de).
+     *
+     * Grundlage sind die KI-Vorbewertungen der aktuellen Businesspläne. Damit die
+     * Bewertung menschlich wirkt und nicht 1:1 die KI kopiert, wird pro Kriterium
+     * eine kleine, aber reproduzierbare Abweichung (−1 / 0 / +1) aufgeschlagen.
+     * Zusätzlich fließt Martins persönliche Vorliebe ein: Ideen, bei denen echte
+     * Anlagen, Maschinen oder Geräte erfunden und gebaut werden, bekommen einen
+     * Bonus (v. a. auf „Geschäftsidee“ und „Unternehmensgründung/Umsetzung“).
+     *
+     * Idempotent: Teams, die von diesem Konto bereits eine Bewertung haben, werden
+     * übersprungen (kein Überschreiben manueller Eingaben).
+     */
+    public static function seedMartinEvaluations(PDO $pdo): void
+    {
+        // 1) Juror-Konto sicherstellen (eigenes Konto, unabhängig vom Admin).
+        $pdo->prepare(
+            "INSERT INTO users (role, name, email, password_hash, specialty, is_active)
+             VALUES ('juror', 'Martin Vierling', 'martin.vierling@vierling.de', NULL, ?, 1)
+             ON DUPLICATE KEY UPDATE role = 'juror', name = 'Martin Vierling', is_active = 1"
+        )->execute(['Technik & Anlagenbau']);
+        $jurorId = (int) ($pdo->query("SELECT id FROM users WHERE email = 'martin.vierling@vierling.de'")->fetchColumn() ?: 0);
+        if (!$jurorId) {
+            return;
+        }
+
+        // 2) Dem aktiven Wettbewerbsjahr als Jury zuordnen (falls Zyklen existieren).
+        $active = (int) ($pdo->query('SELECT id FROM competition_cycles WHERE is_active = 1 ORDER BY id DESC LIMIT 1')->fetchColumn() ?: 0);
+        if ($active) {
+            $pdo->prepare(
+                "INSERT IGNORE INTO cycle_members (cycle_id, user_id, role_in_cycle, specialty) VALUES (?,?, 'juror', ?)"
+            )->execute([$active, $jurorId, 'Technik & Anlagenbau']);
+        }
+
+        // 3) Je aktuellem Businessplan mit fertiger KI-Bewertung eine eigene
+        //    Jury-Bewertung ableiten.
+        $plans = $pdo->query(
+            "SELECT bp.id AS bp_id, bp.team_id, t.name AS team_name, t.idea_name, t.idea_pitch,
+                    ae.id AS ae_id, ae.summary, ae.strengths, ae.weaknesses
+               FROM business_plans bp
+               JOIN teams t ON t.id = bp.team_id
+               JOIN ai_evaluations ae ON ae.id = (
+                   SELECT ae2.id FROM ai_evaluations ae2
+                    WHERE ae2.business_plan_id = bp.id AND ae2.status = 'done'
+                    ORDER BY ae2.id DESC LIMIT 1
+               )
+              WHERE bp.is_current = 1"
+        )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $findScores = $pdo->prepare('SELECT criterion_key, score FROM ai_evaluation_scores WHERE ai_evaluation_id = ?');
+        $hasEval    = $pdo->prepare('SELECT id FROM evaluations WHERE juror_id = ? AND team_id = ?');
+        $insEval    = $pdo->prepare(
+            'INSERT INTO evaluations (juror_id, team_id, bp_submitted, pitch_submitted, bp_total, pitch_total, grand_total)
+             VALUES (?,?,1,0,?,NULL,?)'
+        );
+        $insScore   = $pdo->prepare(
+            'INSERT INTO evaluation_scores (evaluation_id, criterion_key, phase, points, notes) VALUES (?,?,?,?,?)'
+        );
+
+        foreach ($plans as $p) {
+            $teamId = (int) $p['team_id'];
+
+            // Bereits bewertet? Dann nichts überschreiben.
+            $hasEval->execute([$jurorId, $teamId]);
+            if ($hasEval->fetchColumn()) {
+                continue;
+            }
+
+            // KI-Einzelscores laden.
+            $findScores->execute([(int) $p['ae_id']]);
+            $ai = [];
+            foreach ($findScores->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $ai[(string) $r['criterion_key']] = (float) $r['score'];
+            }
+            if (!$ai) {
+                continue;
+            }
+
+            // Baut das Team ein echtes Gerät / eine Maschine / Anlage? -> Bonus.
+            $text = mb_strtolower(
+                (string) $p['team_name'] . ' ' . (string) $p['idea_name'] . ' ' . (string) $p['idea_pitch'] . ' ' .
+                (string) $p['summary'] . ' ' . (string) $p['strengths'] . ' ' . (string) $p['weaknesses']
+            );
+            $maker = self::looksLikeHardware($text);
+
+            $bpTotal = 0;
+            $rows = [];
+            foreach (array_keys(Criteria::BUSINESSPLAN) as $key) {
+                $pts = (int) round($ai[$key] ?? 0.0);
+                $pts += self::seedDelta((int) $p['bp_id'], $key); // leichte Abweichung −1/0/+1
+                if ($maker) {
+                    // Martins Steckenpferd: erfundene/gebaute Geräte, Maschinen, Anlagen.
+                    $pts += ($key === 'idea' || $key === 'foundation') ? 2 : 1;
+                }
+                $pts = max(0, min(10, $pts));
+                $rows[$key] = $pts;
+                $bpTotal += $pts;
+            }
+
+            $grand = (int) Criteria::grandTotal((float) $bpTotal, 0.0); // Pitch noch offen
+            $insEval->execute([$jurorId, $teamId, $bpTotal, $grand]);
+            $evalId = (int) $pdo->lastInsertId();
+            foreach ($rows as $key => $pts) {
+                $insScore->execute([$evalId, $key, 'businessplan', $pts, null]);
+            }
+        }
+    }
+
+    /**
+     * Kleine, reproduzierbare Abweichung (−1/0/+1) je Businessplan+Kriterium, damit
+     * die abgeleitete Jury-Bewertung nicht exakt die KI-Punkte spiegelt.
+     */
+    private static function seedDelta(int $bpId, string $key): int
+    {
+        $m = crc32($bpId . '|' . $key) % 10;
+        if ($m < 3) { return -1; } // ~30 %
+        if ($m < 7) { return 0; }  // ~40 %
+        return 1;                  // ~30 %
+    }
+
+    /**
+     * Heuristik: Deutet der Text (Team-/Ideenname + KI-Zusammenfassung) darauf hin,
+     * dass ein echtes physisches Gerät / eine Maschine / Anlage erfunden und gebaut
+     * wird? Bewusst großzügig – der Bonus soll Martins Vorliebe abbilden.
+     */
+    private static function looksLikeHardware(string $text): bool
+    {
+        $needles = [
+            'gerät', 'maschine', 'anlage', 'prototyp', 'sensor', 'roboter', 'hardware',
+            'elektronik', 'vorrichtung', 'apparat', 'mechanik', 'mechanismus', 'konstru',
+            '3d-druck', '3d druck', 'bauteil', 'platine', 'mikrocontroller', 'arduino',
+            'raspberry', 'ladegerät', 'akku', 'solar', 'scanner', 'motor', 'gebaut',
+        ];
+        foreach ($needles as $n) {
+            if (mb_strpos($text, $n) !== false) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
