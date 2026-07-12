@@ -106,7 +106,8 @@ else:
     $jury    = array_values(array_filter($guests, fn($g) => $g['category'] === 'jury'));
     $press   = array_values(array_filter($guests, fn($g) => $g['category'] === 'press'));
     $speakers = array_values(array_filter($guests, fn($g) => (int) $g['greeting'] === 1 || (int) $g['keynote'] === 1));
-    usort($speakers, fn($a, $b) => ((int) $b['keynote']) <=> ((int) $a['keynote']));
+    // Erst die Grußworte, die Keynote(s) ans Ende (stabile Sortierung ab PHP 8).
+    usort($speakers, fn($a, $b) => ((int) $a['keynote']) <=> ((int) $b['keynote']));
 
     $agenda = Database::all('SELECT * FROM event_agenda WHERE event_id=? ORDER BY sort_order, time_from, id', [$eventId]);
     $prizes = Database::all("SELECT * FROM event_budget_items WHERE event_id=? AND kind='prize' ORDER BY place IS NULL, place, sort_order, id", [$eventId]);
@@ -115,18 +116,13 @@ else:
          WHERE c.cycle_id = ? GROUP BY s.id, s.name, s.logo_path ORDER BY s.name',
         [$cycleId]
     );
-    $schools = Database::all(
-        'SELECT sc.name FROM cycle_schools cs JOIN schools sc ON sc.id = cs.school_id WHERE cs.cycle_id = ? ORDER BY sc.name',
-        [$cycleId]
-    );
-    $leads = Database::all(
-        "SELECT u.name, u.email, u.phone FROM cycle_members cm JOIN users u ON u.id = cm.user_id
-         WHERE cm.cycle_id = ? AND cm.role_in_cycle = 'project_lead' ORDER BY u.name",
-        [$cycleId]
-    );
-    if (!$leads) {
-        $leads = Database::all("SELECT name, email, phone FROM users WHERE role = 'admin' AND is_active = 1 ORDER BY id LIMIT 1");
-    }
+    // Fester WJ-Kontakt fürs Handout. Bewusst NICHT aus Nutzerkonten gezogen –
+    // Admin-/Login-Konten dürfen im öffentlichen Handout nicht auftauchen.
+    $contact = [
+        'name'  => 'Martin Vierling',
+        'email' => 'mv@vimatec.de',
+        'phone' => '+491709009124',
+    ];
 
     $nStudents = (int) Database::value('SELECT COUNT(*) FROM students');
     $nTeams    = (int) Database::value('SELECT COUNT(*) FROM teams');
@@ -140,7 +136,6 @@ else:
 
     $eventDateLine = trim(implode(', ', array_filter([$weekday($event['event_date']), $dateFmt($event['event_date'])])));
     $timeLine = $event['time_from'] ? $timeFmt($event['time_from']) . ' Uhr' : '';
-    $schoolNames = array_map(fn($s) => $s['name'], $schools);
 ?>
   <article class="doc">
     <header class="doc__head">
@@ -162,7 +157,7 @@ else:
         <?php endif; ?>
         <?php if ($eventDateLine): ?><tr><th>Datum</th><td><?= e($eventDateLine) ?></td></tr><?php endif; ?>
         <?php if ($timeLine): ?><tr><th>Uhrzeit</th><td><?= e($timeLine) ?></td></tr><?php endif; ?>
-        <?php if ($parts): ?><tr><th>Teilnehmende</th><td><?= e(implode(' · ', $parts)) ?><?= $schoolNames ? ' aus ' . e(implode(', ', $schoolNames)) : '' ?></td></tr><?php endif; ?>
+        <?php if ($parts): ?><tr><th>Teilnehmende</th><td><?= e(implode(' · ', $parts)) ?></td></tr><?php endif; ?>
       </table>
     </section>
 
@@ -296,16 +291,13 @@ else:
     </section>
     <?php endif; ?>
 
-    <?php if ($leads): ?>
     <section class="block">
       <h2>Fragen &amp; Kontakt</h2>
+      <p>Bei offenen Fragen gerne jederzeit melden:</p>
       <ul class="plain">
-        <?php foreach ($leads as $l): ?>
-          <li><strong><?= e($l['name']) ?></strong><?= $l['email'] ? ' · ' . e($l['email']) : '' ?><?= $l['phone'] ? ' · ' . e($l['phone']) : '' ?></li>
-        <?php endforeach; ?>
+        <li><strong><?= e($contact['name']) ?></strong><?= $contact['email'] ? ' · ' . e($contact['email']) : '' ?><?= $contact['phone'] ? ' · ' . e($contact['phone']) : '' ?></li>
       </ul>
     </section>
-    <?php endif; ?>
 
     <footer class="doc__foot">Unternehmen&nbsp;Plus – Businessplanwettbewerb der Wirtschaftsjunioren Forchheim<?= $yearLabel ? ' · ' . e($yearLabel) : '' ?></footer>
   </article>

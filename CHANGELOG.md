@@ -7,6 +7,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.44.1] - 2026-07-12
+### Geändert
+- **Handout-Feinschliff:** In „Grußworte & Keynote" steht die Keynote jetzt
+  immer am Ende (erst die Grußworte). Bei „Teilnehmende" werden nur noch die
+  Zahlen genannt (z. B. „8 Ehrengäste") ohne Schul-Zusatz, da Gäste auch von
+  anderswo kommen. „Fragen & Kontakt" zeigt einen festen WJ-Ansprechpartner und
+  niemals Admin-/Nutzerkonten.
+
 ## [0.44.0] - 2026-07-12
 ### Hinzugefügt
 - **PitchDay-Gäste: Vertretung hinterlegen.** Sagt eine eingeladene Person ab und
