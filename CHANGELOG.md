@@ -7,6 +7,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.44.3] - 2026-07-12
+### Geändert
+- **„Ablaufplan / Handout (PDF)" liegt jetzt im Tab „Ablaufplan"** (statt bei
+  „Gäste & VIPs") – dort, wo man ihn erwartet.
+- **Reserviert-Schilder standardmäßig für alle Gäste/VIPs außer Absagen.** Die
+  Auswahl ist jetzt für alle nicht abgesagten Gäste vorbelegt (einzeln
+  abwählbar); ohne Auswahl druckt der Button alle außer Absagen.
+
 ## [0.44.2] - 2026-07-12
 ### Geändert
 - **Handout „Fragen & Kontakt" nutzt dieselbe Logik wie der Menüpunkt „Kontakt":**

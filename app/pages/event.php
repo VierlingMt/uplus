@@ -473,11 +473,9 @@ ob_start(); ?>
       <a class="btn btn--ghost btn--sm" target="_blank" rel="noopener"
          href="<?= e(url('event_print', ['cycle' => $cycleId, 'kind' => 'signs'])) ?>"
          data-signs-open="<?= e(url('event_print', ['cycle' => $cycleId, 'kind' => 'signs'])) ?>">🪧 Reserviert-Schilder (PDF)</a>
-      <a class="btn btn--ghost btn--sm" target="_blank" rel="noopener"
-         href="<?= e(url('event_print', ['cycle' => $cycleId, 'kind' => 'handout'])) ?>">📄 Ablaufplan / Handout (PDF)</a>
     </div>
     <p class="muted" style="font-size:13px;margin:-6px 0 14px">
-      🪧 Die angehakten Gäste kommen aufs Reserviert-Schild (vorbelegt mit „Sitzplatz reserviert"). Bei einer <strong>Vertretung</strong> erscheint automatisch die vertretende Person – mit Hinweis, wen sie vertritt.
+      🪧 Die angehakten Gäste kommen aufs Reserviert-Schild – standardmäßig <strong>alle außer Absagen</strong>, einzeln abwählbar. Bei einer <strong>Vertretung</strong> erscheint automatisch die vertretende Person – mit Hinweis, wen sie vertritt.
     </p>
 
     <?php
@@ -518,7 +516,7 @@ ob_start(); ?>
             ], JSON_UNESCAPED_UNICODE));
           ?>
             <tr>
-              <td data-label="Schild"><input type="checkbox" class="js-sign-pick" value="<?= (int) $g['id'] ?>" <?= (int) $g['seat_reserved'] === 1 ? 'checked' : '' ?> title="Reserviert-Schild für diesen Gast drucken"></td>
+              <td data-label="Schild"><input type="checkbox" class="js-sign-pick" value="<?= (int) $g['id'] ?>" <?= $g['status'] !== 'declined' ? 'checked' : '' ?> title="Reserviert-Schild für diesen Gast drucken"></td>
               <td data-label="Name"><strong><?= e($gd['name']) ?></strong>
                 <?= $gd['subline'] ? '<div class="muted" style="font-size:13px">↷ ' . e($gd['subline']) . '</div>' : '' ?>
                 <?= $g['notes'] ? '<div class="muted" style="font-size:13px">' . e($g['notes']) . '</div>' : '' ?></td>
@@ -553,6 +551,8 @@ ob_start(); ?>
           <button class="btn btn--ghost btn--sm">🕒 Standard-Agenda einfügen</button>
         </form>
       <?php endif; ?>
+      <a class="btn btn--ghost btn--sm" target="_blank" rel="noopener"
+         href="<?= e(url('event_print', ['cycle' => $cycleId, 'kind' => 'handout'])) ?>">📄 Ablaufplan / Handout (PDF)</a>
     </div>
     <div class="card">
       <div class="table-wrap">

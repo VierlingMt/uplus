@@ -64,7 +64,8 @@ if ($kind === 'signs'):
     if ($pickIds) {
         $signs = array_values(array_filter($guests, fn($g) => in_array((int) $g['id'], $pickIds, true)));
     } else {
-        $signs = array_values(array_filter($guests, fn($g) => (int) $g['seat_reserved'] === 1));
+        // Standard: alle Gäste/VIPs bis auf Absagen.
+        $signs = array_values(array_filter($guests, fn($g) => $g['status'] !== 'declined'));
     }
     $eventLine = trim(implode(' · ', array_filter([
         $weekday($event['event_date']) . ($event['event_date'] ? ', ' . $dateFmt($event['event_date']) : ''),
@@ -76,7 +77,7 @@ if ($kind === 'signs'):
     <div class="empty">
       <h1>Keine Gäste ausgewählt</h1>
       <p>Für ein Reserviert-Schild bitte im PitchDay unter „Gäste &amp; VIPs" die gewünschten Gäste anhaken
-         (oder bei einem Gast „Sitzplatz reserviert" setzen) und erneut auf „Reserviert-Schilder" klicken.</p>
+         und erneut auf „Reserviert-Schilder" klicken. Ohne Auswahl werden alle Gäste außer Absagen gedruckt.</p>
     </div>
   <?php else: ?>
     <?php foreach ($signs as $g): $gd = PitchDay::guestDisplay($g);
