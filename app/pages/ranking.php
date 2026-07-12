@@ -135,18 +135,32 @@ if (is_post() && $isAdmin) {
         }
     } elseif ($action === 'freeze') {
         Settings::set('ranking_frozen', '1');
+        Settings::set('ranking_frozen_at', date('Y-m-d H:i:s'));
         Audit::log('ranking.freeze', 'Bewertung eingefroren – Ranking festgeschrieben.');
-        flash('success', 'Bewertung eingefroren – das Ranking ist festgeschrieben. Die Jury kann nichts mehr ändern.');
+        flash('success', 'Bewertung eingefroren – das Ranking ist festgeschrieben. Die Jury kann nichts mehr ändern. Versehentlich? Innerhalb von 15 Minuten noch rückgängig zu machen.');
     } elseif ($action === 'unfreeze') {
-        Settings::set('ranking_frozen', '0');
-        Audit::log('ranking.unfreeze', 'Bewertung wieder freigegeben.');
-        flash('success', 'Bewertung wieder freigegeben – die Jury kann wieder bewerten.');
+        // Freigabe nur als „Notausstieg" innerhalb von 15 Minuten nach dem
+        // Einfrieren (falls man sich verklickt hat). Danach bleibt es fix.
+        $frozenAt = Settings::get('ranking_frozen_at');
+        if ($frozenAt !== null && $frozenAt !== '' && (time() - strtotime((string) $frozenAt)) <= 900) {
+            Settings::set('ranking_frozen', '0');
+            Settings::set('ranking_frozen_at', null);
+            Audit::log('ranking.unfreeze', 'Bewertung wieder freigegeben (innerhalb 15-Minuten-Fenster).');
+            flash('success', 'Bewertung wieder freigegeben – die Jury kann wieder bewerten.');
+        } else {
+            flash('error', 'Freigabe nicht mehr möglich: Das 15-Minuten-Fenster ist abgelaufen. Das Ranking bleibt festgeschrieben.');
+        }
     }
     redirect(url('ranking'));
 }
 
 $rows = $loadRows();
 $frozen = Settings::getInt('ranking_frozen', 0) === 1;
+// Freigabe (Rückgängig) nur innerhalb von 15 Minuten nach dem Einfrieren.
+$frozenAt = $frozen ? Settings::get('ranking_frozen_at') : null;
+$unfreezeSecsLeft = ($frozenAt !== null && $frozenAt !== '') ? (900 - (time() - strtotime((string) $frozenAt))) : 0;
+$canUnfreeze = $frozen && $unfreezeSecsLeft > 0;
+$unfreezeMinLeft = (int) ceil($unfreezeSecsLeft / 60);
 $fmt = fn($n) => $n === null ? '–' : rtrim(rtrim(number_format((float) $n, 1, ',', ''), '0'), ',');
 // Admin ist eine reine Servicerolle und zählt NICHT als Jurymitglied.
 $totalJurors = (int) Database::value("SELECT COUNT(*) FROM users u WHERE u.is_active=1 AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role IN ('lead','juror'))");
@@ -194,10 +208,12 @@ ob_start(); ?>
           : 'Top ' . (int) $pitchSlots . ' (+' . (int) $fallbackSlots . ') nominieren' ?></button>
       </form>
       <?php if ($frozen): ?>
+        <?php if ($canUnfreeze): ?>
         <form method="post" action="<?= url('ranking') ?>" data-confirm="Bewertung wieder freigeben? Die Jury kann danach ihre Bewertungen wieder ändern.">
           <?= Csrf::field() ?><input type="hidden" name="action" value="unfreeze">
-          <button class="btn btn--ghost">🔓 Freigeben</button>
+          <button class="btn btn--ghost">🔓 Freigeben (noch <?= $unfreezeMinLeft ?> Min)</button>
         </form>
+        <?php endif; ?>
       <?php else: ?>
         <form method="post" action="<?= url('ranking') ?>" data-confirm="Bewertung jetzt einfrieren? Das Ranking wird festgeschrieben – nur die Verwaltung kann danach noch Änderungen vornehmen.">
           <?= Csrf::field() ?><input type="hidden" name="action" value="freeze">
@@ -212,9 +228,7 @@ ob_start(); ?>
 <div class="card" style="border-left:4px solid var(--wj-blue)"><div class="card__body" style="display:flex;align-items:center;gap:10px">
   <span style="font-size:20px">🔒</span>
   <div><strong>Bewertung eingefroren – das Ranking ist festgeschrieben.</strong>
-    <span class="muted"><?= $isAdmin
-      ? 'Die Jury kann nichts mehr ändern. Als Verwaltung kannst du bei Bedarf noch korrigieren oder oben wieder freigeben.'
-      : 'Deine Bewertungen sind gespeichert und können nicht mehr geändert werden.' ?></span></div>
+    <span class="muted"><?php if (!$isAdmin): ?>Deine Bewertungen sind gespeichert und können nicht mehr geändert werden.<?php elseif ($canUnfreeze): ?>Die Jury kann nichts mehr ändern. Verklickt? Noch <?= $unfreezeMinLeft ?> Minute<?= $unfreezeMinLeft === 1 ? '' : 'n' ?> lang oben wieder freizugeben; danach bleibt es endgültig festgeschrieben.<?php else: ?>Die Jury kann nichts mehr ändern. Das 15-Minuten-Fenster zum Freigeben ist abgelaufen – das Ranking bleibt endgültig festgeschrieben.<?php endif; ?></span></div>
 </div></div>
 <?php endif; ?>
 

@@ -7,6 +7,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.53.1] - 2026-07-12
+### Geändert
+- **Freigeben nur noch als 15-Minuten-Notausstieg.** Ein eingefrorenes Ranking
+  lässt sich nur innerhalb von 15 Minuten nach dem Einfrieren wieder freigeben
+  (für versehentliches Einfrieren); danach bleibt es endgültig festgeschrieben.
+  Der Freigeben-Button zeigt die Restzeit an und verschwindet nach Ablauf.
+  Einfrieren/Freigeben bleibt Admin bzw. Projektleitung vorbehalten.
+
 ## [0.53.0] - 2026-07-12
 ### Hinzugefügt
 - **Finale Platzierung der Pitch-Teams.** Neue Karte „🏆 Finale Platzierung" im
