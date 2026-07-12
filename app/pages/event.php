@@ -138,7 +138,7 @@ if (is_post()) {
                     (SELECT GROUP_CONCAT(ur.role) FROM user_roles ur WHERE ur.user_id = u.id) AS roles
              FROM users u
              LEFT JOIN schools s ON s.id = u.school_id
-             WHERE NOT EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role = 'admin')
+             WHERE EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role IN ('juror','lead','teacher'))
                AND (
                  u.id IN (SELECT user_id FROM cycle_members WHERE cycle_id = ?)
                  OR (EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role = 'teacher')
@@ -546,7 +546,7 @@ ob_start(); ?>
       <button type="button" class="btn btn--teal btn--sm" data-modal-open="guestModal">+ Gast / VIP</button>
       <form method="post" action="<?= url('event') ?>">
         <?= Csrf::field() ?><input type="hidden" name="action" value="import_jury"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="tab" value="guests">
-        <button class="btn btn--ghost btn--sm" title="Alle Beteiligten des Wettbewerbsjahres aus „Jury & Nutzer" übernehmen (Jury, Projektleitung, Lehrkräfte – ohne Admin); idempotent">⚖ Jury &amp; Nutzer übernehmen</button>
+        <button class="btn btn--ghost btn--sm" title="Alle Beteiligten des Wettbewerbsjahres aus „Jury & Nutzer" übernehmen (Jury, Projektleitung, Lehrkräfte; reine Admin-Konten ausgenommen); idempotent">⚖ Jury &amp; Nutzer übernehmen</button>
       </form>
       <a class="btn btn--ghost btn--sm" target="_blank" rel="noopener"
          href="<?= e(url('event_print', ['cycle' => $cycleId, 'kind' => 'signs'])) ?>"

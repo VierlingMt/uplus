@@ -89,9 +89,11 @@ if ($eid = (int) input('edit', 0)) {
 }
 $sponsors = Database::all(
     "SELECT s.*, (SELECT COUNT(*) FROM sponsor_contributions c WHERE c.sponsor_id=s.id AND c.cycle_id=?) AS active_now,
+            (SELECT COALESCE(SUM(amount),0) FROM sponsor_contributions c WHERE c.sponsor_id=s.id AND c.cycle_id=?) AS amount_now,
             (SELECT COUNT(*) FROM sponsor_contributions c WHERE c.sponsor_id=s.id) AS n_contrib
-     FROM sponsors s ORDER BY s.name", [$activeCycleId]
+     FROM sponsors s ORDER BY s.name", [$activeCycleId, $activeCycleId]
 );
+$sumNow = array_sum(array_map(fn($s) => (float) $s['amount_now'], $sponsors));
 $money = fn($a) => number_format((float) $a, 2, ',', '.') . ' €';
 
 $fill = fn(array $s) => e(json_encode([
@@ -170,7 +172,7 @@ ob_start(); ?>
   <div class="card">
     <div class="table-wrap">
       <table class="data data--cards">
-        <thead><tr><th>Sponsor</th><th>Ansprechpartner</th><th>E-Mail</th><th><?= e($activeLabel) ?> aktiv</th><th>Beiträge</th><th></th></tr></thead>
+        <thead><tr><th>Sponsor</th><th>Ansprechpartner</th><th>E-Mail</th><th>Beitrag <?= e($activeLabel) ?></th><th>Beiträge</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($sponsors as $s): ?>
           <tr>
@@ -186,7 +188,7 @@ ob_start(); ?>
             </td>
             <td data-label="Ansprechpartner"><?= e($s['contact_name'] ?? '—') ?></td>
             <td data-label="E-Mail"><?= $s['email'] ? '<a href="mailto:' . e($s['email']) . '">' . e($s['email']) . '</a>' : '—' ?></td>
-            <td data-label="<?= e($activeLabel) ?> aktiv"><?= $s['active_now'] ? '<span class="pill teal">ja</span>' : '<span class="pill muted">nein</span>' ?></td>
+            <td data-label="Beitrag <?= e($activeLabel) ?>"><?= (float) $s['amount_now'] > 0 ? '<strong>' . e($money($s['amount_now'])) . '</strong>' : '<span class="muted">–</span>' ?></td>
             <td data-label="Beiträge"><?= (int) $s['n_contrib'] ?></td>
             <td class="row-actions" style="white-space:nowrap;text-align:right">
               <a href="<?= url('sponsors', ['edit' => $s['id']]) ?>" class="btn btn--ghost btn--sm" title="Sponsor öffnen: Beiträge verwalten">💶 Beiträge</a>
@@ -203,6 +205,9 @@ ob_start(); ?>
       </table>
     </div>
   </div>
+  <?php if ($sponsors): ?>
+    <div style="text-align:right;margin-top:10px;font-size:15px">Summe <strong><?= e($activeLabel) ?></strong>: <span class="pill teal" style="font-size:15px"><?= e($money($sumNow)) ?></span></div>
+  <?php endif; ?>
   <p class="muted mt" style="font-size:13px">Logos erscheinen automatisch im Dashboard, sobald ein Sponsor im aktiven Wettbewerbsjahr (<?= e($activeLabel) ?>) eine Leistung erbringt. Das aktive Jahr wird unter „Wettbewerbsjahre“ festgelegt.</p>
 <?php endif; ?>
 

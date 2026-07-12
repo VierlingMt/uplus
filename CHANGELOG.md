@@ -7,6 +7,15 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.49.1] - 2026-07-12
+### Geändert
+- **Import „Jury & Nutzer übernehmen" überspringt nur noch reine Admin-Konten.**
+  Wer die Rolle Jury (oder Projektleitung/Lehrkraft) hat, wird jetzt übernommen –
+  **auch wenn er zusätzlich Admin ist** (z. B. Jury nach Rolle → Jury). Nur Konten,
+  die **ausschließlich** Admin sind, bleiben außen vor.
+- **Sponsoren-Übersicht zeigt den Beitrag in € für das aktuelle Wettbewerbsjahr**
+  (Spalte statt „aktiv ja/nein") samt Gesamtsumme des Jahres.
+
 ## [0.49.0] - 2026-07-12
 ### Geändert
 - **Gästeliste zieht Stammdaten jetzt LIVE aus „Jury & Nutzer".** Übernommene
