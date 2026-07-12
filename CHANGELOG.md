@@ -7,6 +7,21 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.52.0] - 2026-07-12
+### Geändert
+- **Handout folgt jetzt dem Ablauf der Moderationskärtchen.** Die Infos sind nach
+  dem Veranstaltungsablauf sinnvoll gruppiert: erst „Wer & Was" (Veranstaltungs-
+  infos, Projekt, Ehrengäste, Lehrkräfte, Presse, Sponsoren), dann der
+  Programmablauf (Ablauf/Organisatorisches, **Grußworte & Keynote vor** den
+  nominierten Teams, Jury, Aufgaben & Bewertung, Nominierte Teams, Preise) und zum
+  Schluss „Fragen & Kontakt".
+### Hinzugefügt
+- **Jury-Bewertungskriterien im Handout** (Businessplan & Pitch) unter „Aufgaben &
+  Bewertung der Jury".
+- **Sparkasse als „offizieller Bildungssponsor"** wird im Sponsorenblock
+  hervorgehoben.
+- **Hinweis zu Buffet/Getränken & Toiletten** im Ablauf-/Organisationsteil.
+
 ## [0.51.1] - 2026-07-12
 ### Geändert
 - **Bühnen-Reihenfolge der Pitches ist jetzt zufällig** (nicht die Punktereihenfolge).

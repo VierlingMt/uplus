@@ -184,6 +184,9 @@ else:
     $eventDateLine = trim(implode(', ', array_filter([$weekday($event['event_date']), $dateFmt($event['event_date'])])));
     $timeLine = $event['time_from'] ? $timeFmt($event['time_from']) . ' Uhr' : '';
 ?>
+  <?php
+    $juryScore = fn($v) => $v === null ? null : number_format((float) $v, 1, ',', '.');
+  ?>
   <article class="doc">
     <header class="doc__head">
       <img class="doc__logo" src="<?= e($logo) ?>" alt="">
@@ -194,6 +197,7 @@ else:
       </div>
     </header>
 
+    <!-- ============ Teil 1: Eröffnung / Wer & Was ============ -->
     <section class="block">
       <h2>Veranstaltungsinfos</h2>
       <table class="kv">
@@ -208,6 +212,19 @@ else:
       </table>
     </section>
 
+    <section class="block">
+      <h2>Infos zum Projekt</h2>
+      <p>Die Wirtschaftsjunioren Forchheim – ein Netzwerk junger Unternehmerinnen, Unternehmer und
+        Führungskräfte bis 45 Jahre – engagieren sich für wirtschaftliche Bildung, gesellschaftliche
+        Verantwortung und nachhaltige Entwicklung in der Region.</p>
+      <p>Mit „Unternehmen&nbsp;Plus" fördern wir gezielt unternehmerisches Denken bei Schülerinnen und
+        Schülern an den regionalen Gymnasien und unterstützen den bayerischen LehrplanPLUS mit
+        Praxisbezug. In Anlehnung an „Die Höhle der Löwen" entwickeln die Jugendlichen in Teams eigene
+        Geschäftsideen, die sie beim großen Pitch&nbsp;Day einer Jury aus Unternehmerinnen, Unternehmern
+        und Führungskräften präsentieren. Die besten Teams erfahren erst am Veranstaltungstag, ob sie
+        live auf die Bühne dürfen.</p>
+    </section>
+
     <?php if ($vips): ?>
     <section class="block">
       <h2>Ehrengäste</h2>
@@ -216,21 +233,6 @@ else:
           <li>
             <strong><?= e($gd['name']) ?></strong>
             <?php $r = $roleLine($gd, $g['category']); if ($r): ?><span class="role"><?= e($r) ?></span><?php endif; ?>
-            <?php if ($gd['subline']): ?><span class="vertritt">↷ <?= e($gd['subline']) ?></span><?php endif; ?>
-          </li>
-        <?php endforeach; ?>
-      </ol>
-    </section>
-    <?php endif; ?>
-
-    <?php if ($jury): ?>
-    <section class="block">
-      <h2>Jury</h2>
-      <ol class="people">
-        <?php foreach ($jury as $g): $gd = PitchDay::guestDisplay($g); ?>
-          <li>
-            <strong><?= e($gd['name']) ?></strong>
-            <?php $r = $roleLine($gd, $g['category']); if ($r && $r !== PitchDay::guestCategory('jury')): ?><span class="role"><?= e($r) ?></span><?php endif; ?>
             <?php if ($gd['subline']): ?><span class="vertritt">↷ <?= e($gd['subline']) ?></span><?php endif; ?>
           </li>
         <?php endforeach; ?>
@@ -256,9 +258,35 @@ else:
     </section>
     <?php endif; ?>
 
+    <?php if ($press): ?>
+    <section class="block">
+      <h2>Presse</h2>
+      <ul class="plain">
+        <?php foreach ($press as $g): $gd = PitchDay::guestDisplay($g); ?>
+          <li><strong><?= e($gd['name']) ?></strong><?php $r = $roleLine($gd, $g['category']); if ($r && $r !== PitchDay::guestCategory('press')): ?> · <?= e($r) ?><?php endif; ?></li>
+        <?php endforeach; ?>
+      </ul>
+    </section>
+    <?php endif; ?>
+
+    <?php if ($sponsors): ?>
+    <section class="block">
+      <h2>Sponsoren &amp; Unterstützer</h2>
+      <div class="sponsors">
+        <?php foreach ($sponsors as $s): $isEdu = stripos((string) $s['name'], 'sparkasse') !== false; ?>
+          <div class="sponsor">
+            <?php if (!empty($s['logo_path'])): ?><img src="<?= e(asset($s['logo_path'])) ?>" alt="<?= e($s['name']) ?>"><?php else: ?><span><?= e($s['name']) ?></span><?php endif; ?>
+            <?php if ($isEdu): ?><div class="sponsor__badge">offizieller Bildungssponsor</div><?php endif; ?>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    </section>
+    <?php endif; ?>
+
+    <!-- ============ Teil 2: Programmablauf (nach Agenda) ============ -->
     <?php if ($agenda): ?>
     <section class="block">
-      <h2>Ablauf</h2>
+      <h2>Ablauf / Organisatorisches</h2>
       <table class="agenda">
         <?php foreach ($agenda as $a): ?>
           <tr>
@@ -270,11 +298,60 @@ else:
           </tr>
         <?php endforeach; ?>
       </table>
+      <p class="note-line">Buffet &amp; Getränke jederzeit und in der Pause · Toiletten im Eingangsbereich.</p>
     </section>
     <?php endif; ?>
 
+    <?php if ($speakers): ?>
+    <section class="block">
+      <h2>Grußworte &amp; Keynote</h2>
+      <ol class="people">
+        <?php foreach ($speakers as $g): $gd = PitchDay::guestDisplay($g);
+          $tag = (int) $g['keynote'] === 1 ? 'Keynote' : 'Grußwort'; ?>
+          <li>
+            <span class="tag"><?= e($tag) ?></span>
+            <strong><?= e($gd['name']) ?></strong>
+            <?php $r = $roleLine($gd, $g['category']); if ($r): ?><span class="role"><?= e($r) ?></span><?php endif; ?>
+            <?php if ($g['greeting_minutes']): ?><span class="role">ca. <?= (int) $g['greeting_minutes'] ?> Min</span><?php endif; ?>
+            <?php if ($gd['subline']): ?><span class="vertritt">↷ <?= e($gd['subline']) ?></span><?php endif; ?>
+          </li>
+        <?php endforeach; ?>
+      </ol>
+    </section>
+    <?php endif; ?>
+
+    <?php if ($jury): ?>
+    <section class="block">
+      <h2>Jury</h2>
+      <ol class="people">
+        <?php foreach ($jury as $g): $gd = PitchDay::guestDisplay($g); ?>
+          <li>
+            <strong><?= e($gd['name']) ?></strong>
+            <?php $r = $roleLine($gd, $g['category']); if ($r && $r !== PitchDay::guestCategory('jury')): ?><span class="role"><?= e($r) ?></span><?php endif; ?>
+            <?php if ($gd['subline']): ?><span class="vertritt">↷ <?= e($gd['subline']) ?></span><?php endif; ?>
+          </li>
+        <?php endforeach; ?>
+      </ol>
+    </section>
+    <?php endif; ?>
+
+    <section class="block">
+      <h2>Aufgaben &amp; Bewertung der Jury</h2>
+      <ol class="steps">
+        <li>Ihr sitzt zu Beginn vorne in den ersten Sitzreihen.</li>
+        <li>Vor den Pitches werdet ihr aufgerufen und vorgestellt und kommt einzeln auf die Bühne zu den Jurystühlen.</li>
+        <li>Zu jedem Pitch werden Fragen gestellt und Anmerkungen gemacht – immer konstruktiv und positiv, mit echtem Mehrwert für die Teams.</li>
+        <li>Ablauf je Team: <strong>3&nbsp;Min. Pitch · 5&nbsp;Min. Jury-Feedback · 2&nbsp;Min. Puffer</strong>.</li>
+        <li>Nach den Pitches zieht ihr euch in einen separaten Raum zurück und kürt den 1., 2. und 3.&nbsp;Platz. Die Nominierung anschließend an die Moderation geben (Urkunden mit Businessplan-Titel, Namen der Teammitglieder &amp; Schulname).</li>
+        <li>Bitte haltet euch streng an den Zeitplan. Danke für euren Einsatz!</li>
+      </ol>
+      <div class="subgroup">Bewertung Businessplan</div>
+      <p class="crit">Geschäftsidee · Vertrieb &amp; Wettbewerb · Team &amp; Partner · Unternehmensgründung · Finanzen &amp; Kosten</p>
+      <div class="subgroup">Bewertung Pitch</div>
+      <p class="crit">Überzeugungskraft &amp; Klarheit · Präsentationsstil &amp; Körpersprache · Kreativität &amp; Begeisterung · Antworten auf Jury-Fragen</p>
+    </section>
+
     <?php if ($pitchTeams || $fallbackTeams): ?>
-    <?php $juryScore = fn($v) => $v === null ? null : number_format((float) $v, 1, ',', '.'); ?>
     <section class="block">
       <h2>Nominierte Teams (Pitches)</h2>
       <p class="note-line">Die <strong>Reihenfolge ist die Aufruf-Reihenfolge auf der Bühne</strong> – bewusst <strong>zufällig</strong> gelost, <strong>nicht</strong> nach Punkten (so lässt sich aus der Reihenfolge nicht auf die Platzierung schließen). Auswahl per <strong>fairer Verteilung je Schule</strong>: jede Schule erhält einen Grundstock an Plätzen, überzählige Plätze gehen an die Schule mit den besten Businessplänen. Angegeben ist der <strong>Jury-Ø des Businessplans</strong> (nur Jury, max. 50 Punkte).</p>
@@ -309,49 +386,6 @@ else:
     </section>
     <?php endif; ?>
 
-    <?php if ($speakers): ?>
-    <section class="block">
-      <h2>Grußworte &amp; Keynote</h2>
-      <ol class="people">
-        <?php foreach ($speakers as $g): $gd = PitchDay::guestDisplay($g);
-          $tag = (int) $g['keynote'] === 1 ? 'Keynote' : 'Grußwort'; ?>
-          <li>
-            <span class="tag"><?= e($tag) ?></span>
-            <strong><?= e($gd['name']) ?></strong>
-            <?php $r = $roleLine($gd, $g['category']); if ($r): ?><span class="role"><?= e($r) ?></span><?php endif; ?>
-            <?php if ($g['greeting_minutes']): ?><span class="role">ca. <?= (int) $g['greeting_minutes'] ?> Min</span><?php endif; ?>
-            <?php if ($gd['subline']): ?><span class="vertritt">↷ <?= e($gd['subline']) ?></span><?php endif; ?>
-          </li>
-        <?php endforeach; ?>
-      </ol>
-    </section>
-    <?php endif; ?>
-
-    <section class="block">
-      <h2>Infos zum Projekt</h2>
-      <p>Die Wirtschaftsjunioren Forchheim – ein Netzwerk junger Unternehmerinnen, Unternehmer und
-        Führungskräfte bis 45 Jahre – engagieren sich für wirtschaftliche Bildung, gesellschaftliche
-        Verantwortung und nachhaltige Entwicklung in der Region.</p>
-      <p>Mit „Unternehmen&nbsp;Plus" fördern wir gezielt unternehmerisches Denken bei Schülerinnen und
-        Schülern an den regionalen Gymnasien und unterstützen den bayerischen LehrplanPLUS mit
-        Praxisbezug. In Anlehnung an „Die Höhle der Löwen" entwickeln die Jugendlichen in Teams eigene
-        Geschäftsideen, die sie beim großen Pitch&nbsp;Day einer Jury aus Unternehmerinnen, Unternehmern
-        und Führungskräften präsentieren. Die besten Teams erfahren erst am Veranstaltungstag, ob sie
-        live auf die Bühne dürfen.</p>
-    </section>
-
-    <section class="block">
-      <h2>Aufgaben der Jury</h2>
-      <ol class="steps">
-        <li>Ihr sitzt zu Beginn vorne in den ersten Sitzreihen.</li>
-        <li>Vor den Pitches werdet ihr aufgerufen und vorgestellt und kommt einzeln auf die Bühne zu den Jurystühlen.</li>
-        <li>Zu jedem Pitch werden Fragen gestellt und Anmerkungen gemacht – immer konstruktiv und positiv, mit echtem Mehrwert für die Teams.</li>
-        <li>Ablauf je Team: 3&nbsp;Min. Pitch, 5&nbsp;Min. Jury-Feedback, 2&nbsp;Min. Puffer.</li>
-        <li>Nach den Pitches zieht ihr euch in einen separaten Raum zurück und kürt den 1., 2. und 3.&nbsp;Platz. Die Nominierung anschließend an die Moderation geben (Urkunden mit Businessplan-Titel, Namen der Teammitglieder &amp; Schulname).</li>
-        <li>Bitte haltet euch streng an den Zeitplan. Danke für euren Einsatz!</li>
-      </ol>
-    </section>
-
     <?php if ($prizes): ?>
     <section class="block">
       <h2>Preise</h2>
@@ -365,30 +399,6 @@ else:
           </li>
         <?php endforeach; ?>
       </ul>
-    </section>
-    <?php endif; ?>
-
-    <?php if ($press): ?>
-    <section class="block">
-      <h2>Presse</h2>
-      <ul class="plain">
-        <?php foreach ($press as $g): $gd = PitchDay::guestDisplay($g); ?>
-          <li><strong><?= e($gd['name']) ?></strong><?php $r = $roleLine($gd, $g['category']); if ($r && $r !== PitchDay::guestCategory('press')): ?> · <?= e($r) ?><?php endif; ?></li>
-        <?php endforeach; ?>
-      </ul>
-    </section>
-    <?php endif; ?>
-
-    <?php if ($sponsors): ?>
-    <section class="block">
-      <h2>Sponsoren</h2>
-      <div class="sponsors">
-        <?php foreach ($sponsors as $s): ?>
-          <div class="sponsor">
-            <?php if (!empty($s['logo_path'])): ?><img src="<?= e(asset($s['logo_path'])) ?>" alt="<?= e($s['name']) ?>"><?php else: ?><span><?= e($s['name']) ?></span><?php endif; ?>
-          </div>
-        <?php endforeach; ?>
-      </div>
     </section>
     <?php endif; ?>
 
@@ -502,9 +512,12 @@ header('Content-Type: text/html; charset=utf-8');
   ul.prizes li, ul.plain li { margin-bottom: 5px; }
   .prizes .amount { color: var(--blue); font-weight: 700; margin-left: 4px; }
   .prizes .note { display: block; font-size: 13px; }
-  .sponsors { display: flex; flex-wrap: wrap; gap: 16px 22px; align-items: center; }
+  .sponsors { display: flex; flex-wrap: wrap; gap: 16px 22px; align-items: flex-start; }
+  .sponsor { display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .sponsor img { height: 42px; max-width: 150px; object-fit: contain; filter: grayscale(.15); }
   .sponsor span { font-weight: 600; }
+  .sponsor__badge { font-size: 11px; color: var(--blue); font-weight: 700; text-align: center; }
+  .crit { font-size: 13px; color: var(--ink); margin: 2px 0 8px; line-height: 1.45; }
   .doc__foot { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 10px; color: var(--muted); font-size: 12px; text-align: center; }
 
   @media print {
