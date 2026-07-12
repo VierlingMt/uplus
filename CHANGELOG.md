@@ -7,6 +7,12 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.44.2] - 2026-07-12
+### Geändert
+- **Handout „Fragen & Kontakt" nutzt dieselbe Logik wie der Menüpunkt „Kontakt":**
+  angezeigt wird die Projektleitung (Rolle „lead", aktive Konten) – das
+  technische Admin-/Super-Admin-Konto erscheint nicht.
+
 ## [0.44.1] - 2026-07-12
 ### Geändert
 - **Handout-Feinschliff:** In „Grußworte & Keynote" steht die Keynote jetzt

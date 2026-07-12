@@ -116,13 +116,13 @@ else:
          WHERE c.cycle_id = ? GROUP BY s.id, s.name, s.logo_path ORDER BY s.name',
         [$cycleId]
     );
-    // Fester WJ-Kontakt fürs Handout. Bewusst NICHT aus Nutzerkonten gezogen –
-    // Admin-/Login-Konten dürfen im öffentlichen Handout nicht auftauchen.
-    $contact = [
-        'name'  => 'Martin Vierling',
-        'email' => 'mv@vimatec.de',
-        'phone' => '+491709009124',
-    ];
+    // Ansprechpartner = Projektleitung (Rolle „lead"), exakt wie der Menüpunkt
+    // „Kontakt" (contact.php). Das Admin/Super-Admin-Konto ist eine technische
+    // Rolle und erscheint hier bewusst nicht.
+    $leads = Database::all(
+        'SELECT name, email, phone, specialty FROM users
+         WHERE role = "lead" AND is_active = 1 ORDER BY name'
+    );
 
     $nStudents = (int) Database::value('SELECT COUNT(*) FROM students');
     $nTeams    = (int) Database::value('SELECT COUNT(*) FROM teams');
@@ -291,13 +291,17 @@ else:
     </section>
     <?php endif; ?>
 
+    <?php if ($leads): ?>
     <section class="block">
       <h2>Fragen &amp; Kontakt</h2>
-      <p>Bei offenen Fragen gerne jederzeit melden:</p>
+      <p>Bei Fragen rund um den Wettbewerb hilft dir die Projektleitung gerne weiter:</p>
       <ul class="plain">
-        <li><strong><?= e($contact['name']) ?></strong><?= $contact['email'] ? ' · ' . e($contact['email']) : '' ?><?= $contact['phone'] ? ' · ' . e($contact['phone']) : '' ?></li>
+        <?php foreach ($leads as $l): ?>
+          <li><strong><?= e($l['name']) ?></strong><?= $l['specialty'] ? ' · ' . e($l['specialty']) : '' ?><?= $l['email'] ? ' · ' . e($l['email']) : '' ?><?= $l['phone'] ? ' · ' . e($l['phone']) : '' ?></li>
+        <?php endforeach; ?>
       </ul>
     </section>
+    <?php endif; ?>
 
     <footer class="doc__foot">Unternehmen&nbsp;Plus – Businessplanwettbewerb der Wirtschaftsjunioren Forchheim<?= $yearLabel ? ' · ' . e($yearLabel) : '' ?></footer>
   </article>
