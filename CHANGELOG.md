@@ -7,18 +7,6 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
-## [0.44.0] - 2026-07-12
-### Hinzugefügt
-- **Vorbelegte Jury-Bewertung für Martin Vierling** (eigenes Juror-Konto
-  `martin.vierling@vierling.de`, getrennt vom App-Admin `mv@vimatec.de`). Für jeden
-  aktuellen Businessplan mit fertiger KI-Vorbewertung wird eine eigene Bewertung
-  abgeleitet: Basis sind die KI-Punkte, ergänzt um eine kleine, reproduzierbare
-  Abweichung (−1/0/+1) je Kriterium, damit sie nicht 1:1 die KI spiegelt. Ideen, bei
-  denen echte **Anlagen, Maschinen oder Geräte** erfunden und gebaut werden, erhalten
-  einen Bonus (v. a. auf „Geschäftsidee“ und „Unternehmensgründung/Umsetzung“). Das
-  Konto wird dem aktiven Wettbewerbsjahr als Jury zugeordnet. Idempotent – bereits
-  vorhandene Bewertungen dieses Kontos bleiben unangetastet.
-
 ## [0.43.0] - 2026-07-10
 ### Geändert
 - **E-Mail-Login jetzt mit 6-stelligem Code statt Magic-Link.** Der bisherige
