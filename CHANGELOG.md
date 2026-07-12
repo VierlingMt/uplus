@@ -7,6 +7,18 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.44.6] - 2026-07-12
+### Hinzugefügt
+- **Handout-Fußzeile mit Seitenzahlen:** unten rechts „Seite X / Y", unten links
+  kurz die Überschrift – beides klein und in Anthrazit, auf jeder Seite (echte
+  Seitenzähler über CSS Paged Media).
+### Geändert
+- **Reserviert-Schilder: Logo größer und mittig ganz oben** über dem Titel.
+### Behoben
+- **Handout listet keine Absagen mehr.** Gäste mit Status „Absage" tauchen nicht
+  mehr in Ehrengäste/Jury/Presse/Grußworte oder in „Teilnehmende" auf (z. B. ein
+  abgesagtes Jurymitglied stand bisher noch in der Liste).
+
 ## [0.44.5] - 2026-07-12
 ### Behoben
 - **Ranking-Filter ließ „Status setzen"-Zeilen der ausgefilterten Teams stehen.** Beim

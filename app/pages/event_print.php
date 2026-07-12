@@ -103,10 +103,13 @@ if ($kind === 'signs'):
 <?php
 else:
     // ======================= HANDOUT =======================
-    $vips    = array_values(array_filter($guests, fn($g) => $g['category'] === 'vip'));
-    $jury    = array_values(array_filter($guests, fn($g) => $g['category'] === 'jury'));
-    $press   = array_values(array_filter($guests, fn($g) => $g['category'] === 'press'));
-    $speakers = array_values(array_filter($guests, fn($g) => (int) $g['greeting'] === 1 || (int) $g['keynote'] === 1));
+    // Nur tatsächlich Teilnehmende – Absagen tauchen im Handout nicht auf
+    // (weder in den Listen noch in den Zahlen).
+    $attending = array_values(array_filter($guests, fn($g) => $g['status'] !== 'declined'));
+    $vips    = array_values(array_filter($attending, fn($g) => $g['category'] === 'vip'));
+    $jury    = array_values(array_filter($attending, fn($g) => $g['category'] === 'jury'));
+    $press   = array_values(array_filter($attending, fn($g) => $g['category'] === 'press'));
+    $speakers = array_values(array_filter($attending, fn($g) => (int) $g['greeting'] === 1 || (int) $g['keynote'] === 1));
     // Erst die Grußworte, die Keynote(s) ans Ende (stabile Sortierung ab PHP 8).
     usort($speakers, fn($a, $b) => ((int) $a['keynote']) <=> ((int) $b['keynote']));
 
@@ -311,6 +314,12 @@ endif;
 $body = ob_get_clean();
 
 $pageTitle = $kind === 'signs' ? 'Reserviert-Schilder' : 'PitchDay – Ablauf & Handout';
+
+// Kurze Überschrift für die laufende Fußzeile (links). CSS-escapen, da als
+// content-String in einer @page-Margin-Box (im <style>) ausgegeben.
+$footTitle    = 'Unternehmen Plus · PitchDay' . ($yearLabel !== '' ? ' ' . $yearLabel : '');
+$cssFootTitle = str_replace(['\\', '"'], ['\\\\', '\\"'], $footTitle);
+
 header('Content-Type: text/html; charset=utf-8');
 ?>
 <!doctype html>
@@ -342,8 +351,8 @@ header('Content-Type: text/html; charset=utf-8');
   .sign { background: #fff; width: 100%; max-width: 820px; margin: 0 auto 18px; aspect-ratio: 1 / 1.414;
           border: 1px solid var(--line); border-radius: 6px; padding: 22mm 18mm; display: flex;
           flex-direction: column; text-align: center; }
-  .sign__top { display: flex; align-items: center; gap: 12px; justify-content: center; color: var(--muted); }
-  .sign__logo { height: 40px; }
+  .sign__top { display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--muted); }
+  .sign__logo { height: 68px; }
   .sign__event { font-size: 15px; line-height: 1.3; }
   .sign__event span { color: var(--muted); font-size: 13px; }
   .sign__mid { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
@@ -401,7 +410,18 @@ header('Content-Type: text/html; charset=utf-8');
     .doc { border: 0; border-radius: 0; max-width: none; margin: 0; padding: 0; }
     .block, ol.people li, table.agenda tr, .sign { break-inside: avoid; }
   }
+  <?php if ($kind === 'handout'): ?>
+  /* Laufende Fußzeile: links kurz die Überschrift, rechts „Seite X / Y" –
+     klein und anthrazit. Echte Seitenzähler über CSS Paged Media. */
+  @page {
+    size: A4;
+    margin: 13mm 12mm 15mm;
+    @bottom-left  { content: "<?= $cssFootTitle ?>"; font-size: 8.5pt; color: #3a3f47; }
+    @bottom-right { content: "Seite " counter(page) " / " counter(pages); font-size: 8.5pt; color: #3a3f47; }
+  }
+  <?php else: ?>
   @page { size: A4; margin: 12mm; }
+  <?php endif; ?>
 </style>
 </head>
 <body>
