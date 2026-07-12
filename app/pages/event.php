@@ -126,29 +126,45 @@ if (is_post()) {
 
     // --- Gäste ---
     if ($action === 'import_jury') {
+        // Jury des Wettbewerbsjahres aus „Jury & Nutzer" übernehmen – idempotent:
+        // Neue werden angelegt, bereits vorhandene mit den aktuellen Angaben
+        // (Organisation, Position, E-Mail) aufgefrischt. Manuelle Angaben wie
+        // Status, Sitzplatz oder Bemerkung bleiben unangetastet.
         $jurors = Database::all(
-            "SELECT u.name, u.email, cm.specialty FROM cycle_members cm
+            "SELECT u.name, u.email, u.org, u.position, cm.specialty FROM cycle_members cm
              JOIN users u ON u.id = cm.user_id
              WHERE cm.cycle_id = ? AND cm.role_in_cycle = 'juror' ORDER BY u.name",
             [$cycleId]
         );
-        $added = 0;
+        $added = $updated = 0;
         foreach ($jurors as $j) {
-            $exists = Database::value(
-                "SELECT COUNT(*) FROM event_guests WHERE event_id=? AND category='jury' AND name=?",
+            $org = ($j['org'] ?? '') !== '' ? $j['org'] : ($j['specialty'] ?: null);
+            $pos = ($j['position'] ?? '') !== '' ? $j['position'] : null;
+            $existingId = (int) Database::value(
+                "SELECT id FROM event_guests WHERE event_id=? AND category='jury' AND name=? LIMIT 1",
                 [$eventId, $j['name']]
             );
-            if ((int) $exists === 0) {
+            if ($existingId === 0) {
                 Database::insert(
-                    "INSERT INTO event_guests (event_id, category, name, org, email, status)
-                     VALUES (?, 'jury', ?, ?, ?, 'confirmed')",
-                    [$eventId, $j['name'], $j['specialty'] ?: null, $j['email'] ?: null]
+                    "INSERT INTO event_guests (event_id, category, name, org, position, email, status)
+                     VALUES (?, 'jury', ?, ?, ?, ?, 'confirmed')",
+                    [$eventId, $j['name'], $org, $pos, $j['email'] ?: null]
                 );
                 $added++;
+            } else {
+                Database::run(
+                    "UPDATE event_guests SET org=?, position=?, email=? WHERE id=?",
+                    [$org, $pos, $j['email'] ?: null, $existingId]
+                );
+                $updated++;
             }
         }
-        Audit::log('event.import_jury', "Jury importiert ($added)", 'event', $eventId);
-        flash($added ? 'success' : 'error', $added ? "$added Jury-Mitglieder übernommen." : 'Keine neuen Jury-Mitglieder gefunden.');
+        Audit::log('event.import_jury', "Jury & Nutzer übernommen (neu $added, aktualisiert $updated)", 'event', $eventId);
+        $parts = [];
+        if ($added)   { $parts[] = "$added neu"; }
+        if ($updated) { $parts[] = "$updated aktualisiert"; }
+        flash($parts ? 'success' : 'error',
+            $parts ? 'Jury übernommen (' . implode(', ', $parts) . ').' : 'Keine Jury im Wettbewerbsjahr gefunden.');
         $back();
     }
     if ($action === 'save_guest') {
@@ -466,9 +482,9 @@ ob_start(); ?>
 
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
       <button type="button" class="btn btn--teal btn--sm" data-modal-open="guestModal">+ Gast / VIP</button>
-      <form method="post" action="<?= url('event') ?>" data-confirm="Jury dieses Wettbewerbsjahres als Gäste übernehmen?">
+      <form method="post" action="<?= url('event') ?>">
         <?= Csrf::field() ?><input type="hidden" name="action" value="import_jury"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="tab" value="guests">
-        <button class="btn btn--ghost btn--sm">⚖ Jury übernehmen</button>
+        <button class="btn btn--ghost btn--sm" title="Jury des Wettbewerbsjahres aus „Jury & Nutzer" übernehmen – neue anlegen, vorhandene auffrischen">⚖ Jury &amp; Nutzer übernehmen</button>
       </form>
       <a class="btn btn--ghost btn--sm" target="_blank" rel="noopener"
          href="<?= e(url('event_print', ['cycle' => $cycleId, 'kind' => 'signs'])) ?>"

@@ -313,7 +313,62 @@ final class Migrator
                 'name'    => 'Mehrfachrollen je Nutzer (user_roles) – Backfill aus users.role',
                 'up'      => [self::class, 'userRoles'],
             ],
+            [
+                'version' => '2026_07_29_user_org_position',
+                'name'    => 'Nutzer: Organisation & Position (selbst pflegbar, für Gästeliste)',
+                'up'      => 'ALTER TABLE users
+                    ADD COLUMN IF NOT EXISTS org      VARCHAR(190) NULL AFTER specialty,
+                    ADD COLUMN IF NOT EXISTS position VARCHAR(190) NULL AFTER org',
+            ],
+            [
+                'version' => '2026_07_30_user_phone_unique',
+                'name'    => 'Handynummer systemweit eindeutig (UNIQUE, sofern keine Dubletten)',
+                'up'      => [self::class, 'userPhoneUnique'],
+            ],
+            [
+                'version' => '2026_07_31_guest_teacher_category',
+                'name'    => 'PitchDay-Gäste: Kategorie „Lehrkraft" ergänzen',
+                'up'      => "ALTER TABLE event_guests
+                    MODIFY category ENUM('jury','vip','press','sponsor','speaker','teacher')
+                    NOT NULL DEFAULT 'vip'",
+            ],
+            [
+                'version' => '2026_07_32_cycle_member_teacher',
+                'name'    => 'Wettbewerbsjahr auch für Lehrkräfte zuweisbar (cycle_members-Rolle)',
+                'up'      => "ALTER TABLE cycle_members
+                    MODIFY role_in_cycle ENUM('juror','project_lead','teacher')
+                    NOT NULL DEFAULT 'juror'",
+            ],
         ];
+    }
+
+    /**
+     * Handynummer systemweit eindeutig machen. Fügt einen UNIQUE-Index hinzu –
+     * aber nur, wenn keine doppelten (nicht-leeren) Nummern existieren; sonst
+     * würde die Migration fehlschlagen. Mehrere NULL-Werte sind in MySQL bei
+     * UNIQUE erlaubt (Nutzer ohne Handynummer). Existieren Dubletten, greift bis
+     * zur Bereinigung weiterhin die App-Prüfung.
+     */
+    public static function userPhoneUnique(PDO $pdo): void
+    {
+        $idxExists = (bool) $pdo->query(
+            "SELECT COUNT(*) FROM information_schema.statistics
+             WHERE table_schema = DATABASE() AND table_name = 'users'
+               AND index_name = 'uq_users_phone'"
+        )->fetchColumn();
+        if ($idxExists) {
+            return;
+        }
+        $dupes = (int) $pdo->query(
+            "SELECT COUNT(*) FROM (
+                SELECT phone FROM users
+                WHERE phone IS NOT NULL AND phone <> ''
+                GROUP BY phone HAVING COUNT(*) > 1
+             ) d"
+        )->fetchColumn();
+        if ($dupes === 0) {
+            $pdo->exec('ALTER TABLE users ADD UNIQUE KEY uq_users_phone (phone)');
+        }
     }
 
     /**

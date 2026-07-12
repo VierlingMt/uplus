@@ -119,6 +119,9 @@ final class Roles
         if (in_array('juror', $roles, true)) {
             return 'juror';
         }
+        if (in_array('teacher', $roles, true)) {
+            return 'teacher';
+        }
         return null;
     }
 

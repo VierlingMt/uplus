@@ -37,6 +37,8 @@ if (is_post()) {
     $name  = trim((string) input('name'));
     $email = strtolower(trim((string) input('email')));
     $spec  = trim((string) input('specialty'));
+    $org   = trim((string) input('org'));
+    $pos   = trim((string) input('position'));
     $phoneRaw = trim((string) input('phone'));
     // Immer im internationalen Format ohne Leerzeichen speichern (z. B. +491709009124).
     $phone = $phoneRaw === '' ? '' : (phone_normalize($phoneRaw) ?? $phoneRaw);
@@ -49,10 +51,15 @@ if (is_post()) {
         flash('error', 'Bitte Name, gültige E-Mail und mindestens eine Rolle angeben.');
         redirect(url('jurors'));
     }
-    // E-Mail-Eindeutigkeit
-    $dup = Database::value('SELECT id FROM users WHERE email = ? AND id <> ?', [$email, $id]);
-    if ($dup) {
+    // E-Mail-Eindeutigkeit (systemweit)
+    if (Database::value('SELECT id FROM users WHERE email = ? AND id <> ?', [$email, $id])) {
         flash('error', 'Diese E-Mail wird bereits verwendet.');
+        redirect(url('jurors'));
+    }
+    // Handynummer-Eindeutigkeit (systemweit) – doppelte Nummern machen den
+    // Handy-Login mehrdeutig.
+    if ($phone !== '' && Database::value('SELECT id FROM users WHERE phone = ? AND id <> ?', [$phone, $id])) {
+        flash('error', 'Diese Handynummer wird bereits verwendet.');
         redirect(url('jurors'));
     }
 
@@ -75,15 +82,15 @@ if (is_post()) {
     $primary = Roles::primary($selRoles);
     $photo = save_image('photo', 'usr', 'avatars');
     if ($id > 0) {
-        Database::run('UPDATE users SET name=?, email=?, specialty=?, phone=?, school_id=?, is_active=? WHERE id=?',
-            [$name, $email, $spec ?: null, $phone ?: null, $school, $active, $id]);
+        Database::run('UPDATE users SET name=?, email=?, specialty=?, org=?, position=?, phone=?, school_id=?, is_active=? WHERE id=?',
+            [$name, $email, $spec ?: null, $org ?: null, $pos ?: null, $phone ?: null, $school, $active, $id]);
         if ($photo) { Database::run('UPDATE users SET photo_path=? WHERE id=?', [$photo, $id]); }
         Roles::setForUser($id, $selRoles); // pflegt user_roles + users.role (Hauptrolle)
         Audit::log('user.update', 'Nutzer bearbeitet: ' . $name . ' <' . $email . '> (' . implode(', ', $selRoles) . ')', 'user', $id);
         flash('success', 'Nutzer aktualisiert.');
     } else {
-        $id = Database::insert('INSERT INTO users (role,name,email,specialty,phone,school_id,is_active,photo_path) VALUES (?,?,?,?,?,?,?,?)',
-            [$primary, $name, $email, $spec ?: null, $phone ?: null, $school, $active, $photo]);
+        $id = Database::insert('INSERT INTO users (role,name,email,specialty,org,position,phone,school_id,is_active,photo_path) VALUES (?,?,?,?,?,?,?,?,?,?)',
+            [$primary, $name, $email, $spec ?: null, $org ?: null, $pos ?: null, $phone ?: null, $school, $active, $photo]);
         Roles::setForUser($id, $selRoles);
         Audit::log('user.create', 'Nutzer angelegt: ' . $name . ' <' . $email . '> (' . implode(', ', $selRoles) . ')', 'user', $id);
         flash('success', 'Nutzer angelegt. Anmeldung erfolgt passwortlos per Login-Link an die E-Mail.');
@@ -159,7 +166,8 @@ $rolesOf = fn(array $u) => Roles::sanitize($userRoles[(int) $u['id']] ?? [$u['ro
 $fill = function (array $u) use ($userCycleIds, $rolesOf): string {
     return e(json_encode([
         'id' => (int) $u['id'], 'roles' => $rolesOf($u), 'name' => $u['name'], 'email' => $u['email'],
-        'school_id' => (int) ($u['school_id'] ?? 0) ?: '', 'specialty' => $u['specialty'], 'phone' => $u['phone'],
+        'school_id' => (int) ($u['school_id'] ?? 0) ?: '', 'specialty' => $u['specialty'],
+        'org' => $u['org'] ?? '', 'position' => $u['position'] ?? '', 'phone' => $u['phone'],
         'is_active' => (int) $u['is_active'], 'cycles' => $userCycleIds[(int) $u['id']] ?? [],
     ], JSON_UNESCAPED_UNICODE));
 };
@@ -270,6 +278,10 @@ ob_start(); ?>
         </select>
       </div>
       <div class="field"><label>Spezialgebiet (Jury)</label><input type="text" name="specialty" placeholder="z. B. Marketing, Finanzen"></div>
+      <div class="grid cols-2">
+        <div class="field"><label>Organisation</label><input type="text" name="org" placeholder="z. B. Firma / Schule"></div>
+        <div class="field"><label>Position</label><input type="text" name="position" placeholder="z. B. Geschäftsführer:in"></div>
+      </div>
       <div class="field"><label>Handynummer</label><input type="text" name="phone" placeholder="z. B. 0170 9009124 – für SMS-/Handy-Login"><div class="help">Wird international gespeichert (+49…) und erlaubt Login per Handynummer.</div></div>
       <div class="field" id="cyclesField"><label>Wettbewerbsjahre (Teilnahme)</label>
         <?php if (!$cycles): ?>
@@ -309,7 +321,8 @@ ob_start(); ?>
   function has(r){ for(var i=0;i<chips.length;i++){ if(chips[i].value===r && chips[i].checked) return true; } return false; }
   function upd(){
     if(sf) sf.style.display = has('teacher') ? '' : 'none';
-    if(cf) cf.style.display = (has('admin')||has('lead')||has('juror')) ? '' : 'none';
+    // Wettbewerbsjahr ist für alle Rollen wählbar (auch Lehrkraft).
+    if(cf) cf.style.display = (has('admin')||has('lead')||has('juror')||has('teacher')) ? '' : 'none';
   }
   chips.forEach(function(c){ c.addEventListener('change',upd); });
   upd();

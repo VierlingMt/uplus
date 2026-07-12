@@ -24,6 +24,8 @@ if (is_post()) {
             flash('error', 'Bitte Name und gültige E-Mail angeben.');
         } elseif (Database::value('SELECT id FROM users WHERE email = ?', [$email])) {
             flash('error', 'Diese E-Mail wird bereits verwendet.');
+        } elseif ($mobile !== '' && Database::value('SELECT id FROM users WHERE phone = ?', [$mobile])) {
+            flash('error', 'Diese Handynummer wird bereits verwendet.');
         } else {
             $tid = Database::insert(
                 'INSERT INTO users (role, name, email, phone, school_id, is_active) VALUES (?,?,?,?,?,1)',
@@ -50,6 +52,8 @@ if (is_post()) {
                 flash('error', 'Bitte Name und gültige E-Mail angeben.');
             } elseif (Database::value('SELECT id FROM users WHERE email = ? AND id <> ?', [$email, $id])) {
                 flash('error', 'Diese E-Mail wird bereits verwendet.');
+            } elseif ($mobile !== '' && Database::value('SELECT id FROM users WHERE phone = ? AND id <> ?', [$mobile, $id])) {
+                flash('error', 'Diese Handynummer wird bereits verwendet.');
             } else {
                 Database::run('UPDATE users SET name=?, email=?, phone=?, is_active=? WHERE id=?',
                     [$name, $email, $mobile ?: null, $active, $id]);

@@ -7,6 +7,24 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.46.0] - 2026-07-12
+### Hinzugefügt
+- **Organisation & Position pflegbar – fließen in die Gästeliste.** Nutzer können
+  im eigenen Profil ihre **Organisation** und **Position** selbst eintragen (auch
+  in „Jury & Nutzer" pflegbar). Beim Übernehmen der Jury in den PitchDay werden
+  diese Angaben in die Gästeliste (und damit aufs Reserviert-Schild) übernommen.
+- **Wettbewerbsjahr jetzt auch für Lehrkräfte auswählbar** (eigene Zyklus-Rolle
+  „Lehrkraft").
+### Geändert
+- **„Jury übernehmen" → „Jury & Nutzer übernehmen".** Der Button fragt nicht mehr
+  irreführend „Wirklich löschen?" und arbeitet **idempotent**: Neue Jury-Mitglieder
+  werden angelegt, bereits vorhandene mit den aktuellen Angaben (Organisation,
+  Position, E-Mail) aufgefrischt – Status/Sitzplatz/Bemerkung bleiben erhalten.
+- **Handynummer systemweit eindeutig.** Doppelte Handynummern werden jetzt auch in
+  „Jury & Nutzer" und „Projektlehrer" abgewiesen (bisher nur im Profil), zusätzlich
+  abgesichert durch einen DB-UNIQUE-Index. Doppelte Nummern hätten den Handy-Login
+  mehrdeutig gemacht. (E-Mail war bereits doppelt gesichert.)
+
 ## [0.45.0] - 2026-07-12
 ### Hinzugefügt
 - **Mehrfachrollen je Nutzer.** Eine Person kann jetzt mehrere Rollen zugleich

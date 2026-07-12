@@ -20,6 +20,16 @@ if (is_post() && !$readonly) {
         redirect(url('profile'));
     }
 
+    // --- Organisation & Position selbst pflegen (fließen in die Gästeliste) ---
+    if ($action === 'save_contact') {
+        $org = trim((string) input('org')) ?: null;
+        $pos = trim((string) input('position')) ?: null;
+        Database::run('UPDATE users SET org=?, position=? WHERE id=?', [$org, $pos, $uid]);
+        Audit::log('profile.contact', 'Organisation/Position aktualisiert', 'user', $uid);
+        flash('success', 'Organisation & Position gespeichert.');
+        redirect(url('profile'));
+    }
+
     // --- E-Mail ändern: Bestätigungslink an die NEUE Adresse -----------------
     if ($action === 'change_email') {
         $new = strtolower(trim((string) input('new_email')));
@@ -128,6 +138,15 @@ ob_start(); ?>
             'hint' => 'Foto hierher ziehen oder klicken – quadratisch zuschneiden, zoomen, drehen.',
         ]) ?>
         <button class="btn btn--primary">Foto speichern</button>
+      </form>
+
+      <form method="post" action="<?= url('profile') ?>" style="margin-top:18px">
+        <?= Csrf::field() ?><input type="hidden" name="action" value="save_contact">
+        <h3 style="margin:0 0 8px">Organisation &amp; Position</h3>
+        <p class="muted" style="font-size:13px;margin:0 0 10px">Wird für die PitchDay-Gästeliste übernommen (z. B. auf dem Reserviert-Schild).</p>
+        <div class="field"><label>Organisation</label><input type="text" name="org" value="<?= e($u['org'] ?? '') ?>" placeholder="z. B. Firma / Schule"></div>
+        <div class="field"><label>Position</label><input type="text" name="position" value="<?= e($u['position'] ?? '') ?>" placeholder="z. B. Geschäftsführer:in"></div>
+        <button class="btn btn--primary">Speichern</button>
       </form>
     <?php endif; ?>
   </div></div>
