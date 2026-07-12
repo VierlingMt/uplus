@@ -103,6 +103,7 @@ try {
         case 'plans':
         case 'bp_download':
         case 'ranking':
+        case 'jury_feedback':
         case 'evaluate':
             require APP_PATH . '/pages/' . $route . '.php';
             break;

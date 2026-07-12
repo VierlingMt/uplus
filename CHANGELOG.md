@@ -7,6 +7,19 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.50.0] - 2026-07-12
+### Hinzugefügt
+- **Neuer Menüpunkt „Jury-Feedback" (Gruppe Jury).** Skizziert je Schule einen
+  groben Zeitplan für die Feedback-Gespräche. Aus der Zahl der Schüler-Gruppen
+  (Teams je Schule) und wenigen Parametern werden **Gesamtzeit** und **Zeit je
+  Jury-Gruppe** geschätzt; eine „Gesamt"-Spalte fasst alle Schulen zusammen.
+- **Konfigurierbar (nur Verwaltung):** Gesprächsdauer je Schüler-Gruppe,
+  Pausenlänge und „Pause nach X Gesprächen" (global) sowie Anzahl Jury-Gruppen
+  und Jurymitglieder je Gruppe **je Schule**. Bei weniger als 2 Jurymitgliedern
+  je Gruppe wird der Wert markiert. Die Jury sieht die Übersicht schreibgeschützt.
+- Rechenmodell: `Gesamtzeit = n · Gesprächsdauer + (n / Pause-nach-X) · Pausenlänge`,
+  `Zeit je Jury-Gruppe = Gesamtzeit / Anzahl Jury-Gruppen` (Gruppen laufen parallel).
+
 ## [0.49.2] - 2026-07-12
 ### Behoben
 - **PitchDay „Gäste & VIPs" warf einen Fehler (500).** Durch die neue Live-
