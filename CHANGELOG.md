@@ -7,6 +7,12 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.57.1] - 2026-07-13
+### Hinzugefügt
+- **Kurzer Projektabschnitt „Über das Projekt" in den Budget-PDFs**: beschreibt
+  „Unternehmen Plus" knapp und benennt Wirkung und Mehrwert für Schülerinnen und
+  Schüler sowie für die Region – als Kontext für Zuwendungsgeber.
+
 ## [0.57.0] - 2026-07-13
 ### Hinzugefügt
 - **Zwei druckfertige Budget-Übersichten** im Menüpunkt **PitchDay → Budget**:

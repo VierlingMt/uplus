@@ -121,6 +121,15 @@ header('Content-Type: text/html; charset=utf-8');
   .block { margin: 0 0 20px; }
   .block h2 { font-size: 16px; color: var(--blue); border-bottom: 1px solid var(--line); padding-bottom: 5px; margin: 0 0 8px; }
 
+  .lead { font-size: 13.5px; margin: 0 0 10px; line-height: 1.55; }
+  .impact { border: 1px solid var(--line); border-left: 4px solid var(--blue); border-radius: 6px;
+            background: rgba(0,53,148,.03); padding: 12px 16px; margin-top: 12px; }
+  .impact__title { font-weight: 700; color: var(--blue); font-size: 13px; text-transform: uppercase;
+                   letter-spacing: .06em; margin-bottom: 6px; }
+  .impact ul { margin: 0; padding-left: 20px; }
+  .impact li { font-size: 13px; line-height: 1.5; margin-bottom: 6px; }
+  .impact li:last-child { margin-bottom: 0; }
+
   table.fin { width: 100%; border-collapse: collapse; }
   table.fin th, table.fin td { padding: 6px 8px; text-align: left; vertical-align: top; }
   table.fin thead th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
@@ -190,6 +199,32 @@ header('Content-Type: text/html; charset=utf-8');
         <?php if ($eventDateLine): ?><tr><th>Veranstaltungsdatum</th><td><?= e($eventDateLine) ?></td></tr><?php endif; ?>
         <tr><th>Erstellt am</th><td><?= e(date('d.m.Y')) ?></td></tr>
       </table>
+
+      <!-- ============ Über das Projekt / Wirkung ============ -->
+      <section class="block">
+        <h2>Über das Projekt</h2>
+        <p class="lead">„Unternehmen&nbsp;Plus" ist der Businessplanwettbewerb der Wirtschaftsjunioren
+          Forchheim für Schülerinnen und Schüler der regionalen Gymnasien. In Anlehnung an „Die Höhle
+          der Löwen" entwickeln die Jugendlichen in Teams eigene Geschäftsideen, erstellen einen
+          Businessplan und präsentieren ihn beim großen <strong>Pitch&nbsp;Day</strong> vor einer Jury
+          aus Unternehmerinnen, Unternehmern und Führungskräften. Ehrenamtlich getragen, mit
+          Praxisbezug zum bayerischen LehrplanPLUS und offen für alle weiterführenden Schulen der Region.</p>
+        <p class="lead">Die hier aufgeführten Mittel fließen unmittelbar in die Durchführung – von der
+          Veranstaltung über die Betreuung der Teams bis zu den Preisgeldern.</p>
+        <div class="impact">
+          <div class="impact__title">Wirkung &amp; Mehrwert</div>
+          <ul>
+            <li><strong>Für die Schülerinnen und Schüler:</strong> unternehmerisches Denken, wirtschaftliche
+              Bildung und Selbstvertrauen – praxisnah, im Team und mit echtem Bühnen-Pitch statt trockener
+              Theorie. Wertvolle Erfahrungen für Ausbildung, Studium und Berufsorientierung.</li>
+            <li><strong>Für die Region:</strong> Stärkung von Fachkräftenachwuchs und Gründergeist vor Ort,
+              enge Verzahnung von Schulen und regionaler Wirtschaft sowie Sichtbarkeit für den Standort
+              Forchheim als Ort, der junge Talente fördert.</li>
+            <li><strong>Nachhaltig &amp; ehrenamtlich:</strong> getragen vom bürgerschaftlichen Engagement
+              der Wirtschaftsjunioren – jede Zuwendung kommt direkt den teilnehmenden Jugendlichen zugute.</li>
+          </ul>
+        </div>
+      </section>
 
       <?php if ($kind === 'full'): ?>
       <!-- ============ Einnahmen ============ -->
