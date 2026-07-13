@@ -99,6 +99,15 @@ if (!$schools) {
 $sumTeams    = array_sum(array_map(static fn($r) => (int) $r['n_teams'], $schools));
 $sumStudents = array_sum(array_map(static fn($r) => (int) $r['n_students'], $schools));
 
+// Aktuelle Projektleitung (Rolle „lead") – für die digitalen Pseudo-Unterschriften.
+// Gleiche Quelle wie „Kontakt"/Handout: aktive Konten mit Rolle „lead".
+$leads = Database::all(
+    'SELECT name, specialty FROM users u
+      WHERE u.is_active = 1
+        AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role = "lead")
+      ORDER BY name'
+);
+
 $eventDateLine = trim(implode(', ', array_filter([$weekday($event['event_date']), $dateFmt($event['event_date'])])));
 
 $pageTitle = $kind === 'full' ? 'Einnahmen- und Ausgabenübersicht' : 'Ausgabenübersicht';
@@ -183,9 +192,17 @@ header('Content-Type: text/html; charset=utf-8');
   .summary tr.total td.num.neg { color: var(--red); }
 
   .attest { margin-top: 26px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
-  .sign-row { display: flex; gap: 40px; margin-top: 34px; }
-  .sign-row .box { flex: 1 1 0; }
-  .sign-row .line { border-top: 1px solid var(--ink); padding-top: 5px; font-size: 12px; color: var(--muted); }
+
+  /* Digitale „Pseudo-Unterschriften" der Projektleitung: Name in Schreibschrift,
+     darunter Trennlinie mit gedrucktem Namen und Position. */
+  .signs { display: flex; flex-wrap: wrap; gap: 26px 44px; margin-top: 30px; }
+  .sig { min-width: 210px; }
+  .sig__hand { font-family: "Segoe Script", "Bradley Hand", "Brush Script MT", "Snell Roundhand", "Comic Sans MS", cursive;
+               font-size: 30px; line-height: 1; color: #16255c; padding: 0 6px 3px; white-space: nowrap;
+               transform: rotate(-3deg); transform-origin: left bottom; }
+  .sig__line { border-top: 1px solid var(--ink); padding-top: 5px; font-size: 12.5px; color: var(--muted); }
+  .sig__line strong { display: block; color: var(--ink); font-weight: 700; }
+  .auto-note { margin-top: 24px; font-size: 11.5px; color: var(--muted); font-style: italic; line-height: 1.5; }
 
   .doc__foot { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 10px; color: var(--muted); font-size: 12px; text-align: center; }
 
@@ -194,7 +211,7 @@ header('Content-Type: text/html; charset=utf-8');
     .toolbar { display: none; }
     .sheet { margin: 0; max-width: none; }
     .doc { border: 0; border-radius: 0; max-width: none; margin: 0; padding: 0; }
-    .block, table.fin tr, .sign-row { break-inside: avoid; }
+    .block, table.fin tr, .sig { break-inside: avoid; }
   }
   @page {
     size: A4;
@@ -362,9 +379,25 @@ header('Content-Type: text/html; charset=utf-8');
         Die vorstehenden Angaben entsprechen den in „Unternehmen&nbsp;Plus" erfassten Positionen und wurden
         nach bestem Wissen und Gewissen zusammengestellt. Alle Beträge in Euro (€), inkl. ggf. anfallender USt.
       </div>
-      <div class="sign-row">
-        <div class="box"><div class="line">Ort, Datum</div></div>
-        <div class="box"><div class="line">Projektleitung „Unternehmen Plus"</div></div>
+
+      <?php if ($leads): ?>
+      <div class="signs">
+        <?php foreach ($leads as $l): ?>
+          <div class="sig">
+            <div class="sig__hand"><?= e($l['name']) ?></div>
+            <div class="sig__line">
+              <strong><?= e($l['name']) ?></strong>
+              <?= $l['specialty'] ? e($l['specialty']) . ' · ' : '' ?>Projektleitung „Unternehmen&nbsp;Plus"
+            </div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+      <?php endif; ?>
+
+      <div class="auto-note">
+        Hinweis: Dieses Dokument wurde am <?= e(date('d.m.Y')) ?> automatisch aus den in „Unternehmen&nbsp;Plus"
+        erfassten Daten erzeugt. Die Unterschriften der Projektleitung sind digital eingesetzt; das Dokument ist
+        auch ohne handschriftliche Unterschrift gültig.
       </div>
 
       <footer class="doc__foot">Unternehmen&nbsp;Plus – Businessplanwettbewerb der Wirtschaftsjunioren Forchheim<?= $yearLabel ? ' · ' . e($yearLabel) : '' ?></footer>

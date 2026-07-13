@@ -7,6 +7,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.57.3] - 2026-07-13
+### Hinzugefügt
+- **Budget-PDFs: digitale „Pseudo-Unterschriften" der Projektleitung** – für alle
+  aktuellen Projektleiter:innen (Rolle „lead") erscheint der Name in Schreibschrift
+  über einer Linie mit gedrucktem Namen und Position. Dazu ein Hinweis, dass das
+  Dokument automatisch erzeugt wurde und auch ohne handschriftliche Unterschrift
+  gültig ist. Ersetzt die bisherigen leeren Unterschriftsfelder.
+
 ## [0.57.2] - 2026-07-13
 ### Hinzugefügt
 - **Budget-PDFs: Abschnitt „Teilnehmende Schulen"** – live je Wettbewerbsjahr die
