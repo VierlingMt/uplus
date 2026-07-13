@@ -2,9 +2,12 @@
 /** Schulen verwalten (Admin & Projektleitung). */
 declare(strict_types=1);
 
-Auth::requireManager();
+// Jury darf die Schulen lesen (Nur-Lese); Verwalten nur Admin/Projektleitung.
+Auth::require('admin', 'lead', 'juror');
+$canManage = Auth::isManager();
 
 if (is_post()) {
+    if (!$canManage) { redirect(url('schools')); }
     Csrf::check();
     $action = (string) input('action');
     if ($action === 'delete') {
@@ -57,7 +60,7 @@ $imgs = fn(array $s) => $s['logo_path'] ? e(json_encode(['logo' => asset($s['log
 ob_start(); ?>
 <div class="page-head">
   <h1>Schulen</h1>
-  <button type="button" class="btn btn--teal" data-modal-open="schoolModal">+ Neu</button>
+  <?php if ($canManage): ?><button type="button" class="btn btn--teal" data-modal-open="schoolModal">+ Neu</button><?php endif; ?>
 </div>
 <div class="card">
   <div class="card__head"><?= count($schools) ?> Schulen</div>
@@ -72,12 +75,14 @@ ob_start(); ?>
           <td data-label="Ort"><?= e($s['city'] ?? '—') ?></td>
           <td data-label="Teams"><?= (int) $s['teams'] ?></td>
           <td class="row-actions" style="white-space:nowrap;text-align:right">
+            <?php if ($canManage): ?>
             <a href="<?= url('school_teachers', ['school' => $s['id']]) ?>" class="btn btn--ghost btn--sm">👩‍🏫 Projektlehrer (<?= (int) $s['teachers'] ?>)</a>
             <button type="button" class="btn btn--ghost btn--sm" data-modal-open="schoolModal" data-fill="<?= $fill($s) ?>"<?= $imgs($s) ? ' data-images="' . $imgs($s) . '"' : '' ?>>Bearbeiten</button>
             <form method="post" action="<?= url('schools') ?>" style="display:inline" data-confirm="Schule „<?= e($s['name']) ?>“ inkl. Teams wirklich löschen?">
               <?= Csrf::field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int) $s['id'] ?>">
               <button class="btn btn--danger btn--sm">Löschen</button>
             </form>
+            <?php else: ?><span class="muted">–</span><?php endif; ?>
           </td>
         </tr>
       <?php endforeach; ?>
@@ -87,6 +92,7 @@ ob_start(); ?>
   </div>
 </div>
 
+<?php if ($canManage): ?>
 <div class="modal-overlay" id="schoolModal" hidden>
   <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="schoolModalTitle">
     <div class="modal__head">
@@ -110,6 +116,7 @@ ob_start(); ?>
     </form>
   </div>
 </div>
+<?php endif; ?>
 <?php
 $content = ob_get_clean();
 $title = 'Schulen';

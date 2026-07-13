@@ -9,10 +9,10 @@
   // Kennzahl-Kacheln. Verlinkt wird nur, wenn die aktuelle Rolle das Zielmodul
   // auch öffnen darf – sonst reine Info-Kachel (kein toter Link auf „Kein Zugriff").
   $cards = [
-    ['schools', 'Schulen', $stats['schools'], ['admin', 'lead']],
-    ['teams', 'Teams', $stats['teams'], ['admin', 'lead', 'teacher']],
+    ['schools', 'Schulen', $stats['schools'], ['admin', 'lead', 'juror']],
+    ['teams', 'Teams', $stats['teams'], ['admin', 'lead', 'teacher', 'juror']],
     ['plans', 'Eingereichte Pläne', $stats['plans'], ['admin', 'lead', 'teacher', 'juror']],
-    ['jurors', 'Juror:innen', $stats['jurors'], ['admin', 'lead']],
+    ['jurors', 'Juror:innen', $stats['jurors'], ['admin', 'lead', 'juror']],
   ];
   foreach ($cards as [$r, $label, $n, $roles]):
     $canOpen = Auth::is(...$roles); ?>

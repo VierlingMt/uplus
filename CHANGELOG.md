@@ -7,6 +7,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.58.0] - 2026-07-13
+### Hinzugefügt
+- **Jury erhält Nur-Lese-Zugriff auf Schulen, Teams & Schüler sowie Jury & Nutzer.**
+  Die drei Bereiche sind für Juror:innen im Menü und über die Dashboard-Kacheln
+  erreichbar und zeigen alle Inhalte – jedoch ohne Anlegen/Bearbeiten/Löschen
+  (keine Buttons/Formulare, schreibende Aktionen serverseitig geblockt). Verwaltung
+  (Admin/Projektleitung) und Lehrkräfte behalten ihre vollen Rechte unverändert.
+
 ## [0.57.4] - 2026-07-13
 ### Behoben
 - **Dashboard-Kacheln verlinken nur noch auf erreichbare Bereiche.** Kennzahl-Kacheln

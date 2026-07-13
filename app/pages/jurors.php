@@ -2,7 +2,9 @@
 /** Nutzer verwalten: Admin, Projektleitung, Lehrkräfte, Jury (Admin & Projektleitung). */
 declare(strict_types=1);
 
-Auth::requireManager();
+// Jury darf die Nutzerliste lesen (Nur-Lese); Verwalten nur Admin/Projektleitung.
+Auth::require('admin', 'lead', 'juror');
+$canManage = Auth::isManager();
 
 $roles = ['admin' => 'Admin', 'lead' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 'Jury'];
 
@@ -12,6 +14,7 @@ $isOwner = Auth::isAdmin();
 const PERMANENT_OWNER = 'mv@vimatec.de';
 
 if (is_post()) {
+    if (!$canManage) { redirect(url('jurors')); }
     Csrf::check();
     $action = (string) input('action');
     $id = (int) input('id', 0);
@@ -189,7 +192,7 @@ ob_start(); ?>
         </select>
       </form>
     <?php endif; ?>
-    <button type="button" class="btn btn--teal" data-modal-open="userModal">+ Neu</button>
+    <?php if ($canManage): ?><button type="button" class="btn btn--teal" data-modal-open="userModal">+ Neu</button><?php endif; ?>
   </div>
 </div>
 <div class="card">
@@ -225,10 +228,10 @@ ob_start(); ?>
               <?php if ($isOwner && $u['id'] !== Auth::id()): ?>
                 <a href="<?= url('viewas', ['user' => $u['id']]) ?>" class="btn btn--ghost btn--sm btn--icon" title="App aus Sicht dieses Nutzers ansehen (nur Lesen)">👁</a>
               <?php endif; ?>
-              <?php if ($canManageRow): ?>
+              <?php if ($canManage && $canManageRow): ?>
                 <button type="button" class="btn btn--ghost btn--sm" data-modal-open="userModal" data-fill="<?= $fill($u) ?>"<?= $imgs($u) ? ' data-images="' . $imgs($u) . '"' : '' ?>>Bearbeiten</button>
               <?php endif; ?>
-              <?php if ($u['id'] !== Auth::id() && !$isPermOwner && $canManageRow): ?>
+              <?php if ($canManage && $u['id'] !== Auth::id() && !$isPermOwner && $canManageRow): ?>
                 <form method="post" action="<?= url('jurors') ?>" style="display:inline" data-confirm="„<?= e($u['name']) ?>“ löschen?">
                   <?= Csrf::field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int) $u['id'] ?>">
                   <button class="btn btn--danger btn--sm">Löschen</button>
@@ -242,6 +245,7 @@ ob_start(); ?>
     </div>
   </div>
 
+<?php if ($canManage): ?>
 <div class="modal-overlay" id="userModal" hidden>
   <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
     <div class="modal__head">
@@ -328,6 +332,7 @@ ob_start(); ?>
   upd();
 })();
 </script>
+<?php endif; ?>
 <?php
 $content = ob_get_clean();
 $title = 'Jury & Nutzer';

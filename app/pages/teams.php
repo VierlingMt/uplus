@@ -2,18 +2,21 @@
 /** Teams & Schüler verwalten (Projektleitung: alle; Lehrkraft: eigene Schule). */
 declare(strict_types=1);
 
-Auth::require('admin', 'lead', 'teacher');
+Auth::require('admin', 'lead', 'teacher', 'juror');
 $me = Auth::user();
 $isAdmin = Auth::isManager(); // Admin oder Projektleitung = volle Verwaltung
 $mySchool = $me['school_id'] ? (int) $me['school_id'] : null;
-$noSchool = !$isAdmin && !$mySchool; // Lehrkraft ohne Schulzuordnung: kann nichts verwalten
+$readOnly = !$isAdmin && !Auth::is('teacher'); // reine Jury: darf nur lesen
+$viewAll  = $isAdmin || $readOnly;             // Jury sieht – wie die Verwaltung – alle Schulen
+$noSchool = !$isAdmin && !$readOnly && !$mySchool; // Lehrkraft ohne Schulzuordnung: kann nichts verwalten
 
-/** Zugriff auf ein Team pruefen (Lehrkraft nur eigene Schule). */
-$canAccessTeam = function (array $team) use ($isAdmin, $mySchool): bool {
-    return $isAdmin || ((int) $team['school_id'] === $mySchool);
+/** Zugriff auf ein Team pruefen (Lehrkraft nur eigene Schule, Jury nur lesen). */
+$canAccessTeam = function (array $team) use ($isAdmin, $mySchool, $readOnly): bool {
+    return $isAdmin || $readOnly || ((int) $team['school_id'] === $mySchool);
 };
 
 if (is_post()) {
+    if ($readOnly) { redirect(url('teams')); }
     Csrf::check();
     $action = (string) input('action');
 
@@ -93,7 +96,7 @@ if ($eid = (int) input('edit', 0)) {
 }
 
 $schools = Database::all('SELECT id, name FROM schools ORDER BY name');
-$where = $isAdmin ? '' : 'WHERE t.school_id = ' . (int) $mySchool;
+$where = $viewAll ? '' : 'WHERE t.school_id = ' . (int) $mySchool;
 $teams = Database::all(
     "SELECT t.*, s.name AS school_name,
             (SELECT COUNT(*) FROM students st WHERE st.team_id = t.id) AS members,
@@ -109,7 +112,7 @@ $teamFill = fn(array $t) => e(json_encode([
 ob_start(); ?>
 <div class="page-head">
   <h1>Teams &amp; Schüler</h1>
-  <?php if (!$edit && !$noSchool): ?><button type="button" class="btn btn--teal" data-modal-open="teamModal">+ Neu</button><?php endif; ?>
+  <?php if (!$edit && !$noSchool && !$readOnly): ?><button type="button" class="btn btn--teal" data-modal-open="teamModal">+ Neu</button><?php endif; ?>
 </div>
 
 <?php if ($noSchool): ?>
@@ -122,12 +125,12 @@ ob_start(); ?>
     <div class="card">
       <div class="card__head" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
         <span>Team</span>
-        <button type="button" class="btn btn--ghost btn--sm" data-modal-open="teamModal" data-fill="<?= $teamFill($edit) ?>">Bearbeiten</button>
+        <?php if (!$readOnly): ?><button type="button" class="btn btn--ghost btn--sm" data-modal-open="teamModal" data-fill="<?= $teamFill($edit) ?>">Bearbeiten</button><?php endif; ?>
       </div>
       <div class="card__body">
         <h2 style="margin:0 0 4px;font-size:22px"><?= e($edit['name']) ?></h2>
         <p style="margin:0 0 14px"><span class="pill <?= $sc ?>"><?= e($sl) ?></span>
-          <?php if ($isAdmin && !empty($edit['school_id'])): $sn = array_column($schools, 'name', 'id')[(int) $edit['school_id']] ?? null; ?>
+          <?php if ($viewAll && !empty($edit['school_id'])): $sn = array_column($schools, 'name', 'id')[(int) $edit['school_id']] ?? null; ?>
             <?php if ($sn): ?><span class="pill muted"><?= e($sn) ?></span><?php endif; ?>
           <?php endif; ?>
         </p>
@@ -158,14 +161,17 @@ ob_start(); ?>
           <?php foreach ($students as $st): ?>
             <tr><td><?= e($st['name']) ?></td><td><?= $st['role_color'] ? '<span class="pill muted">'.e($st['role_color']).'</span>' : '' ?></td>
             <td style="text-align:right">
+              <?php if (!$readOnly): ?>
               <form method="post" action="<?= url('teams') ?>" style="display:inline" data-confirm="„<?= e($st['name']) ?>“ aus dem Team entfernen?">
                 <?= Csrf::field() ?><input type="hidden" name="action" value="del_student"><input type="hidden" name="id" value="<?= (int) $st['id'] ?>">
                 <button class="btn btn--ghost btn--sm">×</button>
-              </form></td></tr>
+              </form>
+              <?php endif; ?></td></tr>
           <?php endforeach; ?>
           <?php if (!$students): ?><tr><td class="muted">Noch keine Mitglieder.</td></tr><?php endif; ?>
           </tbody>
         </table>
+        <?php if (!$readOnly): ?>
         <form method="post" action="<?= url('teams') ?>">
           <?= Csrf::field() ?><input type="hidden" name="action" value="add_student"><input type="hidden" name="team_id" value="<?= (int) $edit['id'] ?>">
           <div style="display:flex;gap:8px">
@@ -174,6 +180,7 @@ ob_start(); ?>
             <button class="btn btn--teal">+</button>
           </div>
         </form>
+        <?php endif; ?>
       </div>
     </div>
   </div>
@@ -181,12 +188,12 @@ ob_start(); ?>
   <div class="card">
     <div class="table-wrap">
       <table class="data data--cards">
-        <thead><tr><th>Team</th><?php if ($isAdmin): ?><th>Schule</th><?php endif; ?><th>Mitglieder</th><th>Businessplan</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Team</th><?php if ($viewAll): ?><th>Schule</th><?php endif; ?><th>Mitglieder</th><th>Businessplan</th><th>Status</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($teams as $t): [$sl,$sc] = status_label($t['status']); ?>
           <tr>
             <td data-label="Team"><strong><?= e($t['name']) ?></strong><?php if ($t['idea_name']): ?><br><span class="muted" style="font-size:13px"><?= e($t['idea_name']) ?></span><?php endif; ?></td>
-            <?php if ($isAdmin): ?><td data-label="Schule"><?= e($t['school_name']) ?></td><?php endif; ?>
+            <?php if ($viewAll): ?><td data-label="Schule"><?= e($t['school_name']) ?></td><?php endif; ?>
             <td data-label="Mitglieder"><?= (int) $t['members'] ?></td>
             <td data-label="Businessplan">
               <?php if ($t['bp_id']): ?>
@@ -198,12 +205,14 @@ ob_start(); ?>
             </td>
             <td data-label="Status"><span class="pill <?= $sc ?>"><?= e($sl) ?></span></td>
             <td class="row-actions" style="white-space:nowrap;text-align:right">
-              <a href="<?= url('teams', ['edit' => $t['id']]) ?>" class="btn btn--ghost btn--sm" title="Team öffnen: Mitglieder verwalten">👥 Mitglieder</a>
+              <a href="<?= url('teams', ['edit' => $t['id']]) ?>" class="btn btn--ghost btn--sm" title="<?= $readOnly ? 'Team öffnen: Mitglieder ansehen' : 'Team öffnen: Mitglieder verwalten' ?>">👥 Mitglieder</a>
+              <?php if (!$readOnly): ?>
               <button type="button" class="btn btn--ghost btn--sm" data-modal-open="teamModal" data-fill="<?= $teamFill($t) ?>">Bearbeiten</button>
               <form method="post" action="<?= url('teams') ?>" style="display:inline" data-confirm="Team „<?= e($t['name']) ?>“ inkl. Mitglieder wirklich löschen?">
                 <?= Csrf::field() ?><input type="hidden" name="action" value="delete_team"><input type="hidden" name="id" value="<?= (int) $t['id'] ?>">
                 <button class="btn btn--danger btn--sm">Löschen</button>
               </form>
+              <?php endif; ?>
             </td>
           </tr>
         <?php endforeach; ?>
@@ -214,6 +223,7 @@ ob_start(); ?>
   </div>
 <?php endif; ?>
 
+<?php if (!$readOnly): ?>
 <div class="modal-overlay" id="teamModal" hidden>
   <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="teamModalTitle">
     <div class="modal__head">
@@ -252,6 +262,7 @@ ob_start(); ?>
     </form>
   </div>
 </div>
+<?php endif; ?>
 <?php
 $content = ob_get_clean();
 $title = 'Teams & Schüler';

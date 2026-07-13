@@ -16,7 +16,7 @@ $navGroups = [
         ['contact',   'Kontakt', '✉', ['admin', 'lead', 'teacher', 'juror']],
     ]],
     ['Lehrkraft', [
-        ['teams', 'Teams & Schüler', '👥', ['admin', 'lead', 'teacher']],
+        ['teams', 'Teams & Schüler', '👥', ['admin', 'lead', 'teacher', 'juror']],
     ]],
     ['Jury', [
         ['jury_feedback', 'Jury-Feedback', '🗣', ['admin', 'lead', 'juror']],
@@ -26,8 +26,8 @@ $navGroups = [
     ['Verwaltung', [
         ['cycles',   'Wettbewerbsjahre', '🏆', ['admin', 'lead']],
         ['event',    'PitchDay-Orga', '🎤', ['admin', 'lead']],
-        ['schools',  'Schulen', '🏫', ['admin', 'lead']],
-        ['jurors',   'Jury & Nutzer', '⚖', ['admin', 'lead']],
+        ['schools',  'Schulen', '🏫', ['admin', 'lead', 'juror']],
+        ['jurors',   'Jury & Nutzer', '⚖', ['admin', 'lead', 'juror']],
         ['sponsors', 'Sponsoren', '🤝', ['admin', 'lead']],
         ['audit',    'Audit-Log', '🧾', ['admin', 'lead']],
         ['admin',    'Admin', '⚙', ['admin', 'lead']],
