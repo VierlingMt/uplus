@@ -7,6 +7,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.60.1] - 2026-07-13
+### Geändert
+- **Zugriffsmatrix, Bewerten:** „Schreiben" bei **Bewertung & Ranking** bzw.
+  **PitchDay** bedeutet jetzt eindeutig „die Rolle darf bewerten". Die Jury steht
+  dafür standardmäßig auf **Schreiben** (kann also bewerten); auf „Lesen" gesetzt,
+  ist die Bewerten-Maske schreibgeschützt. Die Leitungs-Aktionen (Runden
+  einfrieren, Endergebnis) und die Freeze-Sperren bleiben davon unberührt.
+
 ## [0.60.0] - 2026-07-13
 ### Hinzugefügt
 - **Ablaufplan/Handout freigeben:** In der PitchDay-Orga (Tab „Ablauf") lässt sich

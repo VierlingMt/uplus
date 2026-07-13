@@ -56,11 +56,12 @@ final class Access
         'teams'         => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'write', 'juror' => 'read'],
         'schools'       => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'none', 'juror' => 'read'],
         'jurors'        => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'none', 'juror' => 'read'],
-        // Jury liest diese Ansichten; die eigentliche Bewertung läuft über die
-        // Bewerten-Maske (evaluate) und die bestehende Freeze-Logik.
+        // „Schreiben" bei ranking/pitch = die Jury darf bewerten (Punkte vergeben);
+        // die Leitungs-Aktionen (Runden einfrieren, Endergebnis) bleiben ohnehin
+        // der Verwaltung vorbehalten. jury_feedback ist für die Jury nur lesbar.
         'jury_feedback' => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'none', 'juror' => 'read'],
-        'ranking'       => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'none', 'juror' => 'read'],
-        'pitch'         => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'none', 'juror' => 'read'],
+        'ranking'       => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'none', 'juror' => 'write'],
+        'pitch'         => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'none', 'juror' => 'write'],
         'cycles'        => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'none', 'juror' => 'none'],
         'event'         => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'none', 'juror' => 'none'],
         'sponsors'      => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'none', 'juror' => 'none'],

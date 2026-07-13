@@ -25,9 +25,13 @@ $plan = Database::one('SELECT id FROM business_plans WHERE team_id=? AND is_curr
 $bpFrozen    = Settings::getInt('bp_frozen', 0) === 1;
 $finalFrozen = Settings::getInt('ranking_frozen', 0) === 1;
 $isManager   = Auth::isManager();
-$bpLocked    = ($bpFrozen || $finalFrozen) && !$isManager;  // Businessplan-Punkte gesperrt
-$pitchLocked = $finalFrozen && !$isManager;                 // Pitch-Punkte gesperrt
-$allLocked   = $bpLocked && (!$isPitch || $pitchLocked);    // gar nichts editierbar
+// Bewerten-Recht laut Zugriffsmatrix: „Schreiben" auf ranking (Businessplan) bzw.
+// pitch (Pitch). Ohne Schreibrecht sieht die Rolle die Maske nur lesend.
+$canScoreBp    = $isManager || Access::canWrite('ranking');
+$canScorePitch = $isManager || Access::canWrite('pitch');
+$bpLocked    = (($bpFrozen || $finalFrozen) && !$isManager) || !$canScoreBp;  // Businessplan-Punkte gesperrt
+$pitchLocked = ($finalFrozen && !$isManager) || !$canScorePitch;             // Pitch-Punkte gesperrt
+$allLocked   = $bpLocked && (!$isPitch || $pitchLocked);                     // gar nichts editierbar
 
 // Bestehende Bewertung + Scores laden
 $eval = Database::one('SELECT * FROM evaluations WHERE juror_id=? AND team_id=?', [$jurorId, $teamId]);
@@ -42,13 +46,16 @@ if (is_post()) {
     Csrf::check();
 
     if ($allLocked) {
+        $lockMsg = ($canScoreBp || $canScorePitch)
+            ? 'Die Bewertung ist eingefroren – Änderungen sind nicht mehr möglich.'
+            : 'Für die Bewertung fehlt dir das Schreibrecht – die Ansicht ist schreibgeschützt.';
         if (input('ajax') === '1') {
             http_response_code(423);
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['ok' => false, 'locked' => true, 'error' => 'Die Bewertung ist eingefroren.']);
+            echo json_encode(['ok' => false, 'locked' => true, 'error' => $lockMsg]);
             exit;
         }
-        flash('error', 'Die Bewertung ist eingefroren – Änderungen sind nicht mehr möglich.');
+        flash('error', $lockMsg);
         redirect(url('evaluate', ['team' => $teamId]));
     }
 
