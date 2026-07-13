@@ -2,7 +2,7 @@
 /** Sponsoren verwalten (Admin & Projektleitung): Stammdaten, Logo, Beiträge je Jahr. */
 declare(strict_types=1);
 
-Auth::requireManager();
+Access::requireRead('sponsors');
 
 // Wettbewerbsjahr = aktiver Zyklus (einzige Quelle). Beiträge hängen am Zyklus.
 $cycles      = Cycle::all();
@@ -11,6 +11,7 @@ $activeCycleId = (int) ($activeCycle['id'] ?? 0);
 $activeLabel  = (string) ($activeCycle['year_label'] ?? '—');
 
 if (is_post()) {
+    Access::requireWrite('sponsors');
     Csrf::check();
     $action = (string) input('action');
 

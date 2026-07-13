@@ -2,7 +2,11 @@
 /** Jury-Bewertung eines Teams durch die/den angemeldete:n Juror:in (Leitung/Jury). */
 declare(strict_types=1);
 
-Auth::require('admin', 'lead', 'juror');
+Auth::require();
+// Bewerten setzt Lesezugriff auf Businessplan- (ranking) oder Pitch-Bewertung voraus.
+if (!Access::canRead('ranking') && !Access::canRead('pitch')) {
+    Access::requireRead('ranking');
+}
 $jurorId = (int) Auth::id();
 
 $teamId = (int) input('team');

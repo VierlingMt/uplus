@@ -31,8 +31,18 @@ $navGroups = [
         ['sponsors', 'Sponsoren', '🤝', ['admin', 'lead']],
         ['audit',    'Audit-Log', '🧾', ['admin', 'lead']],
         ['admin',    'Admin', '⚙', ['admin', 'lead']],
+        ['access',   'Zugriffsmatrix', '🔐', ['admin']],
     ]],
 ];
+
+// Sichtbarkeit eines Menüpunkts: governte Module über die Zugriffsmatrix
+// (Lesen genügt), alle übrigen (z. B. der Editor selbst) über die Rollenliste.
+$canSeeNav = function (string $route, array $roles): bool {
+    if (class_exists('Access') && array_key_exists($route, Access::MODULES)) {
+        return Access::canRead($route);
+    }
+    return (bool) array_intersect($roles, Auth::roles());
+};
 // Alle Rollen des Nutzers als Label (Mehrfachrollen möglich).
 $roleLabel = class_exists('Roles') && Auth::roles()
     ? implode(' · ', array_map([Roles::class, 'label'], Auth::roles()))
@@ -62,7 +72,7 @@ $roleLabel = class_exists('Roles') && Auth::roles()
     </div>
     <nav class="nav">
       <?php foreach ($navGroups as [$groupLabel, $items]): ?>
-        <?php $visible = array_filter($items, fn($it) => (bool) array_intersect($it[3], Auth::roles())); ?>
+        <?php $visible = array_filter($items, fn($it) => $canSeeNav($it[0], $it[3])); ?>
         <?php if ($visible): ?>
           <div class="nav__group"><?= e($groupLabel) ?></div>
           <?php foreach ($visible as [$r, $label, $ic, $roles]): ?>

@@ -101,6 +101,7 @@ try {
         case 'event_print':
         case 'budget_print':
         case 'audit':
+        case 'access':
         case 'plans':
         case 'bp_download':
         case 'ranking':

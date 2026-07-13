@@ -2,9 +2,10 @@
 /** Admin-Bereich: zentrale Einstellungen (Admin & Projektleitung). */
 declare(strict_types=1);
 
-Auth::requireManager();
+Access::requireRead('admin');
 
 if (is_post()) {
+    Access::requireWrite('admin');
     Csrf::check();
     $section = (string) input('section');
 

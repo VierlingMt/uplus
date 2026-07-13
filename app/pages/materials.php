@@ -2,11 +2,11 @@
 /** Material & Vorlagen: Downloads + Erklärvideo. Verwaltung nur Projektleitung. */
 declare(strict_types=1);
 
-Auth::require();
-$isAdmin = Auth::isManager(); // Admin oder Projektleitung = volle Verwaltung
+Access::requireRead('materials');
+$isAdmin = Access::canWrite('materials'); // Schreibrecht laut Zugriffsmatrix
 
 if (is_post()) {
-    Auth::requireManager();
+    Access::requireWrite('materials');
     Csrf::check();
     $action = (string) input('action');
 

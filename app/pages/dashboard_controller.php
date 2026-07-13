@@ -3,6 +3,8 @@
 
 declare(strict_types=1);
 
+Access::requireRead('dashboard'); // bleibt für alle mindestens lesbar
+
 $stats = [
     'schools' => (int) Database::value('SELECT COUNT(*) FROM schools'),
     'teams'   => (int) Database::value('SELECT COUNT(*) FROM teams'),

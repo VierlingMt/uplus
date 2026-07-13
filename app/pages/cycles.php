@@ -7,9 +7,10 @@
  */
 declare(strict_types=1);
 
-Auth::requireManager();
+Access::requireRead('cycles');
 
 if (is_post()) {
+    Access::requireWrite('cycles');
     Csrf::check();
     $action = (string) input('action');
     $id     = (int) input('id', 0);

@@ -5,7 +5,7 @@
  */
 declare(strict_types=1);
 
-Auth::requireManager();
+Access::requireRead('audit');
 
 // --- Filter aus der URL ---------------------------------------------------
 $q       = trim((string) input('q', ''));

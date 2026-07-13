@@ -2,7 +2,7 @@
 /** Bewertungsübersicht, Ranking und Nominierung (Admin + Jury). */
 declare(strict_types=1);
 
-Auth::require('admin', 'lead', 'juror');
+Access::requireRead('ranking');
 $isAdmin = Auth::isManager(); // Admin oder Projektleitung = volle Verwaltung
 $jurorId = (int) Auth::id();
 
@@ -42,6 +42,7 @@ $loadRows = function () use ($jurorId): array {
 };
 
 if (is_post() && $isAdmin) {
+    Access::requireWrite('ranking');
     Csrf::check();
     $action = (string) input('action');
 

@@ -2,7 +2,7 @@
 /** Businesspläne: Upload, Übersicht, KI-Vorbewertung. */
 declare(strict_types=1);
 
-Auth::require();
+Access::requireRead('plans');
 $me = Auth::user();
 $isAdmin = Auth::isManager(); // Admin oder Projektleitung = volle Verwaltung
 // Reine Lehrkraft-Sicht (schulgebunden): nur wenn die Person NICHT zugleich
@@ -20,6 +20,7 @@ $canUploadFor = function (array $team) use ($isAdmin, $canTeach, $mySchool): boo
 };
 
 if (is_post()) {
+    Access::requireWrite('plans');
     Csrf::check();
     $action = (string) input('action');
 

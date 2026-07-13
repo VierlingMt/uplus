@@ -2,6 +2,8 @@
 /** Kontakt: Projektleitung mit Foto und Kontaktdaten – für alle sichtbar. */
 declare(strict_types=1);
 
+Access::requireRead('contact');
+
 $roles = ['lead' => 'Projektleitung'];
 
 // Ansprechpartner = Projektleitung (Rolle „lead"), nur aktive Konten.

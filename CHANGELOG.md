@@ -7,6 +7,23 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.59.0] - 2026-07-13
+### Hinzugefügt
+- **Zugriffsmatrix (nur Admin):** Neuer Menüpunkt „Zugriffsmatrix" (Verwaltung),
+  in dem der Admin je **Modul** und **Rolle** die Stufe **Kein Zugriff / Lesen /
+  Schreiben** festlegt. Die Einstellung steuert Menüsichtbarkeit, Seitenzugriff
+  und Schreibaktionen. Der Admin hat immer vollen Zugriff (nicht sperrbar), das
+  Dashboard bleibt für alle mindestens lesbar. Die Standardwerte entsprechen exakt
+  dem bisherigen Verhalten – ohne Änderung ändert sich nichts.
+- **Jury-Regel:** Juror:innen sehen unter „Jury & Nutzer" ausschließlich Personen
+  aus ihren eigenen Wettbewerbsjahrgängen (technische Admin-Konten ausgeblendet) –
+  unabhängig von der Matrix.
+### Geändert
+- Menü, Dashboard-Kacheln und die Modul-Guards (Schulen, Teams, Jury & Nutzer,
+  Wettbewerbsjahre, PitchDay-Orga, Sponsoren, Audit, Material, Businesspläne,
+  Bewertung, PitchDay, Jury-Feedback, Admin) prüfen den Zugriff jetzt über die
+  zentrale Zugriffsmatrix statt fest verdrahteter Rollenlisten.
+
 ## [0.58.0] - 2026-07-13
 ### Hinzugefügt
 - **Jury erhält Nur-Lese-Zugriff auf Schulen, Teams & Schüler sowie Jury & Nutzer.**

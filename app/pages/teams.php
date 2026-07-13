@@ -2,21 +2,23 @@
 /** Teams & Schüler verwalten (Projektleitung: alle; Lehrkraft: eigene Schule). */
 declare(strict_types=1);
 
-Auth::require('admin', 'lead', 'teacher', 'juror');
+Access::requireRead('teams');
 $me = Auth::user();
-$isAdmin = Auth::isManager(); // Admin oder Projektleitung = volle Verwaltung
+$isAdmin  = Auth::isManager();               // Admin/Projektleitung = volle Verwaltung (alle Schulen)
+$canWrite = Access::canWrite('teams');       // Schreibrecht laut Zugriffsmatrix
 $mySchool = $me['school_id'] ? (int) $me['school_id'] : null;
-$readOnly = !$isAdmin && !Auth::is('teacher'); // reine Jury: darf nur lesen
-$viewAll  = $isAdmin || $readOnly;             // Jury sieht – wie die Verwaltung – alle Schulen
-$noSchool = !$isAdmin && !$readOnly && !$mySchool; // Lehrkraft ohne Schulzuordnung: kann nichts verwalten
+$isTeacher = !$isAdmin && Auth::is('teacher'); // Lehrkraft: nur eigene Schule
+$viewAll  = !$isTeacher;                        // Lehrkraft nur eigene Schule, sonst alle
+$readOnly = !$canWrite;                         // UI-Flag: keine Schreibaktionen anbieten
+$noSchool = $canWrite && $isTeacher && !$mySchool; // Lehrkraft ohne Schulzuordnung: kann nichts verwalten
 
-/** Zugriff auf ein Team pruefen (Lehrkraft nur eigene Schule, Jury nur lesen). */
-$canAccessTeam = function (array $team) use ($isAdmin, $mySchool, $readOnly): bool {
-    return $isAdmin || $readOnly || ((int) $team['school_id'] === $mySchool);
+/** Zugriff auf ein Team pruefen (Lehrkraft nur eigene Schule). */
+$canAccessTeam = function (array $team) use ($isTeacher, $mySchool): bool {
+    return !$isTeacher || ((int) $team['school_id'] === $mySchool);
 };
 
 if (is_post()) {
-    if ($readOnly) { redirect(url('teams')); }
+    Access::requireWrite('teams');
     Csrf::check();
     $action = (string) input('action');
 

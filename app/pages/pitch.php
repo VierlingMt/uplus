@@ -7,7 +7,7 @@
  */
 declare(strict_types=1);
 
-Auth::require('admin', 'lead', 'juror');
+Access::requireRead('pitch');
 $isAdmin = Auth::isManager();
 $jurorId = (int) Auth::id();
 
@@ -15,6 +15,7 @@ $jurorId = (int) Auth::id();
 // Pitches wird das Ranking festgeschrieben. Freigabe nur als 15-Minuten-
 // Notausstieg (Verklick). Nur Verwaltung (Admin/Projektleitung).
 if (is_post() && $isAdmin) {
+    Access::requireWrite('pitch');
     Csrf::check();
     $action = (string) input('action');
     if ($action === 'freeze') {

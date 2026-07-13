@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-Auth::requireManager();
+Access::requireRead('event');
 
 $cycles        = Cycle::all();
 $activeCycleId = Cycle::activeId();
@@ -28,6 +28,7 @@ if (!in_array($tab, $allowedTabs, true)) {
 $back = fn() => redirect(url('event', ['cycle' => $cycleId, 'tab' => $tab]));
 
 if (is_post()) {
+    Access::requireWrite('event');
     Csrf::check();
     $action = (string) input('action');
     $tab = in_array((string) input('tab', $tab), $allowedTabs, true) ? (string) input('tab', $tab) : 'tasks';

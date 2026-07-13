@@ -2,12 +2,12 @@
 /** Schulen verwalten (Admin & Projektleitung). */
 declare(strict_types=1);
 
-// Jury darf die Schulen lesen (Nur-Lese); Verwalten nur Admin/Projektleitung.
-Auth::require('admin', 'lead', 'juror');
-$canManage = Auth::isManager();
+// Zugriff über die Zugriffsmatrix (Standard: Verwaltung schreibt, Jury liest).
+Access::requireRead('schools');
+$canManage = Access::canWrite('schools');
 
 if (is_post()) {
-    if (!$canManage) { redirect(url('schools')); }
+    Access::requireWrite('schools');
     Csrf::check();
     $action = (string) input('action');
     if ($action === 'delete') {

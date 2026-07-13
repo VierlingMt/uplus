@@ -18,7 +18,8 @@
 
 declare(strict_types=1);
 
-$canEdit = Auth::isManager();
+Access::requireRead('jury_feedback');
+$canEdit = Access::canWrite('jury_feedback');
 
 $CFG_KEY  = 'jury_feedback_cfg';
 $defaults = ['talk_min' => 15, 'break_min' => 10, 'break_after' => 3, 'members' => 2, 'groups' => 2];

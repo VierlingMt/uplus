@@ -2,9 +2,11 @@
 /** Nutzer verwalten: Admin, Projektleitung, Lehrkräfte, Jury (Admin & Projektleitung). */
 declare(strict_types=1);
 
-// Jury darf die Nutzerliste lesen (Nur-Lese); Verwalten nur Admin/Projektleitung.
-Auth::require('admin', 'lead', 'juror');
-$canManage = Auth::isManager();
+// Zugriff über die Zugriffsmatrix (Standard: Verwaltung schreibt, Jury liest).
+Access::requireRead('jurors');
+$canManage = Access::canWrite('jurors');
+// Jury (ohne Verwaltungsrechte) sieht nur Personen aus den eigenen Wettbewerbsjahrgängen.
+$juryCohort = !Auth::isManager() && Auth::is('juror');
 
 $roles = ['admin' => 'Admin', 'lead' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 'Jury'];
 
@@ -14,7 +16,7 @@ $isOwner = Auth::isAdmin();
 const PERMANENT_OWNER = 'mv@vimatec.de';
 
 if (is_post()) {
-    if (!$canManage) { redirect(url('jurors')); }
+    Access::requireWrite('jurors');
     Csrf::check();
     $action = (string) input('action');
     $id = (int) input('id', 0);
@@ -150,6 +152,35 @@ if ($filterCycleId > 0) {
          ORDER BY FIELD(u.role,"admin","lead","juror","teacher"), u.name'
     );
 }
+
+// Jury-Regel: Juror:innen sehen ausschließlich Personen aus ihren eigenen
+// Wettbewerbsjahrgängen (Zyklus-Mitglieder dieser Jahre + Lehrkräfte der in dem
+// Jahr teilnehmenden Schulen) sowie sich selbst. Technische Admin-Konten bleiben
+// für die Jury ausgeblendet.
+if ($juryCohort) {
+    $myCycles = array_map('intval', array_column(
+        Database::all('SELECT cycle_id FROM cycle_members WHERE user_id = ?', [Auth::id()]), 'cycle_id'));
+    if ($myCycles) {
+        $in = implode(',', $myCycles);
+        $users = Database::all(
+            "SELECT u.*, s.name AS school_name FROM users u
+             LEFT JOIN schools s ON s.id = u.school_id
+             WHERE (u.id IN (SELECT user_id FROM cycle_members WHERE cycle_id IN ($in))
+                OR (EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role = 'teacher')
+                    AND u.school_id IN (SELECT school_id FROM cycle_schools WHERE cycle_id IN ($in)))
+                OR u.id = ?)
+             ORDER BY FIELD(u.role,'admin','lead','juror','teacher'), u.name",
+            [Auth::id()]
+        );
+    } else {
+        $users = Database::all(
+            'SELECT u.*, s.name AS school_name FROM users u LEFT JOIN schools s ON s.id = u.school_id
+             WHERE u.id = ?', [Auth::id()]
+        );
+    }
+    $users = array_values(array_filter($users, static fn($x) => $x['role'] !== 'admin'));
+}
+
 // Jahres-Labels + IDs je Nutzer (Labels für die Liste, IDs zum Vorbelegen des Modals)
 $userCycles = $userCycleIds = [];
 foreach (Database::all(
@@ -180,7 +211,7 @@ ob_start(); ?>
 <div class="page-head">
   <h1>Jury &amp; Nutzer</h1>
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-    <?php if ($cycles): ?>
+    <?php if ($cycles && !$juryCohort): ?>
       <form method="get" action="<?= url('jurors') ?>" style="display:flex;align-items:center;gap:6px;margin:0">
         <input type="hidden" name="r" value="jurors">
         <label for="cycleFilter" class="muted" style="font-size:14px">Wettbewerbsjahr</label>
@@ -196,7 +227,7 @@ ob_start(); ?>
   </div>
 </div>
 <div class="card">
-  <div class="card__head"><?= count($users) ?> Nutzer<?= $filterCycle ? ' · Wettbewerbsjahr ' . e($filterCycle['year_label']) : ' · alle Jahre' ?></div>
+  <div class="card__head"><?= count($users) ?> Nutzer<?= $juryCohort ? ' · eigene Wettbewerbsjahrgänge' : ($filterCycle ? ' · Wettbewerbsjahr ' . e($filterCycle['year_label']) : ' · alle Jahre') ?></div>
   <div class="table-wrap">
     <table class="data data--cards">
       <thead><tr><th>Name</th><th>Rolle</th><th>Login</th><th></th></tr></thead>
