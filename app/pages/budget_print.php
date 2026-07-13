@@ -67,6 +67,38 @@ if ($kind === 'full') {
 }
 $balance = $sumIncome - $sumExpenses;
 
+// Teilnehmende Schulen dieses Wettbewerbsjahres mit Anzahl Teams/Schüler:innen –
+// Schulen aus der Zyklus-Zuordnung (cycle_schools), Zahlen live aus teams/students.
+// Fallback für Altbestände ohne Zyklus-Zuordnung: alle Schulen mit erfassten Teams.
+$schoolCountSelect =
+    'SELECT s.id, s.name, s.short_name,
+            COUNT(DISTINCT t.id)  AS n_teams,
+            COUNT(DISTINCT st.id) AS n_students';
+$schools = Database::all(
+    $schoolCountSelect . '
+       FROM cycle_schools cs
+       JOIN schools s   ON s.id = cs.school_id
+       LEFT JOIN teams t    ON t.school_id = s.id
+       LEFT JOIN students st ON st.team_id = t.id
+      WHERE cs.cycle_id = ?
+      GROUP BY s.id, s.name, s.short_name
+      ORDER BY s.name',
+    [$cycleId]
+);
+if (!$schools) {
+    $schools = Database::all(
+        $schoolCountSelect . '
+           FROM schools s
+           JOIN teams t     ON t.school_id = s.id
+           LEFT JOIN students st ON st.team_id = t.id
+          GROUP BY s.id, s.name, s.short_name
+          HAVING n_teams > 0 OR n_students > 0
+          ORDER BY s.name'
+    );
+}
+$sumTeams    = array_sum(array_map(static fn($r) => (int) $r['n_teams'], $schools));
+$sumStudents = array_sum(array_map(static fn($r) => (int) $r['n_students'], $schools));
+
 $eventDateLine = trim(implode(', ', array_filter([$weekday($event['event_date']), $dateFmt($event['event_date'])])));
 
 $pageTitle = $kind === 'full' ? 'Einnahmen- und Ausgabenübersicht' : 'Ausgabenübersicht';
@@ -167,8 +199,12 @@ header('Content-Type: text/html; charset=utf-8');
   @page {
     size: A4;
     margin: 14mm 12mm 15mm;
-    @bottom-left  { content: "<?= $cssFootTitle ?>"; font-size: 8.5pt; color: #3a3f47; }
-    @bottom-right { content: "Seite " counter(page) " / " counter(pages); font-size: 8.5pt; color: #3a3f47; }
+    /* Links unten: erst die Seitenzahl („Seite 1 von 3"), auf gleicher Höhe der
+       Dokumenttitel – klein und anthrazit. Echte Seitenzähler über CSS Paged Media. */
+    @bottom-left {
+      content: "Seite " counter(page) " von " counter(pages) "   ·   <?= $cssFootTitle ?>";
+      font-size: 8.5pt; color: #3a3f47;
+    }
   }
 </style>
 </head>
@@ -225,6 +261,26 @@ header('Content-Type: text/html; charset=utf-8');
           </ul>
         </div>
       </section>
+
+      <?php if ($schools): ?>
+      <!-- ============ Teilnehmende Schulen (live) ============ -->
+      <section class="block">
+        <h2>Teilnehmende Schulen<?= $yearLabel ? ' – ' . e($yearLabel) : '' ?></h2>
+        <table class="fin">
+          <thead><tr><th>Schule</th><th class="num">Teams</th><th class="num">Schüler:innen</th></tr></thead>
+          <tbody>
+            <?php foreach ($schools as $r): ?>
+              <tr>
+                <td><?= e($r['name']) ?><?= $r['short_name'] ? ' <span class="note">(' . e($r['short_name']) . ')</span>' : '' ?></td>
+                <td class="num"><?= (int) $r['n_teams'] ?></td>
+                <td class="num"><?= (int) $r['n_students'] ?></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+          <tfoot><tr><td><?= count($schools) ?> <?= count($schools) === 1 ? 'Schule' : 'Schulen' ?></td><td class="num"><?= $sumTeams ?></td><td class="num"><?= $sumStudents ?></td></tr></tfoot>
+        </table>
+      </section>
+      <?php endif; ?>
 
       <?php if ($kind === 'full'): ?>
       <!-- ============ Einnahmen ============ -->

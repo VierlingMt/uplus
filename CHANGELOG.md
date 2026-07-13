@@ -7,6 +7,16 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.57.2] - 2026-07-13
+### Hinzugefügt
+- **Budget-PDFs: Abschnitt „Teilnehmende Schulen"** – live je Wettbewerbsjahr die
+  teilnehmenden Schulen mit Anzahl der Teams und Schüler:innen (samt Summenzeile).
+  Schulen aus der Zyklus-Zuordnung, Zahlen live aus den erfassten Teams.
+### Geändert
+- **Budget-PDFs: Fußzeile** zeigt links unten – klein und anthrazit – erst die
+  Seitenzahl im Format „Seite 1 von 3" und auf gleicher Höhe den Dokumenttitel.
+  A4-Format bleibt gesetzt.
+
 ## [0.57.1] - 2026-07-13
 ### Hinzugefügt
 - **Kurzer Projektabschnitt „Über das Projekt" in den Budget-PDFs**: beschreibt
