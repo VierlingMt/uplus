@@ -7,6 +7,15 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.57.0] - 2026-07-13
+### Hinzugefügt
+- **Zwei druckfertige Budget-Übersichten** im Menüpunkt **PitchDay → Budget**:
+  „Ausgaben-Übersicht" (Kosten + Preisgelder mit Summen) und
+  „Ausgaben-/Einnahmen-Übersicht" (zusätzlich die Sponsoren-Einnahmen und der
+  Saldo). Beide öffnen eine sauber formatierte A4-Seite mit Kopf, Eckdaten,
+  Summen sowie Datums- und Unterschriftszeile und lassen sich per „Als PDF
+  speichern" drucken – gedacht als Nachweis gegenüber Zuwendungsgebern.
+
 ## [0.56.0] - 2026-07-12
 ### Geändert
 - **Deutlich kompaktere Mobil-Ansicht** für PitchDay und Bewertung & Ranking: Jede

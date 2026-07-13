@@ -707,7 +707,14 @@ ob_start(); ?>
     </div>
     <p class="muted" style="font-size:13px;margin-bottom:14px">Einnahmen werden aus den Sponsoren-Beiträgen dieses Wettbewerbsjahres übernommen (Modul <a href="<?= url('sponsors') ?>">Sponsoren</a>).</p>
 
-    <div style="margin-bottom:14px"><button type="button" class="btn btn--teal btn--sm" data-modal-open="budgetModal">+ Kosten / Preis</button></div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <button type="button" class="btn btn--teal btn--sm" data-modal-open="budgetModal">+ Kosten / Preis</button>
+      <a class="btn btn--ghost btn--sm" target="_blank" rel="noopener"
+         href="<?= e(url('budget_print', ['cycle' => $cycleId, 'kind' => 'expenses'])) ?>">📄 Ausgaben-Übersicht (PDF)</a>
+      <a class="btn btn--ghost btn--sm" target="_blank" rel="noopener"
+         href="<?= e(url('budget_print', ['cycle' => $cycleId, 'kind' => 'full'])) ?>">📊 Ausgaben-/Einnahmen-Übersicht (PDF)</a>
+    </div>
+    <p class="muted" style="font-size:13px;margin:-6px 0 14px">Beide Übersichten öffnen eine druckfertige A4-Seite (Kosten, Preisgelder, bei der zweiten Variante zusätzlich die Sponsoren-Einnahmen und der Saldo) – ideal als Nachweis für Zuwendungen.</p>
     <div class="card">
       <div class="table-wrap">
         <table class="data data--cards">
