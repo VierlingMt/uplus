@@ -7,6 +7,15 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.60.0] - 2026-07-13
+### Hinzugefügt
+- **Ablaufplan/Handout freigeben:** In der PitchDay-Orga (Tab „Ablauf") lässt sich
+  der Ablaufplan per Klick **„Für alle freigeben"** (bzw. zurückziehen). Sobald
+  freigegeben, erscheint auf dem **Dashboard aller Beteiligten** eine Kachel
+  „PitchDay – Ablaufplan & Handout" zum PDF-Download. Vor der Freigabe bleibt das
+  Handout nur für die Verwaltung sichtbar (die es auf dem Dashboard als Vorschau
+  sieht). Die Reserviert-Schilder bleiben in jedem Fall der Verwaltung vorbehalten.
+
 ## [0.59.0] - 2026-07-13
 ### Hinzugefügt
 - **Zugriffsmatrix (nur Admin):** Neuer Menüpunkt „Zugriffsmatrix" (Verwaltung),

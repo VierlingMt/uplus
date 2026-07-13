@@ -364,6 +364,12 @@ final class Migrator
                         REFERENCES users(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             ],
+            [
+                'version' => '2026_07_34_event_handout_release',
+                'name'    => 'PitchDay: Ablaufplan/Handout freigeben (für alle herunterladbar)',
+                'up'      => 'ALTER TABLE events
+                    ADD COLUMN IF NOT EXISTS handout_released_at DATETIME NULL AFTER notes',
+            ],
         ];
     }
 
@@ -557,6 +563,7 @@ final class Migrator
                 venue         VARCHAR(190) NULL,
                 venue_address VARCHAR(255) NULL,
                 notes         TEXT NULL,
+                handout_released_at DATETIME NULL,
                 created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (id),
                 KEY idx_events_cycle (cycle_id),

@@ -82,6 +82,20 @@ if (is_post()) {
         $back();
     }
 
+    // --- Ablaufplan/Handout freigeben bzw. Freigabe zurückziehen ---
+    if ($action === 'toggle_handout_release') {
+        $release = (int) input('release') === 1;
+        Database::run(
+            'UPDATE events SET handout_released_at = ' . ($release ? 'NOW()' : 'NULL') . ' WHERE id=?',
+            [$eventId]
+        );
+        Audit::log('event.handout_release', $release ? 'Ablaufplan/Handout freigegeben' : 'Freigabe des Ablaufplans zurückgezogen', 'event', $eventId);
+        flash('success', $release
+            ? 'Ablaufplan/Handout freigegeben – ab jetzt für alle über das Dashboard herunterladbar.'
+            : 'Freigabe zurückgezogen – der Ablaufplan ist wieder nur für die Verwaltung sichtbar.');
+        $back();
+    }
+
     // --- Aufgaben ---
     if ($action === 'seed_tasks') {
         $n = PitchDay::seedTasks($eventId, $event['event_date'] ?? null);
@@ -660,7 +674,20 @@ ob_start(); ?>
       <?php endif; ?>
       <a class="btn btn--ghost btn--sm" target="_blank" rel="noopener"
          href="<?= e(url('event_print', ['cycle' => $cycleId, 'kind' => 'handout'])) ?>">📄 Ablaufplan / Handout (PDF)</a>
+      <?php $released = !empty($event['handout_released_at']); ?>
+      <form method="post" action="<?= url('event') ?>" style="display:inline"<?= $released ? ' data-confirm="Freigabe zurückziehen? Der Ablaufplan ist dann nicht mehr über das Dashboard herunterladbar."' : '' ?>>
+        <?= Csrf::field() ?><input type="hidden" name="action" value="toggle_handout_release"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="tab" value="agenda">
+        <input type="hidden" name="release" value="<?= $released ? '0' : '1' ?>">
+        <button class="btn <?= $released ? 'btn--ghost' : 'btn--teal' ?> btn--sm"><?= $released ? '↩ Freigabe zurückziehen' : '✅ Für alle freigeben' ?></button>
+      </form>
     </div>
+    <p class="muted" style="font-size:13px;margin:-6px 0 14px">
+      <?php if (!empty($event['handout_released_at'])): ?>
+        ✅ <strong>Freigegeben</strong> am <?= e(date('d.m.Y, H:i', strtotime((string) $event['handout_released_at']))) ?> Uhr – alle Beteiligten können den Ablaufplan/das Handout über ihr Dashboard als PDF herunterladen.
+      <?php else: ?>
+        Solange nicht freigegeben, ist der Ablaufplan nur für die Verwaltung sichtbar. Mit „Für alle freigeben" erscheint er auf dem Dashboard aller Beteiligten zum PDF-Download.
+      <?php endif; ?>
+    </p>
     <div class="card">
       <div class="table-wrap">
         <table class="data data--cards">

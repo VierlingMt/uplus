@@ -55,6 +55,26 @@
   </div>
 </div>
 
+<?php if (!empty($handoutAvailable)): ?>
+<a href="<?= url('event_print', ['cycle' => $activeCycleId, 'kind' => 'handout']) ?>" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
+  <div class="card mb">
+    <div class="card__body" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="font-size:24px">📄</span>
+      <div style="flex:1 1 auto;min-width:180px">
+        <strong>PitchDay – Ablaufplan &amp; Handout</strong>
+        <div class="muted" style="font-size:13px">
+          <?= !empty($handoutReleased)
+            ? 'Alle Infos zum Ablauf – als PDF öffnen und herunterladen.'
+            : 'Vorschau – noch nicht freigegeben, daher nur für die Verwaltung sichtbar.' ?>
+        </div>
+      </div>
+      <span class="pill <?= !empty($handoutReleased) ? 'teal' : 'amber' ?>"><?= !empty($handoutReleased) ? 'freigegeben' : 'Vorschau' ?></span>
+      <span class="btn btn--teal btn--sm">PDF öffnen</span>
+    </div>
+  </div>
+</a>
+<?php endif; ?>
+
 <?php if (!empty($pitchday)): ?>
 <a href="<?= url('event') ?>" style="text-decoration:none;color:inherit">
   <div class="card mb">

@@ -19,7 +19,9 @@
 
 declare(strict_types=1);
 
-Auth::requireManager();
+// Zugriff: Die Verwaltung darf immer drucken. Alle übrigen Beteiligten dürfen
+// ausschließlich den *freigegebenen* Ablaufplan/Handout öffnen (nicht die Schilder).
+Auth::require();
 
 $cycleId = (int) input('cycle', Cycle::activeId());
 if ($cycleId <= 0 || Cycle::find($cycleId) === null) {
@@ -33,6 +35,11 @@ if (!$event) {
 }
 $eventId = (int) $event['id'];
 $kind    = input('kind') === 'handout' ? 'handout' : 'signs';
+
+if (!Auth::isManager() && ($kind !== 'handout' || empty($event['handout_released_at']))) {
+    http_response_code(403);
+    exit('Dieser Ausdruck ist noch nicht freigegeben.');
+}
 
 $dateFmt = fn(?string $d) => $d ? date('d.m.Y', strtotime($d)) : null;
 $timeFmt = fn(?string $t) => $t ? substr($t, 0, 5) : null;
