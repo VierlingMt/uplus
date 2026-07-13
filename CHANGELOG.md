@@ -7,6 +7,13 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.57.4] - 2026-07-13
+### Behoben
+- **Dashboard-Kacheln verlinken nur noch auf erreichbare Bereiche.** Kennzahl-Kacheln
+  (Schulen, Teams, Juror:innen), deren Zielmodul der aktuellen Rolle nicht offensteht,
+  werden als reine Info-Kachel ohne Link angezeigt – kein toter Klick mehr auf die
+  Seite „Kein Zugriff". Jury sieht z. B. nur „Eingereichte Pläne" verlinkt.
+
 ## [0.57.3] - 2026-07-13
 ### Hinzugefügt
 - **Budget-PDFs: digitale „Pseudo-Unterschriften" der Projektleitung** – für alle

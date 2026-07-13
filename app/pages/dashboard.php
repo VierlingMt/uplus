@@ -6,18 +6,21 @@
 
 <div class="grid cols-4 mb">
   <?php
+  // Kennzahl-Kacheln. Verlinkt wird nur, wenn die aktuelle Rolle das Zielmodul
+  // auch öffnen darf – sonst reine Info-Kachel (kein toter Link auf „Kein Zugriff").
   $cards = [
-    ['schools', 'Schulen', $stats['schools']],
-    ['teams', 'Teams', $stats['teams']],
-    ['plans', 'Eingereichte Pläne', $stats['plans']],
-    ['jurors', 'Juror:innen', $stats['jurors']],
+    ['schools', 'Schulen', $stats['schools'], ['admin', 'lead']],
+    ['teams', 'Teams', $stats['teams'], ['admin', 'lead', 'teacher']],
+    ['plans', 'Eingereichte Pläne', $stats['plans'], ['admin', 'lead', 'teacher', 'juror']],
+    ['jurors', 'Juror:innen', $stats['jurors'], ['admin', 'lead']],
   ];
-  foreach ($cards as [$r, $label, $n]): ?>
-    <a href="<?= url($r) ?>" style="text-decoration:none">
+  foreach ($cards as [$r, $label, $n, $roles]):
+    $canOpen = Auth::is(...$roles); ?>
+    <?php if ($canOpen): ?><a href="<?= url($r) ?>" style="text-decoration:none"><?php endif; ?>
       <div class="card stat"><div class="bar"></div><div class="card__body">
         <div class="n"><?= (int) $n ?></div><div class="l"><?= e($label) ?></div>
       </div></div>
-    </a>
+    <?php if ($canOpen): ?></a><?php endif; ?>
   <?php endforeach; ?>
 </div>
 
