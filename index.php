@@ -88,6 +88,11 @@ try {
             require APP_PATH . '/pages/contact.php';
             break;
 
+        case 'presentation':
+        case 'presentation_print':
+            require APP_PATH . '/pages/' . $route . '.php';
+            break;
+
         // --- Module ---
         case 'schools':
         case 'school_teachers':

@@ -7,6 +7,28 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.63.0] - 2026-07-15
+### Hinzugefügt
+- **Projektpräsentation in der App:** Neuer Menüpunkt **„Präsentation"** (für alle
+  sichtbar). Bildet die WJ-Foliensammlung zum Businessplanwettbewerb ab und lässt
+  sich als Deck durchblättern (Pfeiltasten ← →, Punkte-Navigation) sowie im
+  **Vollbild präsentieren** (Taste `F`). Über **„Als PDF / Drucken"** entsteht die
+  komplette Präsentation als PDF (A4 quer, eine Folie je Seite) – ganz ohne
+  zusätzliche PDF-Bibliothek, per Browser-Druck „Als PDF speichern".
+- **Dynamische Folien je Wettbewerbsjahr:** Titel/Jahr, **Projektablauf**
+  (Meilensteine), **Preise** (aus dem PitchDay-Budget), **Unser Team**
+  (Projektleitung), **Kontakt** und **Sponsoren** füllen sich automatisch aus den
+  bereits in der App gepflegten Daten des gewählten Jahres. Bei mehreren Jahren
+  ist das Jahr oben wählbar.
+- **Pflegbare Textfolien:** Die wiederkehrenden Beschreibungstexte (Einleitung,
+  Herausforderungen, Ablaufphasen, KI-Hinweis …) pflegt die Verwaltung direkt in
+  der Präsentation per **„Bearbeiten"** (einfaches Markdown). Die Texte sind je
+  Wettbewerbsjahr überschreibbar; eine **globale Vorlage** dient als Rückfallebene,
+  sodass ein neues Jahr die Texte des Vorjahres erbt. Angepasste Folien lassen sich
+  auf die Vorlage zurücksetzen.
+- **Zugriffsmatrix:** Das Modul **„Präsentation"** ist aufgenommen – ansehen dürfen
+  alle Rollen, pflegen die Verwaltung (Admin/Projektleitung).
+
 ## [0.62.0] - 2026-07-15
 ### Hinzugefügt
 - **PitchDay-Aushänge & Urkunden (automatisch erzeugt):** Neuer Tab „Aushänge &

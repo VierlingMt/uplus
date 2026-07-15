@@ -1,0 +1,150 @@
+/**
+ * Projektpräsentation „Unternehmen Plus" – Foliendarstellung.
+ * Gemeinsame Optik für Bildschirmansicht (presentation.php) und Druck/PDF
+ * (presentation_print.php), damit beide identisch aussehen. Die Navigations-
+ * und Druck-Chrome liegt jeweils inline in der Seite.
+ */
+
+.ps-deck {
+  --ps-blue: #003594;
+  --ps-ink: #1c2430;
+  --ps-muted: #5b6472;
+  --ps-line: #d8dee9;
+  --ps-teal: #0f8a7e;
+}
+
+/* ---------- Folienrahmen (16:9) ---------- */
+.ps-slide {
+  position: relative;
+  background: #fff;
+  color: var(--ps-ink);
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  border: 1px solid var(--ps-line);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 34px rgba(0, 30, 90, .12);
+  font-family: "Bitter", Georgia, serif;
+}
+.ps-slide__inner {
+  position: absolute;
+  inset: 0;
+  padding: 5.2% 6%;
+  display: flex;
+  flex-direction: column;
+  /* Skaliert Schrift mit der Folienbreite (Container Query Unit), damit die
+     Folie in jeder Größe stimmig wirkt. Fallback für ältere Browser via vw. */
+  font-size: clamp(12px, 2.4cqw, 30px);
+}
+@supports not (font-size: 1cqw) {
+  .ps-slide__inner { font-size: clamp(12px, 1.5vw, 26px); }
+}
+
+.ps-kicker {
+  font-family: "Chivo", system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  font-size: .5em;
+  font-weight: 700;
+  color: var(--ps-muted);
+  margin-bottom: .5em;
+}
+.ps-h {
+  font-family: "Chivo", system-ui, sans-serif;
+  font-weight: 900;
+  color: var(--ps-blue);
+  font-size: 1.55em;
+  line-height: 1.1;
+  margin: 0 0 .15em;
+}
+.ps-sub {
+  font-family: "Chivo", system-ui, sans-serif;
+  color: var(--ps-teal);
+  font-weight: 700;
+  font-size: .72em;
+  margin-bottom: .7em;
+}
+.ps-body { font-size: .66em; line-height: 1.5; color: var(--ps-ink); overflow: auto; }
+.ps-body p { margin: 0 0 .7em; }
+.ps-body ul { margin: 0 0 .7em; padding-left: 1.3em; }
+.ps-body li { margin-bottom: .35em; }
+.ps-body strong { color: var(--ps-blue); }
+.ps-body a { color: var(--ps-teal); }
+.ps-muted { color: var(--ps-muted); font-size: .7em; }
+
+/* ---------- Titelfolie ---------- */
+.ps-title {
+  align-items: flex-start;
+  justify-content: center;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(15, 138, 126, .10), transparent 60%),
+    linear-gradient(140deg, #f5f8ff 0%, #eaf0fb 100%);
+}
+.ps-title__logo { height: 2.6em; margin-bottom: 1em; }
+.ps-title__year {
+  font-family: "Chivo", system-ui, sans-serif; font-weight: 700; letter-spacing: .12em;
+  color: var(--ps-teal); font-size: .8em; margin-bottom: .2em;
+}
+.ps-title__h {
+  font-family: "Chivo", system-ui, sans-serif; font-weight: 900; color: var(--ps-blue);
+  font-size: 2.1em; line-height: 1.05; margin: 0;
+}
+.ps-title__brand {
+  font-family: "Chivo", system-ui, sans-serif; font-weight: 900; color: var(--ps-ink);
+  font-size: 2.1em; line-height: 1.05; margin: 0 0 .4em;
+}
+.ps-title__sub { font-size: .72em; color: var(--ps-ink); max-width: 26em; margin: 0 0 .8em; }
+.ps-title__meta { font-size: .52em; color: var(--ps-muted); }
+.ps-title__meta p { margin: 0; }
+
+/* ---------- Zeitleiste (Projektablauf) ---------- */
+.ps-timeline { list-style: none; margin: .3em 0 0; padding: 0; display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6em, 1fr)); gap: .6em; align-content: start; }
+.ps-tl { position: relative; padding: .7em .6em; border-radius: .5em; background: #f4f7fc;
+  border: 1px solid var(--ps-line); display: flex; flex-direction: column; gap: .25em; }
+.ps-tl__dot { width: 1.4em; height: 1.4em; border-radius: 50%; display: inline-flex;
+  align-items: center; justify-content: center; font-size: .55em; font-weight: 900; color: #fff;
+  background: var(--ps-muted); }
+.ps-tl__phase { font-family: "Chivo", system-ui, sans-serif; font-weight: 700; font-size: .6em; line-height: 1.15; }
+.ps-tl__date { font-size: .52em; color: var(--ps-muted); }
+.ps-tl--done .ps-tl__dot { background: var(--ps-teal); }
+.ps-tl--active { border-color: var(--ps-blue); box-shadow: inset 0 0 0 1px var(--ps-blue); }
+.ps-tl--active .ps-tl__dot { background: var(--ps-blue); }
+.ps-tl--active .ps-tl__phase { color: var(--ps-blue); }
+.ps-tl--upcoming .ps-tl__dot { background: #b8c2d4; }
+
+/* ---------- Pitch Day: Text + Preise ---------- */
+.ps-split { display: grid; grid-template-columns: 1.35fr 1fr; gap: 1.2em; overflow: hidden; }
+.ps-prizes { background: #f4f7fc; border: 1px solid var(--ps-line); border-radius: .6em; padding: .8em .9em; }
+.ps-prizes__head { font-family: "Chivo", system-ui, sans-serif; font-weight: 900; color: var(--ps-blue);
+  font-size: .66em; margin-bottom: .5em; }
+.ps-prizes ul { list-style: none; margin: 0; padding: 0; font-size: .6em; line-height: 1.4; }
+.ps-prizes li { padding: .3em 0; border-bottom: 1px solid var(--ps-line); }
+.ps-prizes li:last-child { border-bottom: 0; }
+.ps-amount { color: var(--ps-teal); font-weight: 700; margin-left: .3em; white-space: nowrap; }
+.ps-note { display: block; color: var(--ps-muted); }
+
+/* ---------- Team (Projektleitung) ---------- */
+.ps-people { display: flex; flex-wrap: wrap; gap: 1.4em; margin-top: .6em; }
+.ps-person { width: 8.5em; text-align: center; }
+.ps-person__ph { width: 5em; height: 5em; border-radius: 50%; object-fit: cover; margin: 0 auto .4em;
+  display: block; border: 3px solid #fff; box-shadow: 0 4px 14px rgba(0,30,90,.18); }
+.ps-person__ph--ph { background: var(--ps-blue); color: #fff; font-family: "Chivo", sans-serif;
+  font-weight: 900; font-size: 1.6em; display: flex; align-items: center; justify-content: center; }
+.ps-person__name { font-family: "Chivo", system-ui, sans-serif; font-weight: 700; font-size: .62em; }
+.ps-person__role { font-size: .52em; color: var(--ps-teal); font-weight: 700; }
+.ps-person__org { font-size: .5em; color: var(--ps-muted); }
+
+/* ---------- Kontakt ---------- */
+.ps-contacts { list-style: none; margin: .4em 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 1em; }
+.ps-contacts li { background: #f4f7fc; border: 1px solid var(--ps-line); border-radius: .6em;
+  padding: .7em .9em; min-width: 12em; font-size: .6em; }
+.ps-contacts strong { font-family: "Chivo", system-ui, sans-serif; display: block; font-size: 1.15em; color: var(--ps-blue); }
+.ps-contacts__org { color: var(--ps-muted); display: block; margin-bottom: .3em; }
+.ps-contacts__line { display: block; color: var(--ps-ink); }
+.ps-sponsors { margin-top: auto; padding-top: 1em; }
+.ps-sponsors__head { font-family: "Chivo", system-ui, sans-serif; text-transform: uppercase;
+  letter-spacing: .12em; font-size: .5em; color: var(--ps-muted); margin-bottom: .5em; }
+.ps-sponsors__row { display: flex; flex-wrap: wrap; align-items: center; gap: 1em 1.4em; }
+.ps-sponsors__row img { height: 2.2em; max-width: 8em; object-fit: contain; filter: grayscale(.15); }
+.ps-sponsors__name { font-weight: 700; font-size: .6em; color: var(--ps-ink); }

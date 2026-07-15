@@ -376,7 +376,53 @@ final class Migrator
                 'up'      => 'ALTER TABLE evaluations
                     ADD COLUMN IF NOT EXISTS pitch_questions TEXT NULL AFTER pitch_total',
             ],
+            [
+                'version' => '2026_07_36_presentation_slides',
+                'name'    => 'Projektpräsentation: pflegbare Textfolien je Wettbewerbsjahr (mit Vorlage)',
+                'up'      => [self::class, 'presentationSlides'],
+            ],
         ];
+    }
+
+    /**
+     * Pflegbare Textfolien der Projektpräsentation. `cycle_id = NULL` ist die
+     * globale Vorlage (Rückfallebene für alle Jahre), zyklus-spezifische Zeilen
+     * überschreiben sie. Beim ersten Lauf wird die Vorlage aus den in
+     * Presentation::SEED hinterlegten Originaltexten befüllt (idempotent).
+     *
+     * Hinweis: Für die UNIQUE-Beschränkung dient `cycle_key` = cycle_id oder 0
+     * (NULL könnte in MySQL mehrfach vorkommen und die Vorlage duplizieren).
+     */
+    public static function presentationSlides(PDO $pdo): void
+    {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS presentation_slides (
+                id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                cycle_id   INT UNSIGNED NULL,
+                cycle_key  INT UNSIGNED AS (COALESCE(cycle_id, 0)) STORED,
+                slide_key  VARCHAR(60) NOT NULL,
+                title      VARCHAR(190) NULL,
+                subtitle   VARCHAR(255) NULL,
+                body       TEXT NULL,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_ps_slide (cycle_key, slide_key),
+                KEY idx_ps_cycle (cycle_id),
+                CONSTRAINT fk_ps_cycle FOREIGN KEY (cycle_id)
+                    REFERENCES competition_cycles(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+        // Globale Vorlage (cycle_id NULL) aus den Originaltexten befüllen.
+        // INSERT IGNORE ist dank des UNIQUE-Keys (cycle_key, slide_key) idempotent:
+        // cycle_id NULL ergibt cycle_key 0, ein zweiter Lauf überspringt Dubletten.
+        $ins = $pdo->prepare(
+            'INSERT IGNORE INTO presentation_slides (cycle_id, slide_key, title, subtitle, body)
+             VALUES (NULL, ?, ?, ?, ?)'
+        );
+        foreach (Presentation::SEED as $key => $s) {
+            $ins->execute([$key, $s['title'], $s['subtitle'], $s['body']]);
+        }
     }
 
     /**

@@ -13,6 +13,7 @@ $navGroups = [
         ['dashboard', 'Dashboard', '▦', ['admin', 'lead', 'teacher', 'juror']],
         ['plans',     'Businesspläne', '📄', ['admin', 'lead', 'teacher', 'juror']],
         ['materials', 'Material & Vorlagen', '📎', ['admin', 'lead', 'teacher', 'juror']],
+        ['presentation', 'Präsentation', '🖥', ['admin', 'lead', 'teacher', 'juror']],
         ['contact',   'Kontakt', '✉', ['admin', 'lead', 'teacher', 'juror']],
     ]],
     ['Lehrkraft', [
