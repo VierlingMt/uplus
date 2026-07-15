@@ -7,6 +7,18 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.66.2] - 2026-07-15
+### Behoben
+- **Mediengalerie – Lightbox lag beim Laden offen über der Seite:** Eine
+  CSS-Regel übersteuerte das `hidden`-Attribut; die Bild-/Video-Vollansicht
+  (und die Mehrfachauswahl-Leiste) erscheinen nun erst bei Bedarf.
+- **Mediengalerie – „CSRF"-Fehler beim Mehrfach-Upload:** Übersteigt die
+  Auswahl das Server-Limit (`post_max_size`), verwirft PHP den ganzen Request –
+  die Prüfung meldete dann irreführend „Sitzung abgelaufen". Jetzt gibt es eine
+  verständliche Meldung, eine **clientseitige Vorwarnung** bei zu großer Auswahl
+  und **höhere Upload-Limits** (`upload_max_filesize` 64 MB, `post_max_size`
+  320 MB, `max_file_uploads` 40) für mehrere Bilder/Videos auf einmal.
+
 ## [0.66.1] - 2026-07-15
 ### Geändert
 - **Urkunde – Unterschriften:** Es unterschreibt jetzt ausschließlich die

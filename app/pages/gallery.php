@@ -12,6 +12,16 @@ Access::requireRead('gallery');
 
 // --- Schreibaktionen ------------------------------------------------------
 if (is_post()) {
+    // Übersteigt ein (Mehrfach-)Upload die post_max_size, verwirft PHP den
+    // gesamten Request-Body: $_POST UND $_FILES sind leer. Ohne Sonderfall
+    // würde die anschließende CSRF-Prüfung eine irreführende Meldung zeigen.
+    // Die Ziel-Jahr-ID reist in der Formular-Action als Query mit ($_GET).
+    if (!$_POST && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+        flash('error', 'Die Auswahl war insgesamt zu groß (Serverlimit '
+            . (string) ini_get('post_max_size') . '). Bitte lade weniger oder kleinere Dateien auf einmal hoch.');
+        redirect(url('gallery', ['cycle' => (int) input('cycle', 0)]));
+    }
+
     Access::requireWrite('gallery');
     Csrf::check();
     $action = (string) input('action');
@@ -188,6 +198,19 @@ $items = Media::forCycle($selId);
 $canUpload = Media::canUploadTo($selId);
 $canManage = Media::canManage();
 
+// post_max_size in Bytes – für die clientseitige Vorprüfung des Uploads.
+$postMaxBytes = (static function (): int {
+    $v = trim((string) ini_get('post_max_size'));
+    if ($v === '') { return 0; }
+    $num  = (int) $v;
+    return match (strtolower(substr($v, -1))) {
+        'g'     => $num * 1024 * 1024 * 1024,
+        'm'     => $num * 1024 * 1024,
+        'k'     => $num * 1024,
+        default => (int) $v,
+    };
+})();
+
 // Vorbefüllung fürs Bearbeiten-Modal.
 $fill = fn(array $m) => e(json_encode([
     'id'    => (int) $m['id'],
@@ -288,13 +311,13 @@ ob_start(); ?>
       <h3 id="uploadModalTitle">Medien hochladen – <?= e($selCycle['year_label']) ?></h3>
       <button type="button" class="modal__close" data-modal-close aria-label="Schließen">&times;</button>
     </div>
-    <form method="post" action="<?= url('gallery') ?>" enctype="multipart/form-data" class="modal__body" data-gal-upload-form>
+    <form method="post" action="<?= url('gallery', ['cycle' => $selId]) ?>" enctype="multipart/form-data" class="modal__body" data-gal-upload-form>
       <?= Csrf::field() ?>
       <input type="hidden" name="action" value="upload">
       <input type="hidden" name="cycle_id" value="<?= $selId ?>">
       <div class="field">
         <label>Bilder &amp; Videos</label>
-        <label class="gal-drop" data-gal-drop tabindex="0">
+        <label class="gal-drop" data-gal-drop data-gal-postmax="<?= (int) $postMaxBytes ?>" data-gal-maxfile="<?= (int) Media::maxBytes() ?>" tabindex="0">
           <input type="file" name="files[]" accept="image/*,video/*" multiple hidden data-gal-input>
           <span class="gal-drop__icon" aria-hidden="true">⬆️</span>
           <span class="gal-drop__hint">Dateien hierher ziehen oder klicken – <strong>Mehrfachauswahl möglich</strong></span>
@@ -462,14 +485,44 @@ ob_start(); ?>
   if (drop) {
     var inp = drop.querySelector('[data-gal-input]');
     var list = drop.querySelector('[data-gal-list]');
+    var uploadForm = drop.closest('form');
+    var postMax = parseInt(drop.getAttribute('data-gal-postmax'), 10) || 0;
+    var maxFile = parseInt(drop.getAttribute('data-gal-maxfile'), 10) || 0;
+    function fmt(b) {
+      var u = ['B', 'KB', 'MB', 'GB'], i = 0, n = b;
+      while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+      return (Math.round(n * 10) / 10) + ' ' + u[i];
+    }
+    function totalBytes() {
+      var t = 0, f = inp.files;
+      for (var i = 0; f && i < f.length; i++) t += f[i].size;
+      return t;
+    }
     function renderList() {
       var files = inp.files;
+      list.classList.remove('gal-drop__list--warn');
       if (!files || !files.length) { list.hidden = true; list.textContent = ''; return; }
       var names = [];
       for (var i = 0; i < files.length && i < 8; i++) names.push(files[i].name);
       var extra = files.length > 8 ? (' … +' + (files.length - 8)) : '';
-      list.textContent = files.length + ' Datei(en): ' + names.join(', ') + extra;
+      var total = totalBytes();
+      list.textContent = files.length + ' Datei(en) · ' + fmt(total) + ': ' + names.join(', ') + extra;
+      // Warnung, wenn Gesamtgröße das Serverlimit übersteigt (5 % Overhead-Puffer).
+      if (postMax > 0 && total > postMax * 0.95) {
+        list.textContent += ' — zu groß (Limit ' + fmt(postMax) + '). Bitte weniger auf einmal.';
+        list.classList.add('gal-drop__list--warn');
+      }
       list.hidden = false;
+    }
+    if (uploadForm) {
+      uploadForm.addEventListener('submit', function (e) {
+        var total = totalBytes();
+        if (postMax > 0 && total > postMax * 0.95) {
+          e.preventDefault();
+          e.stopPropagation(); // verhindert den hängenden Lade-Spinner (app.js)
+          renderList();
+        }
+      });
     }
     inp.addEventListener('change', renderList);
     ['dragenter', 'dragover'].forEach(function (ev) {

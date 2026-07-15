@@ -55,11 +55,11 @@ final class Media
 
     /**
      * Maximale Dateigröße je Upload. Orientiert sich an den PHP-Limits der
-     * .user.ini (upload_max_filesize = 32M), damit die Meldung zur Realität passt.
+     * .user.ini (upload_max_filesize = 64M), damit die Meldung zur Realität passt.
      */
     public static function maxBytes(): int
     {
-        return 32 * 1024 * 1024;
+        return 64 * 1024 * 1024;
     }
 
     /**

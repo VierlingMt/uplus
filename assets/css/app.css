@@ -697,6 +697,7 @@ input[type="file"] { max-width: 100%; }
 .gal-drop__icon { font-size: 30px; }
 .gal-drop__hint { color: var(--muted); font-size: 14px; }
 .gal-drop__list { font-size: 13px; word-break: break-word; }
+.gal-drop__list--warn { color: var(--wj-red); font-weight: 600; }
 
 /* Lightbox */
 .gal-lightbox {
