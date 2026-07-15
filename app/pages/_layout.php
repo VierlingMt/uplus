@@ -48,6 +48,24 @@ $canSeeNav = function (string $route, array $roles): bool {
 $roleLabel = class_exists('Roles') && Auth::roles()
     ? implode(' · ', array_map([Roles::class, 'label'], Auth::roles()))
     : (['admin' => 'Admin', 'lead' => 'Projektleitung', 'teacher' => 'Lehrkraft', 'juror' => 'Jury'][$role] ?? $role);
+
+// Route → Anzeigename direkt aus der Navigation ableiten. So wachsen die
+// kontextbasierte Hilfe und ihre Suche automatisch mit: Ein neuer Menüpunkt ist
+// sofort korrekt beschriftet, ohne dass die Hilfe angepasst werden muss.
+$routeLabels = [];
+foreach ($navGroups as [$__g, $__items]) {
+    foreach ($__items as [$__r, $__label]) { $routeLabels[$__r] = $__label; }
+}
+$routeLabels += ['profile' => 'Mein Profil', 'changelog' => 'Änderungsverlauf'];
+
+// Datenquelle für Hilfe & Tour (help.js). Die Tour selbst entsteht im Browser
+// live aus dem DOM – hier reisen nur die durchsuchbaren Hilfetexte mit.
+$helpData = class_exists('Help') ? [
+    'route'      => $current,
+    'routeLabel' => $routeLabels[$current] ?? ucfirst((string) $current),
+    'topics'     => Help::all($routeLabels),
+    'tourIntro'  => Help::TOUR_INTRO,
+] : null;
 ?>
 <!doctype html>
 <html lang="de" data-base="<?= e(rtrim(cfg('base_path', ''), '/')) ?>">
@@ -61,6 +79,7 @@ $roleLabel = class_exists('Roles') && Auth::roles()
 <link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;700;900&family=Bitter:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= asset('vendor/cropperjs/cropper.min.css') ?>">
 <link rel="stylesheet" href="<?= asset('css/app.css') ?>">
+<link rel="stylesheet" href="<?= asset('css/help.css') ?>">
 <?php require __DIR__ . '/_pwa_head.php'; ?>
 </head>
 <body>
@@ -71,7 +90,7 @@ $roleLabel = class_exists('Roles') && Auth::roles()
       <img src="<?= asset('img/logo.svg') ?>" alt="Unternehmen Plus">
       <span>Unternehmen<br>Plus</span>
     </div>
-    <nav class="nav">
+    <nav class="nav"<?= tour_attrs('Navigation', 'Über die Seitenleiste erreichst du alle Bereiche – nach Themen gruppiert. Oben links lässt sie sich schmal klappen bzw. auf dem Handy als Menü öffnen.', 10) ?>>
       <?php foreach ($navGroups as [$groupLabel, $items]): ?>
         <?php $visible = array_filter($items, fn($it) => $canSeeNav($it[0], $it[3])); ?>
         <?php if ($visible): ?>
@@ -101,8 +120,14 @@ $roleLabel = class_exists('Roles') && Auth::roles()
       </button>
       <div class="topbar__title"><?= e($title ?? 'Dashboard') ?></div>
       <div class="topbar__user">
+        <div class="topbar__tools">
+          <button type="button" class="help-trigger help-trigger--tour" data-tour-start title="Geführte Tour starten">
+            <span aria-hidden="true">🧭</span><span class="help-trigger__lbl">Tour</span>
+          </button>
+          <button type="button" class="help-trigger help-trigger--round" data-help-open title="Hilfe (F1)" aria-label="Hilfe öffnen"<?= tour_attrs('Hilfe & Suche', 'Hier öffnest du jederzeit die Hilfe (auch mit der Taste F1) und durchsuchst sie – die Fundstellen werden gelb hervorgehoben.', 900) ?>>?</button>
+        </div>
         <span class="badge-role"><?= e($roleLabel) ?></span>
-        <a href="<?= url('profile') ?>" class="topbar__profile" title="Mein Profil">
+        <a href="<?= url('profile') ?>" class="topbar__profile" title="Mein Profil"<?= tour_attrs('Mein Profil', 'Deine eigenen Daten, Foto und Passkey – und über „Abmelden" verlässt du die App.', 910) ?>>
           <?php if (!empty($u['photo_path'])): ?>
             <img class="avatar avatar--sm" src="<?= asset($u['photo_path']) ?>" alt="">
           <?php else: ?>
@@ -130,5 +155,9 @@ $roleLabel = class_exists('Roles') && Auth::roles()
 </div>
 <script src="<?= asset('vendor/cropperjs/cropper.min.js') ?>"></script>
 <script src="<?= asset('js/app.js') ?>"></script>
+<?php if ($helpData !== null): ?>
+<script type="application/json" id="help-data"><?= json_encode($helpData, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS) ?></script>
+<script src="<?= asset('js/help.js') ?>"></script>
+<?php endif; ?>
 </body>
 </html>

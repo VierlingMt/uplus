@@ -286,6 +286,26 @@ function image_field(string $field, ?string $current = null, array $opts = []): 
     return (string) ob_get_clean();
 }
 
+/**
+ * Attribute für einen Tour-Baustein. Elemente mit diesen Attributen werden von
+ * der geführten Tour (help.js) automatisch als Schritt erkannt – in DOM-
+ * Reihenfolge bzw. nach optionaler Ordnungszahl. So bleibt die Tour immer im
+ * Gleichklang mit der Oberfläche: Wird ein Bereich ergänzt oder verändert,
+ * genügt diese Markierung, und die Tour aktualisiert sich von selbst.
+ *
+ * @param string   $title Kurzüberschrift des Schritts
+ * @param string   $text  Erklärung (einfacher Text)
+ * @param int|null $order Optionale Reihenfolge (kleiner = früher; sonst DOM-Reihenfolge)
+ */
+function tour_attrs(string $title, string $text, ?int $order = null): string
+{
+    $a = ' data-tour="' . e($text) . '" data-tour-title="' . e($title) . '"';
+    if ($order !== null) {
+        $a .= ' data-tour-order="' . (int) $order . '"';
+    }
+    return $a;
+}
+
 /** Label + CSS-Klasse fuer Team-Status. */
 function status_label(string $status): array
 {

@@ -1,0 +1,158 @@
+/* Unternehmen Plus – Interaktive Hilfe (F1) & geführte Tour
+   Nutzt die Design-Token aus app.css (--wj-blue, --wj-teal, --radius …). */
+
+/* ---------- Auslöser in der Topbar ---------- */
+.topbar__tools { display: inline-flex; align-items: center; gap: 8px; }
+.help-trigger {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 7px;
+  height: 36px; padding: 0 12px;
+  background: var(--white); border: 1px solid var(--line); border-radius: 9px;
+  color: var(--wj-blue); cursor: pointer; font: 700 14px/1 "Chivo", sans-serif;
+}
+.help-trigger:hover { background: var(--wj-grey-l); border-color: var(--wj-blue); }
+.help-trigger--round { width: 36px; padding: 0; justify-content: center; font-size: 18px; }
+.help-trigger .help-trigger__lbl { white-space: nowrap; }
+@media (max-width: 720px) {
+  .help-trigger--tour .help-trigger__lbl { display: none; }
+  .help-trigger--tour { width: 36px; padding: 0; justify-content: center; }
+}
+
+/* ---------- Hilfe-Panel (Drawer rechts) ---------- */
+.help-panel {
+  position: fixed; inset: 0 0 0 auto; z-index: 1200;
+  width: min(460px, 100%);
+  background: var(--white); box-shadow: var(--shadow-lg);
+  display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform .24s cubic-bezier(.16,.84,.44,1);
+}
+.help-panel.is-open { transform: none; }
+.help-panel[hidden] { display: none; }
+.help-backdrop {
+  position: fixed; inset: 0; z-index: 1190; background: rgba(1,20,58,.42);
+  opacity: 0; transition: opacity .2s ease;
+}
+.help-backdrop.is-open { opacity: 1; }
+.help-backdrop[hidden] { display: none; }
+
+.help-panel__head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 18px; border-bottom: 1px solid var(--line);
+}
+.help-panel__head h2 { margin: 0; font-size: 19px; font-family: "Chivo", sans-serif; }
+.help-panel__head .ctx { color: var(--muted); font-size: 12px; font-family: "Chivo", sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+.help-panel__close {
+  margin-left: auto; flex: 0 0 auto; width: 34px; height: 34px; border: 0; border-radius: 8px;
+  background: none; color: var(--muted); font-size: 26px; line-height: 1; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.help-panel__close:hover { background: var(--wj-grey-l); color: var(--ink); }
+
+.help-panel__search { padding: 12px 18px; border-bottom: 1px solid var(--line); }
+.help-search-field { position: relative; display: block; }
+.help-search-field input {
+  width: 100%; height: 42px; padding: 0 14px 0 40px;
+  border: 1px solid var(--line); border-radius: 10px; font: 400 15px/1 "Bitter", serif;
+  background: var(--bg);
+}
+.help-search-field input:focus { outline: 2px solid var(--wj-teal); border-color: var(--wj-teal); background: #fff; }
+.help-search-field::before {
+  content: "🔍"; position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+  font-size: 15px; opacity: .7;
+}
+.help-panel__tourbtn { width: 100%; margin-top: 10px; justify-content: center; }
+
+.help-panel__body { padding: 6px 18px 26px; overflow-y: auto; flex: 1 1 auto; -webkit-overflow-scrolling: touch; }
+.help-panel__hint { color: var(--muted); font-size: 13px; margin: 12px 2px 4px; }
+
+/* Auf dieser Seite – live aus dem DOM erzeugte Sprungmarken */
+.help-onpage { margin: 8px 0 6px; }
+.help-onpage__title,
+.help-group__title {
+  margin: 18px 0 8px; font: 700 12px/1 "Chivo", sans-serif;
+  text-transform: uppercase; letter-spacing: .5px; color: var(--wj-blue);
+}
+.help-onpage ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.help-onpage li a {
+  display: flex; gap: 8px; align-items: baseline;
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px;
+  text-decoration: none; color: var(--ink); font-size: 14px;
+}
+.help-onpage li a:hover { background: var(--wj-grey-l); border-color: var(--wj-blue-l); }
+.help-onpage li a .idx { flex: 0 0 auto; color: var(--wj-teal-d); font-weight: 700; font-family: "Chivo", sans-serif; }
+.help-onpage li a .txt { color: var(--muted); font-size: 12px; }
+
+/* Themen (Akkordeon) */
+.help-topic { border: 1px solid var(--line); border-radius: 11px; margin: 0 0 10px; overflow: hidden; background: #fff; }
+.help-topic > summary {
+  list-style: none; cursor: pointer; padding: 13px 15px;
+  font: 700 15px/1.3 "Chivo", sans-serif; color: var(--ink);
+  display: flex; align-items: center; gap: 10px;
+}
+.help-topic > summary::-webkit-details-marker { display: none; }
+.help-topic > summary::after { content: "⌄"; margin-left: auto; color: var(--muted); transition: transform .18s ease; }
+.help-topic[open] > summary::after { transform: rotate(180deg); }
+.help-topic > summary:hover { background: var(--wj-grey-l); }
+.help-topic__badge {
+  flex: 0 0 auto; font: 700 10px/1 "Chivo", sans-serif; text-transform: uppercase; letter-spacing: .3px;
+  padding: 4px 7px; border-radius: 20px; background: var(--wj-grey-l); color: var(--muted);
+}
+.help-topic__badge.is-page { background: rgba(71,215,172,.18); color: var(--wj-teal-d); }
+.help-topic__badge.is-src  { background: rgba(0,53,148,.08); color: var(--wj-blue); }
+.help-topic__content { padding: 2px 16px 14px; border-top: 1px solid var(--line); }
+.help-topic__content > *:first-child { margin-top: 8px; }
+.help-topic__content h3, .help-topic__content h4 { font-size: 15px; margin: 14px 0 6px; }
+.help-topic__content p { margin: 8px 0; font-size: 14.5px; }
+.help-topic__content ul { margin: 8px 0; padding-left: 20px; }
+.help-topic__content li { margin: 4px 0; font-size: 14.5px; }
+.help-topic__content a { color: var(--wj-blue); }
+
+.help-empty { color: var(--muted); text-align: center; padding: 30px 10px; }
+
+/* Trefferhervorhebung der Tokensuche */
+mark.help-hit { background: var(--wj-yellow); color: #3a2d00; border-radius: 3px; padding: 0 1px; }
+
+/* ---------- Geführte Tour ---------- */
+.tour-overlay { position: fixed; inset: 0; z-index: 1300; pointer-events: none; }
+.tour-overlay[hidden] { display: none; }
+/* Spotlight: abgedunkelte Fläche mit „Loch" um das Element (großer Box-Shadow). */
+.tour-spot {
+  position: absolute; border-radius: 12px; pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(1,20,58,.62); outline: 3px solid var(--wj-teal);
+  transition: all .28s cubic-bezier(.16,.84,.44,1);
+}
+.tour-tooltip {
+  position: absolute; z-index: 1310; pointer-events: auto;
+  width: min(340px, calc(100vw - 28px));
+  background: #fff; border-radius: 14px; box-shadow: var(--shadow-lg);
+  padding: 16px 18px 14px; border-top: 4px solid var(--wj-teal);
+  transition: top .28s cubic-bezier(.16,.84,.44,1), left .28s cubic-bezier(.16,.84,.44,1);
+}
+.tour-tooltip__step { font: 700 11px/1 "Chivo", sans-serif; text-transform: uppercase; letter-spacing: .5px; color: var(--wj-teal-d); }
+.tour-tooltip__title { margin: 6px 0 6px; font: 700 18px/1.2 "Chivo", sans-serif; color: var(--ink); }
+.tour-tooltip__text { margin: 0; font-size: 14.5px; color: #33404f; }
+.tour-tooltip__foot { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+.tour-tooltip__dots { display: flex; gap: 5px; flex-wrap: wrap; margin-right: auto; }
+.tour-tooltip__dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); display: block; }
+.tour-tooltip__dots i.is-on { background: var(--wj-teal); }
+.tour-tooltip .btn { min-height: 36px; }
+.tour-tooltip__end {
+  position: absolute; top: 10px; right: 12px; border: 0; background: none; cursor: pointer;
+  color: var(--muted); font-size: 20px; line-height: 1;
+}
+.tour-tooltip__end:hover { color: var(--ink); }
+
+/* Ziel-Element während der Tour deutlich sichtbar halten. */
+.tour-target { position: relative; z-index: 1305; border-radius: 12px; }
+
+@media (max-width: 600px) {
+  /* Tooltip als feste Karte unten – auf kleinen Screens verlässlicher als frei platziert. */
+  .tour-tooltip {
+    position: fixed; left: 12px !important; right: 12px; top: auto !important;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px)); width: auto;
+  }
+  .help-panel { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .help-panel, .help-backdrop, .tour-spot, .tour-tooltip { transition: none; }
+}

@@ -7,6 +7,26 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.65.0] - 2026-07-15
+### Hinzugefügt
+- **Interaktive Hilfe (F1) & geführte Tour:** Über **F1** (oder das **?**-Symbol
+  oben rechts) öffnet sich ein kontextbasiertes Hilfe-Panel, das immer zuerst die
+  Themen zur **aktuellen Seite** zeigt. Eine **Tokensuche** durchsucht alle
+  Hilfetexte gleichzeitig (mehrere Begriffe) und **hebt die Fundstellen gelb
+  hervor**. Mit **„Tour starten"** (Knopf in der Topbar bzw. im Hilfe-Panel) wird
+  man Schritt für Schritt durch die **gerade sichtbaren** Inhalte der Seite
+  geführt und bekommt jeden Bereich per Spotlight erklärt (Weiter/Zurück,
+  Pfeiltasten, Esc beendet).
+- **Wichtige Grundlage – hält sich selbst aktuell:** Hilfe und Tour sind bewusst
+  *datengetrieben*, nicht als separate Kopie der Oberfläche gepflegt. Die Tour
+  entsteht bei jedem Start **live aus dem DOM**: Jeder Baustein bringt seine
+  Erklärung über `data-tour` (Helfer `tour_attrs()`) selbst mit, und sichtbare
+  Bereiche (Karten) werden zusätzlich **automatisch** als Schritt erkannt. Die
+  Routen-Beschriftungen der Hilfe stammen direkt aus der Navigation. Ändert sich
+  die App – neuer Bereich, neues Modul, andere Rolle –, aktualisieren sich Hilfe
+  und Tour **automatisch mit** (neue Dateien: `app/lib/Help.php`,
+  `assets/js/help.js`, `assets/css/help.css`).
+
 ## [0.64.0] - 2026-07-15
 ### Hinzugefügt
 - **Präsentation – Titelfolie mit WJ-Logo & Social-Media:** Auf der Startfolie

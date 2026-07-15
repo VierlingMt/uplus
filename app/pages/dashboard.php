@@ -4,7 +4,7 @@
   <a href="<?= url('plans') ?>" class="btn btn--teal">Businesspläne ansehen</a>
 </div>
 
-<div class="grid cols-4 mb">
+<div class="grid cols-4 mb"<?= tour_attrs('Kennzahlen', 'Die wichtigsten Zahlen auf einen Blick – Schulen, Teams, eingereichte Pläne und Jury. Ein Klick auf eine Kachel führt direkt in den jeweiligen Bereich.', 30) ?>>
   <?php
   // Kennzahl-Kacheln. Verlinkt wird nur, wenn die aktuelle Rolle das Zielmodul
   // laut Zugriffsmatrix lesen darf – sonst reine Info-Kachel (kein toter Link).
