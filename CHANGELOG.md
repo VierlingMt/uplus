@@ -7,6 +7,18 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.63.1] - 2026-07-15
+### Geändert
+- **PitchDay-Urkunde an die echte Vorlage angepasst:** Die Urkunde bildet jetzt
+  die aktuelle „Unternehmen Plus"-Vorlage nach (statt der alten W³-Vorlage):
+  U⁺-Logo, „Businessplanwettbewerb UnternehmenPlus", „URKUNDE" + „Schuljahr",
+  großes „__. Platz" (Zahl per Hand), vier beschriftete Linien (Titel des
+  Businessplans, Teammitglieder ×2, Schule – automatisch befüllt), „Die
+  Wirtschaftsjunioren gratulieren!", Ausstellungsort + PitchDay-Datum, zwei
+  Unterschriften der Projektleitung/des Vorstands (mit Funktion) sowie die
+  Fußzeile **Veranstalter · Sponsoren · Teilnehmende Schulen** mit den
+  jeweiligen Logos.
+
 ## [0.63.0] - 2026-07-15
 ### Hinzugefügt
 - **Projektpräsentation in der App:** Neuer Menüpunkt **„Präsentation"** (für alle
