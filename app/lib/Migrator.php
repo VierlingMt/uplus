@@ -370,6 +370,12 @@ final class Migrator
                 'up'      => 'ALTER TABLE events
                     ADD COLUMN IF NOT EXISTS handout_released_at DATETIME NULL AFTER notes',
             ],
+            [
+                'version' => '2026_07_35_eval_pitch_questions',
+                'name'    => 'Jury-Bewertung: eigene Fragen für den PitchDay je Team notieren',
+                'up'      => 'ALTER TABLE evaluations
+                    ADD COLUMN IF NOT EXISTS pitch_questions TEXT NULL AFTER pitch_total',
+            ],
         ];
     }
 

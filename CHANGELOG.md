@@ -7,6 +7,13 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.61.0] - 2026-07-13
+### Hinzugefügt
+- **Eigene PitchDay-Fragen je Jurymitglied:** In der Bewertung kann jede:r Juror:in
+  zwischen Businessplan- und Pitch-Bewertung eigene Fragen notieren, die am PitchDay
+  gestellt werden sollen. Die Notiz ist privat (nur für die/den Juror:in), je Team,
+  und wird automatisch gespeichert. Erscheint bei Teams mit Pitch-Phase.
+
 ## [0.60.1] - 2026-07-13
 ### Geändert
 - **Zugriffsmatrix, Bewerten:** „Schreiben" bei **Bewertung & Ranking** bzw.

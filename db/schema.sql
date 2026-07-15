@@ -224,6 +224,7 @@ CREATE TABLE IF NOT EXISTS evaluations (
     pitch_submitted TINYINT(1) NOT NULL DEFAULT 0, -- Pitch-Bewertung abgegeben
     bp_total       DECIMAL(5,1) NULL,              -- Summe 5 BP-Kriterien (max 50)
     pitch_total    DECIMAL(5,1) NULL,              -- Summe 4 Pitch-Kriterien (max 40)
+    pitch_questions TEXT NULL,                      -- eigene Fragen der/des Juror:in für den PitchDay
     grand_total    DECIMAL(6,1) NULL,              -- 2*bp_total + 1*pitch_total (max 140)
     updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

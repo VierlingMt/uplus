@@ -100,10 +100,17 @@ if (is_post()) {
         $pitchSubmitted = 1;
     }
 
+    // Eigene PitchDay-Fragen der/des Juror:in (nur wenn Pitch-Phase editierbar,
+    // sonst bestehenden Text beibehalten – deaktivierte Felder werden nicht gesendet).
+    $pitchQuestions = $eval['pitch_questions'] ?? null;
+    if ($isPitch && !$pitchLocked) {
+        $pitchQuestions = trim((string) input('pitch_questions')) ?: null;
+    }
+
     $grand = Criteria::grandTotal((float) $bpTotal, (float) ($pitchTotal ?? 0));
     Database::run(
-        'UPDATE evaluations SET bp_submitted=?, pitch_submitted=?, bp_total=?, pitch_total=?, grand_total=? WHERE id=?',
-        [$bpSubmitted, $pitchSubmitted, $bpTotal, $pitchTotal, $grand, $evalId]
+        'UPDATE evaluations SET bp_submitted=?, pitch_submitted=?, bp_total=?, pitch_total=?, pitch_questions=?, grand_total=? WHERE id=?',
+        [$bpSubmitted, $pitchSubmitted, $bpTotal, $pitchTotal, $pitchQuestions, $grand, $evalId]
     );
 
     // Autosave: still speichern und als JSON antworten (keine Umleitung / kein Flash).
@@ -170,6 +177,14 @@ ob_start(); ?>
 
   <?php if ($isPitch): ?>
     <div class="card mb">
+      <div class="card__head">❓ Meine Fragen für den PitchDay <span class="muted" style="font-weight:400">— nur für dich sichtbar</span></div>
+      <div class="card__body">
+        <p class="muted" style="font-size:13px;margin:0 0 8px">Notiere hier Fragen, die du dem Team am PitchDay stellen möchtest. Diese Notiz ist privat (nur für dich) und wird automatisch gespeichert.</p>
+        <textarea name="pitch_questions" rows="4" data-questions placeholder="z. B. Wie skaliert ihr die Produktion? Wer ist eure Zielgruppe? …"<?= $pitchLocked ? ' disabled' : '' ?>><?= e((string) ($eval['pitch_questions'] ?? '')) ?></textarea>
+      </div>
+    </div>
+
+    <div class="card mb">
       <div class="card__head">Pitch-Day <span class="muted" style="font-weight:400">(Team pitcht)<?= $pitchLocked ? ' · 🔒 eingefroren' : '' ?></span></div>
       <div class="card__body eval-grid"><?php $renderCriteria(Criteria::PITCH, 'pitch', $pitchLocked); ?></div>
     </div>
@@ -207,6 +222,7 @@ ob_start(); ?>
 .autosave-status{color:var(--wj-teal-d);font-family:"Chivo",sans-serif;font-weight:700;font-size:13px;opacity:0;transition:opacity .3s ease}
 .autosave-status.is-visible{opacity:1}
 .autosave-status.is-saving{color:var(--muted)}
+textarea[data-questions]{width:100%;resize:vertical;min-height:90px}
 @media(max-width:800px){.eval-grid{grid-template-columns:1fr}}
 </style>
 <?php

@@ -783,7 +783,7 @@
 
     form.addEventListener('input', function (e) {
       var t = e.target;
-      if (!t.matches('[data-score], textarea[name^="note_"]')) return;
+      if (!t.matches('[data-score], textarea[name^="note_"], textarea[data-questions]')) return;
       var crit = t.closest('.crit');
       clearTimeout(pending);
       pending = setTimeout(function () { save(crit); }, 700);
@@ -791,7 +791,7 @@
     // Verlässt der Fokus ein geändertes Feld, sofort sichern (kein Datenverlust).
     form.addEventListener('blur', function (e) {
       var t = e.target;
-      if (!t.matches || !t.matches('[data-score], textarea[name^="note_"]')) return;
+      if (!t.matches || !t.matches('[data-score], textarea[name^="note_"], textarea[data-questions]')) return;
       clearTimeout(pending);
       save(t.closest('.crit'));
     }, true);
