@@ -65,15 +65,7 @@ $sponsors = Database::all(
     [$cycleId]
 );
 
-// Projektleitung (Rolle „lead“) – für die Pseudo-Unterschrift auf der Urkunde.
-$leads = Database::all(
-    'SELECT name, specialty FROM users u
-     WHERE u.is_active = 1
-       AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role = "lead")
-     ORDER BY name'
-);
-
-/** Sponsor-Logostreifen (grau, wie auf den Vorlagen). */
+/** Sponsor-Logostreifen (wie auf den Vorlagen). */
 $sponsorStrip = function (array $sponsors): string {
     if (!$sponsors) { return ''; }
     ob_start(); ?>
@@ -184,16 +176,24 @@ else:
         }
     }
 
-    // Unterzeichnende = Projektleitung/Vorstand (Verwaltung: admin + lead),
-    // Vorstand (admin) zuerst. Titel aus Position bzw. Spezialgebiet des Kontos.
+    // Unterzeichnende = ausschließlich die aktuelle Projektleitung (Rolle „lead").
+    // Das Admin-/Super-Admin-Konto ist eine technische Rolle und unterschreibt
+    // bewusst NICHT (sonst erschiene der Eigentümer u. U. doppelt). Titel aus
+    // Position bzw. Spezialgebiet des Kontos.
     $signers = Database::all(
-        "SELECT u.name, u.specialty, u.position,
-                EXISTS(SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role = 'admin') AS is_admin
-         FROM users u
+        'SELECT u.name, u.specialty, u.position FROM users u
          WHERE u.is_active = 1
-           AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role IN ('admin','lead'))
-         ORDER BY is_admin DESC, u.name"
+           AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role = "lead")
+         ORDER BY u.name'
     );
+    // Sicherheitsnetz: nach Namen entdoppeln (falls jemand zwei Konten hat).
+    $seenSig = [];
+    $signers = array_values(array_filter($signers, static function ($s) use (&$seenSig) {
+        $k = mb_strtolower(trim((string) $s['name']));
+        if ($k === '' || isset($seenSig[$k])) { return false; }
+        $seenSig[$k] = true;
+        return true;
+    }));
 
     // Alle teilnehmenden Schulen (mit Logo) für die Fußzeile „Teilnehmende Schulen".
     $allSchools = Database::all(

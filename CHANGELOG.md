@@ -7,6 +7,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.66.1] - 2026-07-15
+### Geändert
+- **Urkunde – Unterschriften:** Es unterschreibt jetzt ausschließlich die
+  **aktuelle Projektleitung (Rolle „lead")**. Das Admin-/Super-Admin-Konto
+  (technische Rolle) erscheint bewusst nicht mehr – dadurch keine doppelte
+  Unterschrift derselben Person. Zusätzliche Entdopplung nach Namen als
+  Sicherheitsnetz.
+
 ## [0.66.0] - 2026-07-15
 ### Hinzugefügt
 - **Mediengalerie (neuer Bereich „Mediengalerie"):** Bilder und Videos je
@@ -87,7 +95,6 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
   der Liste links farbig markiert. Für die Projektleitung gibt es – wie bei
   „Bewertung & Ranking" – einen aufklappbaren **Bewertungsstand (Pitch)**: welche:r
   Bewertende hat welche Bühnen-Teams beim Pitch noch nicht (vollständig) bewertet.
-
 ## [0.63.2] - 2026-07-15
 ### Geändert
 - **PitchDay-Urkunde – Feinschliff:** Kopf- und Fußzeilen-Logos überschneiden den
