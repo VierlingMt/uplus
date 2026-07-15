@@ -7,6 +7,24 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.64.0] - 2026-07-15
+### Hinzugefügt
+- **Präsentation – Titelfolie mit WJ-Logo & Social-Media:** Auf der Startfolie
+  erscheint jetzt neben dem Unternehmen-Plus-Logo das **WJ-Forchheim-Logo** (Vektor/
+  SVG, in Farbe für helle sowie Weiß für dunkle Hintergründe unter
+  `assets/img/wj/`). Darunter eine **Social-Media-Leiste**; die Links (Web,
+  Instagram, Facebook, LinkedIn, YouTube) sind über „Bearbeiten" auf der Titelfolie
+  **pflegbar** (global, jahresunabhängig) und werden nur angezeigt, wenn hinterlegt.
+- **Präsentation – Seitenzahlen:** Jede Folie trägt unten rechts klein die
+  Seitenzahl („n / gesamt") – in der App-Ansicht und im PDF.
+### Geändert
+- **Präsentation – „Unser Team" mit Kontaktdaten:** Die Team-/Projektleitungsfolie
+  zeigt jetzt je Person zusätzlich **Telefon und E-Mail** (live aus „Jury &
+  Nutzer") sowie den Sponsoren-Streifen. Die separate **Folie „Kontakt" entfällt**
+  dadurch.
+- **Präsentation – Pitch-Day-Folie:** Klar gegliedert in **Text links** und die
+  **dynamischen Preise rechts** (aus dem PitchDay-Budget).
+
 ## [0.63.3] - 2026-07-15
 ### Geändert
 - **„Bewertung & Ranking" und „PitchDay" für Handys optimiert:** Beide Listen

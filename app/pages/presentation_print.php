@@ -86,8 +86,8 @@ header('Content-Type: text/html; charset=utf-8');
     <button type="button" class="primary" onclick="window.print()">🖨 Drucken / Als PDF speichern</button>
   </div>
   <div class="ps-deck">
-    <?php foreach ($slides as $html): ?>
-      <div class="ps-slide"><?= $html ?></div>
+    <?php foreach ($slides as $i => $html): ?>
+      <div class="ps-slide"><?= $html ?><div class="ps-pageno"><?= $i + 1 ?> / <?= count($slides) ?></div></div>
     <?php endforeach; ?>
   </div>
   <script>

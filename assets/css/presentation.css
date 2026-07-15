@@ -40,6 +40,20 @@
   .ps-slide__inner { font-size: clamp(12px, 1.5vw, 26px); }
 }
 
+/* Seitenzahl unten rechts (klein) */
+.ps-pageno {
+  position: absolute;
+  right: 2.4%;
+  bottom: 2.2%;
+  z-index: 4;
+  font-family: "Chivo", system-ui, sans-serif;
+  font-size: clamp(8px, 1.05cqw, 13px);
+  color: var(--ps-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .04em;
+}
+@supports not (font-size: 1cqw) { .ps-pageno { font-size: 11px; } }
+
 .ps-kicker {
   font-family: "Chivo", system-ui, sans-serif;
   text-transform: uppercase;
@@ -80,7 +94,17 @@
     radial-gradient(120% 90% at 100% 0%, rgba(15, 138, 126, .10), transparent 60%),
     linear-gradient(140deg, #f5f8ff 0%, #eaf0fb 100%);
 }
-.ps-title__logo { height: 2.6em; margin-bottom: 1em; }
+.ps-title__logos { display: flex; align-items: center; gap: 1.4em; margin-bottom: 1em; }
+.ps-title__logo { height: 2.6em; }
+.ps-title__wj { height: 1.9em; }
+/* Social-Media-Leiste unten auf der Titelfolie */
+.ps-social { display: flex; flex-wrap: wrap; align-items: center; gap: .5em .9em; margin-top: 1em;
+  font-family: "Chivo", system-ui, sans-serif; font-size: .5em; }
+.ps-social__lead { color: var(--ps-muted); font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+.ps-social__link { display: inline-flex; align-items: center; gap: .4em; text-decoration: none;
+  color: var(--ps-blue); font-weight: 700; background: #fff; border: 1px solid var(--ps-line);
+  border-radius: 999px; padding: .35em .8em; }
+.ps-social__ic { font-size: 1.15em; line-height: 1; }
 .ps-title__year {
   font-family: "Chivo", system-ui, sans-serif; font-weight: 700; letter-spacing: .12em;
   color: var(--ps-teal); font-size: .8em; margin-bottom: .2em;
@@ -125,15 +149,18 @@
 .ps-note { display: block; color: var(--ps-muted); }
 
 /* ---------- Team (Projektleitung) ---------- */
-.ps-people { display: flex; flex-wrap: wrap; gap: 1.4em; margin-top: .6em; }
-.ps-person { width: 8.5em; text-align: center; }
-.ps-person__ph { width: 5em; height: 5em; border-radius: 50%; object-fit: cover; margin: 0 auto .4em;
+.ps-people { display: flex; flex-wrap: wrap; gap: 1em 1.6em; margin-top: .5em; }
+.ps-person { width: 9.5em; text-align: center; }
+.ps-person__ph { width: 3.8em; height: 3.8em; border-radius: 50%; object-fit: cover; margin: 0 auto .4em;
   display: block; border: 3px solid #fff; box-shadow: 0 4px 14px rgba(0,30,90,.18); }
 .ps-person__ph--ph { background: var(--ps-blue); color: #fff; font-family: "Chivo", sans-serif;
   font-weight: 900; font-size: 1.6em; display: flex; align-items: center; justify-content: center; }
 .ps-person__name { font-family: "Chivo", system-ui, sans-serif; font-weight: 700; font-size: .62em; }
 .ps-person__role { font-size: .52em; color: var(--ps-teal); font-weight: 700; }
 .ps-person__org { font-size: .5em; color: var(--ps-muted); }
+.ps-person__contact { margin-top: .35em; font-size: .48em; line-height: 1.5; color: var(--ps-ink); }
+.ps-person__contact span { display: block; }
+.ps-person__contact a { color: var(--ps-ink); text-decoration: none; }
 
 /* ---------- Kontakt ---------- */
 .ps-contacts { list-style: none; margin: .4em 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 1em; }

@@ -47,8 +47,44 @@ final class Presentation
         ['key' => 'pitchday',     'type' => 'pitchday', 'title' => 'Pitch Day'],
         ['key' => 'closing',      'type' => 'text',     'title' => 'Project Closing'],
         ['key' => 'team',         'type' => 'team',     'title' => 'Unser Team'],
-        ['key' => 'contact',      'type' => 'contact',  'title' => 'Kontakt'],
     ];
+
+    /**
+     * Social-Media-Kanäle der Wirtschaftsjunioren – auf der Titelfolie verlinkt
+     * und in der App pflegbar (global, da jahresunabhängig). Wert = vollständige
+     * URL im settings-Eintrag `presentation_social_<key>`.
+     * key => [Anzeigename, Symbol].
+     * @var array<string,array{0:string,1:string}>
+     */
+    public const SOCIALS = [
+        'website'   => ['Web', '🌐'],
+        'instagram' => ['Instagram', '📷'],
+        'facebook'  => ['Facebook', '📘'],
+        'linkedin'  => ['LinkedIn', '💼'],
+        'youtube'   => ['YouTube', '▶'],
+    ];
+
+    /** Gepflegte, nicht-leere Social-Media-Links. @return array<string,array{label:string,icon:string,url:string}> */
+    public static function socials(): array
+    {
+        $out = [];
+        foreach (self::SOCIALS as $k => [$label, $icon]) {
+            $url = trim((string) Settings::get('presentation_social_' . $k, ''));
+            if ($url !== '') {
+                $out[$k] = ['label' => $label, 'icon' => $icon, 'url' => $url];
+            }
+        }
+        return $out;
+    }
+
+    /** Social-Media-Links speichern (global). @param array<string,string> $urls key => URL */
+    public static function saveSocials(array $urls): void
+    {
+        foreach (array_keys(self::SOCIALS) as $k) {
+            $url = trim((string) ($urls[$k] ?? ''));
+            Settings::set('presentation_social_' . $k, $url !== '' ? $url : null);
+        }
+    }
 
     /** Folientypen, deren Text in der App gepflegt wird. */
     private const EDITABLE_TYPES = ['title', 'text'];
@@ -310,7 +346,6 @@ final class Presentation
             case 'timeline': self::renderTimeline($ctx); break;
             case 'pitchday': self::renderPitchday($ctx, $text); break;
             case 'team':     self::renderTeam($ctx); break;
-            case 'contact':  self::renderContact($ctx); break;
             case 'text':
             default:         self::renderText($text); break;
         }
@@ -327,14 +362,28 @@ final class Presentation
     private static function renderTitle(array $ctx, array $text): void
     {
         $year = $ctx['year_label'];
+        $socials = self::socials();
         ?>
         <div class="ps-slide__inner ps-title">
-          <img class="ps-title__logo" src="<?= asset('img/logo.svg') ?>" alt="Unternehmen Plus">
+          <div class="ps-title__logos">
+            <img class="ps-title__logo" src="<?= asset('img/logo.svg') ?>" alt="Unternehmen Plus">
+            <img class="ps-title__wj" src="<?= asset('img/wj/wj-forchheim-color.svg') ?>" alt="Wirtschaftsjunioren Forchheim">
+          </div>
           <?php if ($year !== ''): ?><div class="ps-title__year"><?= e($year) ?></div><?php endif; ?>
           <h1 class="ps-title__h"><?= e($text['title']) ?></h1>
           <div class="ps-title__brand">Unternehmen&nbsp;Plus</div>
           <?php if ($text['subtitle'] !== ''): ?><p class="ps-title__sub"><?= e($text['subtitle']) ?></p><?php endif; ?>
           <?php if (trim($text['body']) !== ''): ?><div class="ps-title__meta"><?= render_markdown($text['body']) ?></div><?php endif; ?>
+          <?php if ($socials): ?>
+            <div class="ps-social">
+              <span class="ps-social__lead">Folgt uns:</span>
+              <?php foreach ($socials as $s): ?>
+                <a class="ps-social__link" href="<?= e($s['url']) ?>" target="_blank" rel="noopener">
+                  <span class="ps-social__ic" aria-hidden="true"><?= $s['icon'] ?></span><?= e($s['label']) ?>
+                </a>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
         </div>
         <?php
     }
@@ -408,11 +457,12 @@ final class Presentation
     private static function renderTeam(array $ctx): void
     {
         $leads = $ctx['leads'];
+        $sponsors = $ctx['sponsors'];
         ?>
         <div class="ps-slide__inner">
           <?= self::kicker($ctx['year_label']) ?>
           <h2 class="ps-h">Unser Team</h2>
-          <div class="ps-sub">Die Projektleitung hält engen Kontakt zu den Schulen und übernimmt das Projektmanagement.</div>
+          <div class="ps-sub">Wirtschaftsjunioren Forchheim · Ressort Bildung – enger Kontakt zu den Schulen und Projektmanagement.</div>
           <?php if ($leads): ?>
             <div class="ps-people">
               <?php foreach ($leads as $l): $sub = trim((string) ($l['position'] ?: $l['specialty'])); ?>
@@ -425,36 +475,15 @@ final class Presentation
                   <div class="ps-person__name"><?= e($l['name']) ?></div>
                   <?php if ($sub !== ''): ?><div class="ps-person__role"><?= e($sub) ?></div><?php endif; ?>
                   <?php if (!empty($l['org'])): ?><div class="ps-person__org"><?= e($l['org']) ?></div><?php endif; ?>
+                  <div class="ps-person__contact">
+                    <?php if (!empty($l['phone'])): ?><span>☎ <?= e($l['phone']) ?></span><?php endif; ?>
+                    <?php if (!empty($l['email'])): ?><span>✉ <a href="mailto:<?= e($l['email']) ?>"><?= e($l['email']) ?></a></span><?php endif; ?>
+                  </div>
                 </div>
               <?php endforeach; ?>
             </div>
           <?php else: ?>
             <p class="ps-muted">Noch keine Projektleitung hinterlegt (unter „Jury &amp; Nutzer" pflegbar).</p>
-          <?php endif; ?>
-        </div>
-        <?php
-    }
-
-    private static function renderContact(array $ctx): void
-    {
-        $leads = $ctx['leads'];
-        $sponsors = $ctx['sponsors'];
-        ?>
-        <div class="ps-slide__inner">
-          <?= self::kicker($ctx['year_label']) ?>
-          <h2 class="ps-h">Kontakt</h2>
-          <div class="ps-sub">Wirtschaftsjunioren Forchheim · Ressort Bildung</div>
-          <?php if ($leads): ?>
-            <ul class="ps-contacts">
-              <?php foreach ($leads as $l): ?>
-                <li>
-                  <strong><?= e($l['name']) ?></strong>
-                  <?php if (!empty($l['org'])): ?><span class="ps-contacts__org"><?= e($l['org']) ?></span><?php endif; ?>
-                  <?php if (!empty($l['phone'])): ?><span class="ps-contacts__line">☎ <?= e($l['phone']) ?></span><?php endif; ?>
-                  <?php if (!empty($l['email'])): ?><span class="ps-contacts__line">✉ <?= e($l['email']) ?></span><?php endif; ?>
-                </li>
-              <?php endforeach; ?>
-            </ul>
           <?php endif; ?>
           <?php if ($sponsors): ?>
             <div class="ps-sponsors">

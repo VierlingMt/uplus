@@ -37,6 +37,14 @@ if (is_post()) {
                 trim((string) input('subtitle')),
                 (string) input('body')
             );
+            // Auf der Titelfolie zugleich die (globalen) Social-Media-Links pflegen.
+            if ($key === 'title') {
+                $urls = [];
+                foreach (array_keys(Presentation::SOCIALS) as $sk) {
+                    $urls[$sk] = (string) input('social_' . $sk, '');
+                }
+                Presentation::saveSocials($urls);
+            }
             Audit::log('presentation.slide_save', 'Präsentationsfolie gespeichert: ' . $key, 'cycle', $cycleId);
             flash('success', 'Folie gespeichert.');
         } elseif ($action === 'reset_slide') {
@@ -98,6 +106,7 @@ ob_start(); ?>
     <?php foreach ($slides as $i => $s): ?>
       <div class="ps-slide" data-idx="<?= $i ?>"<?= $i === 0 ? '' : ' hidden' ?>>
         <?= $s['html'] ?>
+        <div class="ps-pageno"><?= $i + 1 ?> / <?= count($slides) ?></div>
         <?php if ($canWrite && $s['editable']): ?>
           <button type="button" class="ps-edit-btn" data-modal-open="psEdit_<?= e($s['def']['key']) ?>" title="Diese Folie bearbeiten">✎ Bearbeiten</button>
           <?php if (!empty($s['text']['is_override'])): ?>
@@ -123,8 +132,8 @@ ob_start(); ?>
 
 <p class="muted mt" style="font-size:13px">
   Pfeiltasten ← → blättern, <kbd>F</kbd> startet die Vollbild-Präsentation.
-  Dynamische Folien (Jahr, Projektablauf, Preise, Team, Kontakt, Sponsoren) füllen sich automatisch aus dem gewählten Wettbewerbsjahr.
-  <?php if ($canWrite): ?>Die Textfolien lassen sich je Jahr über „Bearbeiten" pflegen.<?php endif; ?>
+  Dynamische Folien (Jahr, Projektablauf, Preise, Team &amp; Kontakt, Sponsoren) füllen sich automatisch aus dem gewählten Wettbewerbsjahr.
+  <?php if ($canWrite): ?>Die Textfolien lassen sich je Jahr über „Bearbeiten" pflegen; die Social-Media-Links auf der Titelfolie.<?php endif; ?>
 </p>
 
 <?php if ($canWrite): ?>
@@ -143,9 +152,21 @@ ob_start(); ?>
           <div class="field"><label>Untertitel</label><input type="text" name="subtitle" value="<?= e($t['subtitle']) ?>"></div>
           <div class="field">
             <label>Text</label>
-            <textarea name="body" rows="10" style="font-family:inherit"><?= e($t['body']) ?></textarea>
+            <textarea name="body" rows="<?= $k === 'title' ? 3 : 10 ?>" style="font-family:inherit"><?= e($t['body']) ?></textarea>
             <div class="muted" style="font-size:12px;margin-top:4px">Einfaches Markdown: <code>- </code> für Aufzählungen, <code>**fett**</code>, Leerzeile = neuer Absatz.</div>
           </div>
+          <?php if ($k === 'title'): $sc = Presentation::socials(); ?>
+            <div class="field">
+              <label>Social-Media-Links <span class="muted" style="font-weight:400">(gelten für alle Jahre – leer lassen zum Ausblenden)</span></label>
+              <?php foreach (Presentation::SOCIALS as $sk => [$slabel, $sic]): ?>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                  <span style="width:104px;flex:0 0 auto"><?= $sic ?> <?= e($slabel) ?></span>
+                  <input type="url" name="social_<?= e($sk) ?>" value="<?= e($sc[$sk]['url'] ?? '') ?>"
+                         placeholder="https://…" style="flex:1">
+                </div>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
           <div class="modal__foot" style="justify-content:space-between">
             <?php if (!empty($t['is_override'])): ?>
               <button type="submit" name="action" value="reset_slide" class="btn btn--ghost" formnovalidate
