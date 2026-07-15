@@ -99,6 +99,7 @@ try {
         case 'sponsors':
         case 'event':
         case 'event_print':
+        case 'event_aushang':
         case 'budget_print':
         case 'audit':
         case 'access':

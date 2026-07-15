@@ -7,6 +7,23 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.62.0] - 2026-07-15
+### Hinzugefügt
+- **PitchDay-Aushänge & Urkunden (automatisch erzeugt):** Neuer Tab „Aushänge &
+  Urkunden" in der PitchDay-Orga (nur Verwaltung). Alle Vorlagen werden aus den in
+  der App gepflegten Daten zusammengesetzt und in den offiziellen WJ-CI-Farben als
+  eigene Druckseite („Als PDF speichern") ausgegeben – ohne zusätzliche
+  PDF-Bibliothek:
+  - **DIN-A3-Aushang „Pitch-Day"** – mit Veranstaltungsort, Datum/Uhrzeit und
+    Sponsoren-Logostreifen.
+  - **DIN-A3-Aushang mit Agenda** – aus dem gepflegten Ablaufplan.
+  - **DIN-A4-Wegpfeil** – Richtung (↑ → ↓ ←) und Beschriftung auf der Druckseite
+    umstellbar.
+  - **DIN-A4-Urkunden für alle nominierten Teams + Nachrücker** – je Team eine
+    Seite mit Geschäftsidee, Teammitgliedern, Schule (inkl. Logo), Sponsoren,
+    PitchDay-Datum und Pseudo-Unterschrift der Projektleitung. Nur die
+    Platzierung („__. Platz") wird am Veranstaltungstag per Hand ergänzt.
+
 ## [0.61.0] - 2026-07-13
 ### Hinzugefügt
 - **Eigene PitchDay-Fragen je Jurymitglied:** In der Bewertung kann jede:r Juror:in

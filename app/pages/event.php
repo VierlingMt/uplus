@@ -19,7 +19,7 @@ if ($cycleId <= 0 || Cycle::find($cycleId) === null) {
 $cycle = $cycleId ? Cycle::find($cycleId) : null;
 $event = $cycleId ? PitchDay::eventForCycle($cycleId) : null;
 
-$allowedTabs = ['tasks', 'guests', 'agenda', 'budget'];
+$allowedTabs = ['tasks', 'guests', 'agenda', 'budget', 'aushang'];
 $tab = (string) input('tab', 'tasks');
 if (!in_array($tab, $allowedTabs, true)) {
     $tab = 'tasks';
@@ -459,6 +459,8 @@ ob_start(); ?>
       'agenda' => 'Ablaufplan',
       'budget' => 'Budget',
     ];
+    // Aushänge & Urkunden nur für die Verwaltung (die Druckseite selbst prüft ebenso).
+    if (Auth::isManager()) { $tabs['aushang'] = 'Aushänge & Urkunden'; }
   ?>
   <div class="table-toolbar" style="gap:8px;padding:0 0 14px;flex-wrap:wrap">
     <?php foreach ($tabs as $key => $label): ?>
@@ -769,6 +771,63 @@ ob_start(); ?>
           <?php if (!$items): ?><tr><td colspan="6" class="muted">Noch keine Kosten oder Preisgelder erfasst.</td></tr><?php endif; ?>
           </tbody>
         </table>
+      </div>
+    </div>
+
+  <?php elseif ($tab === 'aushang' && Auth::isManager()): ?>
+    <?php
+      $nomCnt  = (int) Database::value("SELECT COUNT(*) FROM teams WHERE status = 'nominated'");
+      $fallCnt = (int) Database::value("SELECT COUNT(*) FROM teams WHERE status = 'fallback'");
+      $al = fn(string $kind, array $extra = []) => e(url('event_aushang', ['cycle' => $cycleId, 'kind' => $kind] + $extra));
+    ?>
+    <p class="muted" style="font-size:13px;margin:0 0 14px">
+      Automatisch aus den PitchDay-Daten erzeugte Aushänge und Urkunden – jeweils als eigene Druckseite
+      („Als PDF speichern“). Bei den Urkunden kommt nur die <strong>Platzierung am Tag per Hand</strong> dazu;
+      Geschäftsidee, Teammitglieder, Schule, Sponsoren, Datum und die Unterschrift der Projektleitung stehen
+      bereits drauf.
+    </p>
+
+    <div class="grid cols-2">
+      <div class="card">
+        <div class="card__head">DIN A3 – Aushänge</div>
+        <div class="card__body">
+          <p class="muted" style="font-size:13px;margin:0 0 12px">Format <strong>A3 hochkant</strong> beim Drucken wählen.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a class="btn btn--primary btn--sm" target="_blank" rel="noopener" href="<?= $al('poster') ?>">🖼 Aushang „Pitch-Day“</a>
+            <a class="btn btn--primary btn--sm" target="_blank" rel="noopener" href="<?= $al('agenda') ?>">🗓 Aushang mit Agenda</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card__head">DIN A4 – Wegweiser</div>
+        <div class="card__body">
+          <p class="muted" style="font-size:13px;margin:0 0 12px">Richtung &amp; Beschriftung lassen sich auf der Druckseite umstellen.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a class="btn btn--teal btn--sm" target="_blank" rel="noopener" href="<?= $al('wegpfeil', ['dir' => 'up']) ?>">⬆ Wegpfeil ↑</a>
+            <a class="btn btn--teal btn--sm" target="_blank" rel="noopener" href="<?= $al('wegpfeil', ['dir' => 'right']) ?>">➡ Wegpfeil →</a>
+            <a class="btn btn--teal btn--sm" target="_blank" rel="noopener" href="<?= $al('wegpfeil', ['dir' => 'left']) ?>">⬅ Wegpfeil ←</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="grid-column:1 / -1">
+        <div class="card__head">DIN A4 – Urkunden</div>
+        <div class="card__body">
+          <p class="muted" style="font-size:13px;margin:0 0 12px">
+            Je Team eine Seite – für <strong><?= $nomCnt ?> nominierte</strong>
+            <?= $fallCnt > 0 ? 'und <strong>' . $fallCnt . ' Nachrücker</strong> ' : '' ?>Team<?= ($nomCnt + $fallCnt) === 1 ? '' : 's' ?>.
+            Die Platzierung („__. Platz“) wird am Veranstaltungstag handschriftlich ergänzt.
+          </p>
+          <?php if ($nomCnt + $fallCnt === 0): ?>
+            <p class="muted" style="font-size:13px;margin:0">
+              Noch keine Teams nominiert. Sobald unter „Teams“ bzw. der PitchDay-Nominierung Teams auf
+              <em>Pitch nominiert</em> / <em>Nachrücker</em> stehen, lassen sich hier die Urkunden erzeugen.
+            </p>
+          <?php else: ?>
+            <a class="btn btn--primary btn--sm" target="_blank" rel="noopener" href="<?= $al('urkunden') ?>">🏆 Urkunden drucken (<?= $nomCnt + $fallCnt ?>)</a>
+          <?php endif; ?>
+        </div>
       </div>
     </div>
   <?php endif; ?>
