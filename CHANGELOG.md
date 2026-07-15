@@ -7,6 +7,28 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.66.0] - 2026-07-15
+### Hinzugefügt
+- **Mediengalerie (neuer Bereich „Mediengalerie"):** Bilder und Videos je
+  **Wettbewerbsjahr**. **Alle angemeldeten Nutzer:innen** dürfen für ihr
+  Wettbewerbsjahr hochladen – mit **Mehrfachauswahl** (mehrere Dateien auf
+  einmal, per Auswahl-Dialog oder Drag-&-Drop). **Eigene Beiträge** lassen sich
+  bearbeiten (Titel/Bildunterschrift) und löschen; **Projektleitung und Admin**
+  verwalten **alle** Beiträge. **Jede:r sieht alle Galerien** – über eine
+  Jahres-Auswahl wechselt man zwischen den Wettbewerbsjahren.
+- **Schöne Galerie mit Lightbox:** Responsives Kachel-Raster mit
+  Bild-Vorschauen und Video-Thumbnails; ein Klick öffnet die **Lightbox**
+  (Vollbild, Vor/Zurück per Pfeiltasten, Videos mit Steuerung). Zusätzlich eine
+  **Mehrfachauswahl zum Löschen** mehrerer eigener Medien auf einmal.
+- **Technik:** Dateien liegen außerhalb des Web-Roots und werden ausschließlich
+  über den Controller `media_file` mit Auth-Prüfung ausgeliefert; Videos mit
+  **HTTP-Range-Unterstützung** (flüssiges Abspielen/Spulen). Erlaubt sind
+  Bilder (JPG, PNG, GIF, WEBP) und Videos (MP4, WEBM, MOV) bis 32 MB je Datei
+  (Bilder werden serverseitig als echtes Bild validiert). Neue Dateien:
+  `app/lib/Media.php`, `app/pages/gallery.php`, `app/pages/media_file.php`;
+  neues, konfigurierbares Modul „gallery" in der Zugriffsmatrix (Standard: alle
+  Rollen dürfen ansehen und hochladen). Schema: neue Tabelle `media_items`.
+
 ## [0.65.0] - 2026-07-15
 ### Hinzugefügt
 - **Interaktive Hilfe (F1) & geführte Tour:** Über **F1** (oder das **?**-Symbol

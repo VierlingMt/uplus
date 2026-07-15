@@ -26,6 +26,7 @@ final class Access
         'dashboard'     => 'Dashboard',
         'plans'         => 'Businesspläne',
         'materials'     => 'Material & Vorlagen',
+        'gallery'       => 'Mediengalerie',
         'contact'       => 'Kontakt',
         'presentation'  => 'Präsentation',
         'teams'         => 'Teams & Schüler',
@@ -53,6 +54,9 @@ final class Access
         'dashboard'     => ['admin' => 'write', 'lead' => 'read',  'teacher' => 'read', 'juror' => 'read'],
         'plans'         => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'write', 'juror' => 'read'],
         'materials'     => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'read', 'juror' => 'read'],
+        // Mediengalerie: alle dürfen ansehen UND hochladen; die feinere Regel
+        // („nur eigene bearbeiten, Verwaltung alle") setzt der Controller durch.
+        'gallery'       => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'write', 'juror' => 'write'],
         'contact'       => ['admin' => 'write', 'lead' => 'read',  'teacher' => 'read', 'juror' => 'read'],
         // Präsentation: alle dürfen ansehen; pflegen (Textfolien) nur die Verwaltung.
         'presentation'  => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'read', 'juror' => 'read'],

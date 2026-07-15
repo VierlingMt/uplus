@@ -101,6 +101,8 @@ try {
         case 'jurors':
         case 'materials':
         case 'material_download':
+        case 'gallery':
+        case 'media_file':
         case 'sponsors':
         case 'event':
         case 'event_print':

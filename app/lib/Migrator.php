@@ -386,6 +386,30 @@ final class Migrator
                 'name'    => 'Fehlerhaftes „Pitch bewertet" korrigieren (nur wenn alle Pitch-Kriterien Punkte haben)',
                 'up'      => [self::class, 'fixPitchSubmitted'],
             ],
+            [
+                'version' => '2026_07_38_media_gallery',
+                'name'    => 'Mediengalerie: Bilder & Videos je Wettbewerbsjahr (Upload für alle, Edit nur eigene)',
+                'up'      => "CREATE TABLE IF NOT EXISTS media_items (
+                    id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    cycle_id      INT UNSIGNED NOT NULL,
+                    uploaded_by   INT UNSIGNED NULL,
+                    kind          ENUM('image','video') NOT NULL DEFAULT 'image',
+                    stored_name   VARCHAR(255) NOT NULL,
+                    original_name VARCHAR(255) NULL,
+                    mime          VARCHAR(100) NULL,
+                    size_bytes    INT UNSIGNED NULL,
+                    title         VARCHAR(255) NULL,
+                    sort_order    INT NOT NULL DEFAULT 0,
+                    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (id),
+                    KEY idx_media_cycle (cycle_id),
+                    KEY idx_media_user (uploaded_by),
+                    CONSTRAINT fk_media_cycle FOREIGN KEY (cycle_id)
+                        REFERENCES competition_cycles(id) ON DELETE CASCADE,
+                    CONSTRAINT fk_media_user FOREIGN KEY (uploaded_by)
+                        REFERENCES users(id) ON DELETE SET NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ],
         ];
     }
 
