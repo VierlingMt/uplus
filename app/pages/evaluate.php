@@ -91,13 +91,19 @@ if (is_post()) {
     $pitchTotal     = $eval['pitch_total'] ?? null;
     $pitchSubmitted = (int) ($eval['pitch_submitted'] ?? 0);
     if ($isPitch && !$pitchLocked) {
-        $pitchTotal = 0;
+        $pitchTotal  = 0;
+        $pitchScored = 0;
         foreach (Criteria::PITCH as $k => $c) {
             $p = max(0, min(10, (int) input('pts_' . $k, 0)));
             $upsert->execute([$evalId, $k, 'pitch', $p, trim((string) input('note_' . $k)) ?: null]);
             $pitchTotal += $p;
+            if ($p > 0) { $pitchScored++; }
         }
-        $pitchSubmitted = 1;
+        // „Pitch bewertet" gilt erst, wenn ALLE Pitch-Kriterien Punkte haben – nicht
+        // schon beim bloßen Öffnen/Autosave eines nominierten Teams (sonst stünde im
+        // PitchDay „bewertet", obwohl bislang nur der Businessplan ausgefüllt wurde).
+        // So bleibt auch der Ø Pitch sauber (keine 0er von noch nicht bewerteten Pitches).
+        $pitchSubmitted = $pitchScored === count(Criteria::PITCH) ? 1 : 0;
     }
 
     // Eigene PitchDay-Fragen der/des Juror:in (nur wenn Pitch-Phase editierbar,

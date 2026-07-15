@@ -7,6 +7,27 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.63.3] - 2026-07-15
+### Geändert
+- **„Bewertung & Ranking" und „PitchDay" für Handys optimiert:** Beide Listen
+  erscheinen auf schmalen Displays jetzt als kompakte, dichte Liste (eine
+  Textzeile „Platz · Team · Aktion", darunter klein die Kennzahlen) statt einer
+  bildschirmfüllenden Karte je Team. So sind mehrere Teams gleichzeitig sichtbar.
+### Behoben
+- **Falsches „bewertet" im PitchDay:** Bislang wurde eine Pitch-Bewertung schon
+  beim bloßen Öffnen/Autospeichern eines nominierten Teams als abgegeben markiert
+  (auch wenn nur der Businessplan ausgefüllt war). „Pitch bewertet" gilt jetzt erst,
+  wenn tatsächlich alle Pitch-Kriterien Punkte haben. Der Button zeigt den
+  Fortschritt an (`Bewerten` → `Weiter · 2/4` → `✓ bewertet`). Nebenbei bleibt der
+  Ø Pitch sauber (keine 0er von noch nicht bewerteten Pitches). Bestehende, falsch
+  gesetzte Markierungen werden per Migration korrigiert.
+### Hinzugefügt
+- **PitchDay – sofort sehen, was noch fehlt:** Wer selbst bewertet, sieht oben einen
+  Hinweis „Du musst noch X von Y Bühnen-Teams bewerten"; die offenen Teams sind in
+  der Liste links farbig markiert. Für die Projektleitung gibt es – wie bei
+  „Bewertung & Ranking" – einen aufklappbaren **Bewertungsstand (Pitch)**: welche:r
+  Bewertende hat welche Bühnen-Teams beim Pitch noch nicht (vollständig) bewertet.
+
 ## [0.63.2] - 2026-07-15
 ### Geändert
 - **PitchDay-Urkunde – Feinschliff:** Kopf- und Fußzeilen-Logos überschneiden den
@@ -47,7 +68,6 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
   auf die Vorlage zurücksetzen.
 - **Zugriffsmatrix:** Das Modul **„Präsentation"** ist aufgenommen – ansehen dürfen
   alle Rollen, pflegen die Verwaltung (Admin/Projektleitung).
-
 ## [0.62.0] - 2026-07-15
 ### Hinzugefügt
 - **PitchDay-Aushänge & Urkunden (automatisch erzeugt):** Neuer Tab „Aushänge &

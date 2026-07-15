@@ -10,6 +10,11 @@ declare(strict_types=1);
 Access::requireRead('pitch');
 $isAdmin = Auth::isManager();
 $jurorId = (int) Auth::id();
+// Wie viele Pitch-Kriterien gibt es? „Pitch bewertet" heißt: alle haben Punkte.
+$pitchCritCount = count(Criteria::PITCH);
+// Bewertet die/der Angemeldete selbst mit (Jury/Projektleitung)? Nur dann ist der
+// persönliche „noch zu bewerten"-Hinweis relevant (der reine Admin bewertet nicht).
+$isRater = Auth::has('juror') || Auth::has('lead');
 
 // „Endergebnis einfrieren" wird bewusst NUR hier (PitchDay) bedient – nach den
 // Pitches wird das Ranking festgeschrieben. Freigabe nur als 15-Minuten-
@@ -51,7 +56,7 @@ $rows = Database::all(
             (SELECT AVG(e.bp_total)    FROM evaluations e JOIN users ju ON ju.id=e.juror_id WHERE e.team_id=t.id AND e.bp_submitted=1    AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = ju.id AND ur.role IN ('lead','juror'))) AS avg_bp,
             (SELECT AVG(e.pitch_total) FROM evaluations e JOIN users ju ON ju.id=e.juror_id WHERE e.team_id=t.id AND e.pitch_submitted=1 AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = ju.id AND ur.role IN ('lead','juror'))) AS avg_pitch,
             (SELECT COUNT(*)           FROM evaluations e JOIN users ju ON ju.id=e.juror_id WHERE e.team_id=t.id AND e.pitch_submitted=1 AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = ju.id AND ur.role IN ('lead','juror'))) AS n_pitch,
-            (SELECT e.id FROM evaluations e WHERE e.team_id=t.id AND e.juror_id=? AND e.pitch_submitted=1) AS my_pitch,
+            (SELECT COUNT(*) FROM evaluation_scores es JOIN evaluations e ON e.id=es.evaluation_id WHERE e.team_id=t.id AND e.juror_id=? AND es.phase='pitch' AND es.points>0) AS my_pitch_scored,
             bp.id AS bp_id
      FROM teams t
      JOIN schools s ON s.id=t.school_id
@@ -75,11 +80,56 @@ $fmt = fn($n) => $n === null ? '–' : rtrim(rtrim(number_format((float) $n, 1, 
 $pitchPending = 0;
 foreach ($nominated as $r) { if ($totalJurors === 0 || (int) $r['n_pitch'] < $totalJurors) { $pitchPending++; } }
 
+// Wie viele Bühnen-Teams muss ICH selbst noch fertig bewerten? (für den
+// persönlichen „sofort sehen, wo noch etwas fehlt"-Hinweis oben)
+$myOpen = 0;
+foreach ($nominated as $r) { if ((int) ($r['my_pitch_scored'] ?? 0) < $pitchCritCount) { $myOpen++; } }
+
+// Bewertungsstand für die Projektleitung: welche:r Bewertende hat welche
+// Bühnen-Teams beim Pitch noch nicht (vollständig) bewertet? Analog zu
+// „Bewertung & Ranking", aber auf die Pitch-Kriterien bezogen.
+$pitchCoverage = [];
+$pitchCoverageDone = 0;
+$roleLabels = ['admin' => 'Admin', 'lead' => 'Projektleitung', 'juror' => 'Jury'];
+if ($isAdmin && $nominated) {
+    $evaluators = Database::all(
+        "SELECT u.id, u.name, u.role FROM users u WHERE u.is_active=1 AND EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role IN ('lead','juror'))
+         ORDER BY FIELD(u.role,'juror','lead'), u.name"
+    );
+    // Anzahl bewerteter Pitch-Kriterien (Punkte>0) je Bewertende:r + Team.
+    $scoredCnt = [];
+    foreach (Database::all(
+        "SELECT e.juror_id, e.team_id, COUNT(*) AS n
+           FROM evaluation_scores es JOIN evaluations e ON e.id=es.evaluation_id
+          WHERE es.phase='pitch' AND es.points>0
+          GROUP BY e.juror_id, e.team_id"
+    ) as $d) {
+        $scoredCnt[(int) $d['juror_id'] . '-' . (int) $d['team_id']] = (int) $d['n'];
+    }
+    foreach ($evaluators as $ev) {
+        $open = [];
+        foreach ($nominated as $nt) {
+            if (($scoredCnt[(int) $ev['id'] . '-' . (int) $nt['id']] ?? 0) < $pitchCritCount) {
+                $open[] = $nt['name'];
+            }
+        }
+        if (!$open) { $pitchCoverageDone++; }
+        $pitchCoverage[] = ['name' => $ev['name'], 'role' => $ev['role'], 'open' => $open, 'total' => count($nominated)];
+    }
+    // Wer am meisten offen hat, steht oben (zum „Nachfassen").
+    usort($pitchCoverage, fn($a, $b) => count($b['open']) <=> count($a['open']));
+}
+
 // Eine Team-Zeile rendern (mit optionaler Platznummer + Medaille).
-$rowHtml = function (array $r, ?int $place) use ($fmt, $frozen, $isAdmin) {
+$rowHtml = function (array $r, ?int $place) use ($fmt, $frozen, $isAdmin, $pitchCritCount, $isRater) {
     $medal = $place !== null ? ([1 => '🥇', 2 => '🥈', 3 => '🥉'][$place] ?? '') : '';
+    // Fortschritt der eigenen Pitch-Bewertung: 0 = offen, 1…n-1 = angefangen, n = fertig.
+    $scored = (int) ($r['my_pitch_scored'] ?? 0);
+    $done   = $scored >= $pitchCritCount;
+    // Linke Kante markieren, solange ICH dieses Team noch bewerten muss.
+    $mineOpen = $isRater && !$frozen && $r['bp_id'] && !$done;
     ob_start(); ?>
-    <tr>
+    <tr<?= $mineOpen ? ' data-open="1"' : '' ?>>
       <?php if ($place !== null): ?>
         <td data-label="Platz" class="place"><?php if ($medal): ?><span class="place__medal"><?= $medal ?></span><?php endif; ?><span class="place__num"><?= $place ?>.</span></td>
       <?php else: ?>
@@ -103,8 +153,12 @@ $rowHtml = function (array $r, ?int $place) use ($fmt, $frozen, $isAdmin) {
         <?php if ($r['bp_id']): ?>
           <?php if ($frozen && !$isAdmin): ?>
             <a class="btn btn--ghost btn--sm" href="<?= url('evaluate', ['team' => $r['id']]) ?>">🔒 Ansehen</a>
+          <?php elseif ($done): ?>
+            <a class="btn btn--ghost btn--sm" href="<?= url('evaluate', ['team' => $r['id']]) ?>">✓ bewertet</a>
+          <?php elseif ($scored > 0): ?>
+            <a class="btn btn--teal btn--sm" href="<?= url('evaluate', ['team' => $r['id']]) ?>">Weiter · <?= $scored ?>/<?= $pitchCritCount ?></a>
           <?php else: ?>
-            <a class="btn btn--<?= $r['my_pitch'] ? 'ghost' : 'teal' ?> btn--sm" href="<?= url('evaluate', ['team' => $r['id']]) ?>"><?= $r['my_pitch'] ? '✓ bewertet' : 'Bewerten' ?></a>
+            <a class="btn btn--teal btn--sm" href="<?= url('evaluate', ['team' => $r['id']]) ?>">Bewerten</a>
           <?php endif; ?>
         <?php else: ?><span class="muted" style="font-size:12px">kein Plan</span><?php endif; ?>
       </td>
@@ -139,6 +193,22 @@ ob_start(); ?>
   <div><strong>Endergebnis eingefroren – das Ranking ist festgeschrieben.</strong>
     <span class="muted"><?php if (!$isAdmin): ?>Die Bewertungen sind gespeichert und können nicht mehr geändert werden.<?php elseif ($canUnfreeze): ?>Die Jury kann nichts mehr ändern. Verklickt? Noch <?= $unfreezeMinLeft ?> Minute<?= $unfreezeMinLeft === 1 ? '' : 'n' ?> lang oben wieder freizugeben; danach bleibt es endgültig festgeschrieben.<?php else: ?>Die Jury kann nichts mehr ändern. Das 15-Minuten-Fenster zum Freigeben ist abgelaufen – das Endergebnis bleibt festgeschrieben.<?php endif; ?></span></div>
 </div></div>
+<?php endif; ?>
+
+<?php if ($isRater && !$frozen && $nominated): ?>
+  <?php if ($myOpen > 0): ?>
+  <div class="card" style="border-left:4px solid var(--wj-teal)"><div class="card__body" style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:20px">📝</span>
+    <div><strong>Du musst noch <?= $myOpen ?> von <?= count($nominated) ?> Bühnen-Team<?= count($nominated) === 1 ? '' : 's' ?> bewerten.</strong>
+      <span class="muted">Die offenen Teams sind unten links farbig markiert – tippe dort auf „Bewerten“ und vergib die Pitch-Kriterien.</span></div>
+  </div></div>
+  <?php else: ?>
+  <div class="card" style="border-left:4px solid var(--wj-teal)"><div class="card__body" style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:20px">✅</span>
+    <div><strong>Du hast alle Bühnen-Teams bewertet.</strong>
+      <span class="muted">Danke! Änderungen bleiben bis zum Einfrieren des Endergebnisses möglich.</span></div>
+  </div></div>
+  <?php endif; ?>
 <?php endif; ?>
 
 <?php if (!$nominated && !$fallback): ?>
@@ -183,6 +253,31 @@ ob_start(); ?>
     </table>
   </div>
 </div>
+<?php endif; ?>
+
+<?php if ($isAdmin && $pitchCoverage): ?>
+<details class="card mt collapse"<?= $pitchCoverageDone < count($pitchCoverage) ? ' open' : '' ?>>
+  <summary class="collapse__head">
+    <span class="collapse__title"><span class="collapse__chev" aria-hidden="true">▸</span> Bewertungsstand (Pitch)
+      <span class="collapse__info"><?= $pitchCoverageDone ?> von <?= count($pitchCoverage) ?> Bewertenden fertig</span></span>
+  </summary>
+  <div class="card__body">
+    <p class="muted" style="margin-top:0;font-size:13px">Wer muss beim Pitch noch welche Bühnen-Teams bewerten? (Sortiert nach den meisten offenen zuerst.)</p>
+    <table class="data data--cards">
+      <thead><tr><th>Bewertende:r</th><th>Fortschritt</th><th>Noch offen</th></tr></thead>
+      <tbody>
+      <?php foreach ($pitchCoverage as $c): $doneN = $c['total'] - count($c['open']); ?>
+        <tr>
+          <td data-label="Bewertende:r"><strong><?= e($c['name']) ?></strong>
+            <span class="pill <?= ['admin'=>'blue','lead'=>'blue','juror'=>'teal'][$c['role']] ?? 'muted' ?>"><?= e($roleLabels[$c['role']] ?? $c['role']) ?></span></td>
+          <td data-label="Fortschritt"><strong><?= $doneN ?></strong>/<?= $c['total'] ?></td>
+          <td data-label="Noch offen"><?php if ($c['open']): ?><span style="color:#b32a22"><?= e(implode(', ', $c['open'])) ?></span><?php else: ?><span class="pill teal">✓ alle bewertet</span><?php endif; ?></td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+</details>
 <?php endif; ?>
 
 <?php endif; ?>

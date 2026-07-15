@@ -381,6 +381,11 @@ final class Migrator
                 'name'    => 'Projektpräsentation: pflegbare Textfolien je Wettbewerbsjahr (mit Vorlage)',
                 'up'      => [self::class, 'presentationSlides'],
             ],
+            [
+                'version' => '2026_07_37_fix_pitch_submitted',
+                'name'    => 'Fehlerhaftes „Pitch bewertet" korrigieren (nur wenn alle Pitch-Kriterien Punkte haben)',
+                'up'      => [self::class, 'fixPitchSubmitted'],
+            ],
         ];
     }
 
@@ -452,6 +457,29 @@ final class Migrator
         if ($dupes === 0) {
             $pdo->exec('ALTER TABLE users ADD UNIQUE KEY uq_users_phone (phone)');
         }
+    }
+
+    /**
+     * Historische Fehlerkorrektur: Früher wurde `pitch_submitted=1` schon beim
+     * bloßen Autosave eines nominierten Teams gesetzt (auch wenn nur der
+     * Businessplan ausgefüllt war). Das führte zu falschem „bewertet" im PitchDay
+     * und zu 0er-Werten im Ø Pitch. Wir setzen die Flag daher zurück auf 0, wo
+     * NICHT alle Pitch-Kriterien tatsächlich Punkte (>0) haben.
+     */
+    public static function fixPitchSubmitted(PDO $pdo): void
+    {
+        $need = count(Criteria::PITCH); // Anzahl Pitch-Kriterien (aktuell 4)
+        $pdo->prepare(
+            'UPDATE evaluations e
+                SET e.pitch_submitted = 0
+              WHERE e.pitch_submitted = 1
+                AND (
+                    SELECT COUNT(*) FROM evaluation_scores es
+                     WHERE es.evaluation_id = e.id
+                       AND es.phase = ?
+                       AND es.points > 0
+                ) < ?'
+        )->execute(['pitch', $need]);
     }
 
     /**
