@@ -7,6 +7,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.67.1] - 2026-07-15
+### Behoben
+- **Hilfe- und Tour-Buttons reagierten nicht:** Auf Seiten mit Karten ohne
+  Überschrift brach das Sammeln der Tour-Schritte mit einem JavaScript-Fehler ab
+  (`textContent` auf `null`), sodass weder das Hilfe-Panel (F1 / „?") noch die
+  Tour öffneten. Die Titel-Ermittlung ist jetzt null-sicher; solche Karten
+  bekommen automatisch den Fallback-Titel „Bereich".
+
 ## [0.67.0] - 2026-07-15
 ### Hinzugefügt
 - **Mediengalerie – Upload großer Videos (bis 2 GB) per Chunk-Upload:** Große

@@ -29,7 +29,7 @@
     if (html != null) n.innerHTML = html;
     return n;
   }
-  function textOf(node) { return (node.textContent || '').replace(/\s+/g, ' ').trim(); }
+  function textOf(node) { return node ? (node.textContent || '').replace(/\s+/g, ' ').trim() : ''; }
   function escapeHtml(s) {
     return String(s).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
