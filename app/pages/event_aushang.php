@@ -403,7 +403,9 @@ header('Content-Type: text/html; charset=utf-8');
                     border-top: 2.2cqw solid var(--frame); border-right: 2.2cqw solid var(--frame); }
   .urk__frame--bl { bottom: 3.4%; left: 3.4%; width: 82%; height: 62%;
                     border-bottom: 2.2cqw solid var(--frame); border-left: 2.2cqw solid var(--frame); }
-  .urk__inner { position: relative; z-index: 1; height: 100%; padding: 5.5% 10% 4%;
+  /* Innenabstand größer als die Rahmenzone, damit Logos/Inhalt den Rahmen
+     nicht überschneiden (Rahmen sitzt 3,4 % vom Rand + Strichstärke). */
+  .urk__inner { position: relative; z-index: 1; height: 100%; padding: 9% 11.5% 8%;
                 display: flex; flex-direction: column; align-items: center; text-align: center; }
   .urk__logo { height: 8.5cqw; width: auto; }
   .urk__event { color: var(--blue); font-weight: 600; font-size: 2.7cqw; line-height: 1.2; margin-top: 1%; }
@@ -421,14 +423,14 @@ header('Content-Type: text/html; charset=utf-8');
   .urk__cap { font-size: 2cqw; font-style: italic; color: var(--muted); text-align: left; margin-top: .4%; }
   .urk__grats { color: var(--blue); font-weight: 600; font-size: 3.6cqw; margin-top: 1.2%; }
   .urk__issue { color: var(--ink); font-size: 2.4cqw; margin-top: .6%; }
-  .urk__sigs { display: flex; justify-content: space-around; align-items: flex-end; gap: 6%;
+  .urk__sigs { display: flex; justify-content: space-around; align-items: flex-end; gap: 4%;
                width: 100%; margin-top: auto; }
-  .urk__sig { flex: 0 1 42%; text-align: center; }
+  .urk__sig { flex: 0 1 31%; text-align: center; }
   .urk__sig-name { font-family: "Segoe Script", "Bradley Hand", "Brush Script MT", "Snell Roundhand", cursive;
-                   color: var(--blue-d); font-size: 3.8cqw; line-height: 1; }
-  .urk__sig-line { border-top: 1.2px solid var(--ink); margin: .8% 0 1.2%; }
-  .urk__sig-role { color: var(--ink); font-weight: 700; font-size: 2.2cqw; }
-  .urk__sig-org { color: var(--muted); font-size: 2.1cqw; }
+                   color: var(--blue-d); font-size: 2.9cqw; line-height: 1.05; }
+  .urk__sig-line { border-top: 1.2px solid var(--ink); margin: .8% 0 1%; }
+  .urk__sig-role { color: var(--ink); font-weight: 700; font-size: 1.95cqw; line-height: 1.2; }
+  .urk__sig-org { color: var(--muted); font-size: 1.85cqw; line-height: 1.2; }
   .urk__foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 4%;
                width: 100%; margin-top: 5%; padding-top: 3%; }
   .urk__foot-col { display: flex; flex-direction: column; gap: 3%; flex: 0 1 auto; min-width: 0; }
@@ -436,7 +438,7 @@ header('Content-Type: text/html; charset=utf-8');
   .urk__foot-cap { color: var(--blue); font-weight: 700; font-size: 2cqw; text-align: left; }
   .urk__foot-logos { display: flex; flex-wrap: wrap; align-items: center; gap: 5% 7%; }
   .urk__foot-wj { height: 5.2cqw; width: auto; }
-  .urk__foot-logos--sponsors img { height: 3.4cqw; max-width: 15%; object-fit: contain; filter: grayscale(1); opacity: .8; }
+  .urk__foot-logos--sponsors img { height: 3.6cqw; max-width: 15%; object-fit: contain; }
   .urk__foot-logos--schools { justify-content: flex-end; gap: 5%; }
   .urk__foot-logos--schools img { height: 6cqw; max-width: 30%; object-fit: contain; }
 

@@ -7,6 +7,13 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.63.2] - 2026-07-15
+### Geändert
+- **PitchDay-Urkunde – Feinschliff:** Kopf- und Fußzeilen-Logos überschneiden den
+  türkisen Rahmen nicht mehr (größerer Innenabstand). Unterschriften und Namen
+  kleiner, sodass auch drei Unterzeichnende sauber nebeneinander passen.
+  Sponsoren-Logos in der Fußzeile jetzt **farbig**.
+
 ## [0.63.1] - 2026-07-15
 ### Geändert
 - **PitchDay-Urkunde an die echte Vorlage angepasst:** Die Urkunde bildet jetzt
