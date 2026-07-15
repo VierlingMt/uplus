@@ -54,12 +54,59 @@ final class Media
     }
 
     /**
-     * Maximale Dateigröße je Upload. Orientiert sich an den PHP-Limits der
-     * .user.ini (upload_max_filesize = 64M), damit die Meldung zur Realität passt.
+     * Maximale Dateigröße für den klassischen (einteiligen) Upload. Orientiert
+     * sich an den PHP-Limits der .user.ini (upload_max_filesize = 64M). Größere
+     * Dateien laufen über den Chunk-Upload (siehe maxUploadBytes()).
      */
     public static function maxBytes(): int
     {
         return 64 * 1024 * 1024;
+    }
+
+    /**
+     * Obergrenze für den stückweisen (Chunk-)Upload großer Videos. Umgeht die
+     * PHP-Request-Limits, da jedes Stück einzeln übertragen wird. Benötigt 64-Bit
+     * PHP (Dateigrößen > 2 GB) – auf modernem Hosting Standard.
+     */
+    public static function maxUploadBytes(): int
+    {
+        return 2 * 1024 * 1024 * 1024; // 2 GB
+    }
+
+    /** Größe eines Chunks (Client & Server müssen nicht exakt übereinstimmen). */
+    public const CHUNK_BYTES = 5 * 1024 * 1024;
+
+    /** Temporärer Sammelordner für laufende Chunk-Uploads. */
+    public static function tmpDir(): string
+    {
+        return self::dir() . '/tmp';
+    }
+
+    public static function ensureTmpDir(): bool
+    {
+        if (!self::ensureDir()) {
+            return false;
+        }
+        $d = self::tmpDir();
+        if (!is_dir($d)) {
+            @mkdir($d, 0775, true);
+        }
+        return is_dir($d) && is_writable($d);
+    }
+
+    /** Verwaiste Chunk-Reste (abgebrochene Uploads) älter als 24 h entfernen. */
+    public static function cleanupTmp(): void
+    {
+        $d = self::tmpDir();
+        if (!is_dir($d)) {
+            return;
+        }
+        $cutoff = time() - 24 * 3600;
+        foreach (glob($d . '/*.part') ?: [] as $f) {
+            if (@filemtime($f) < $cutoff) {
+                @unlink($f);
+            }
+        }
     }
 
     /**
@@ -81,8 +128,8 @@ final class Media
     /** Menschlich lesbare Liste der erlaubten Formate (für Hinweise). */
     public static function allowedHint(): string
     {
-        return 'Bilder (JPG, PNG, GIF, WEBP) und Videos (MP4, WEBM, MOV) · max. '
-            . human_size(self::maxBytes()) . ' je Datei';
+        return 'Bilder (JPG, PNG, GIF, WEBP) und Videos (MP4, WEBM, MOV) · große Videos '
+            . 'bis ' . human_size(self::maxUploadBytes()) . ' werden automatisch stückweise hochgeladen';
     }
 
     public static function find(int $id): ?array

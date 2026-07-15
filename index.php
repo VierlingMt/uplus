@@ -103,6 +103,7 @@ try {
         case 'material_download':
         case 'gallery':
         case 'media_file':
+        case 'media_chunk':
         case 'sponsors':
         case 'event':
         case 'event_print':

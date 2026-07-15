@@ -317,13 +317,19 @@ ob_start(); ?>
       <input type="hidden" name="cycle_id" value="<?= $selId ?>">
       <div class="field">
         <label>Bilder &amp; Videos</label>
-        <label class="gal-drop" data-gal-drop data-gal-postmax="<?= (int) $postMaxBytes ?>" data-gal-maxfile="<?= (int) Media::maxBytes() ?>" tabindex="0">
+        <label class="gal-drop" data-gal-drop
+               data-gal-postmax="<?= (int) $postMaxBytes ?>"
+               data-gal-maxupload="<?= (int) Media::maxUploadBytes() ?>"
+               data-gal-chunk-url="<?= e(url('media_chunk')) ?>"
+               data-gal-return="<?= e(url('gallery', ['cycle' => $selId])) ?>"
+               data-gal-cycle="<?= $selId ?>" tabindex="0">
           <input type="file" name="files[]" accept="image/*,video/*" multiple hidden data-gal-input>
           <span class="gal-drop__icon" aria-hidden="true">⬆️</span>
           <span class="gal-drop__hint">Dateien hierher ziehen oder klicken – <strong>Mehrfachauswahl möglich</strong></span>
           <span class="gal-drop__list muted" data-gal-list hidden></span>
         </label>
         <p class="muted" style="font-size:13px;margin:8px 0 0"><?= e(Media::allowedHint()) ?></p>
+        <div class="gal-progress" data-gal-progress hidden></div>
       </div>
       <div class="modal__foot">
         <button type="button" class="btn btn--ghost" data-modal-close>Abbrechen</button>
@@ -480,14 +486,24 @@ ob_start(); ?>
     }
   }
 
-  // --- Upload: Drag & Drop + Dateiliste -----------------------------------
+  // --- Upload: Drag & Drop, Dateiliste, Chunk-Upload ----------------------
   var drop = document.querySelector('[data-gal-drop]');
   if (drop) {
     var inp = drop.querySelector('[data-gal-input]');
     var list = drop.querySelector('[data-gal-list]');
     var uploadForm = drop.closest('form');
+    var progress = uploadForm ? uploadForm.querySelector('[data-gal-progress]') : null;
     var postMax = parseInt(drop.getAttribute('data-gal-postmax'), 10) || 0;
-    var maxFile = parseInt(drop.getAttribute('data-gal-maxfile'), 10) || 0;
+    var maxUpload = parseInt(drop.getAttribute('data-gal-maxupload'), 10) || 0;
+    var chunkUrl = drop.getAttribute('data-gal-chunk-url');
+    var returnUrl = drop.getAttribute('data-gal-return');
+    var cycleId = drop.getAttribute('data-gal-cycle');
+    var csrfInput = uploadForm ? uploadForm.querySelector('[name="_csrf"]') : null;
+    var CHUNK = 5 * 1024 * 1024;
+    // Chunk-Upload nur, wenn der Browser die nötigen APIs beherrscht.
+    var supportsChunk = !!(window.fetch && window.File && window.Blob &&
+      Blob.prototype.slice && window.FormData && window.Promise && chunkUrl);
+
     function fmt(b) {
       var u = ['B', 'KB', 'MB', 'GB'], i = 0, n = b;
       while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
@@ -507,23 +523,171 @@ ob_start(); ?>
       var extra = files.length > 8 ? (' … +' + (files.length - 8)) : '';
       var total = totalBytes();
       list.textContent = files.length + ' Datei(en) · ' + fmt(total) + ': ' + names.join(', ') + extra;
-      // Warnung, wenn Gesamtgröße das Serverlimit übersteigt (5 % Overhead-Puffer).
-      if (postMax > 0 && total > postMax * 0.95) {
+      // Ohne Chunk-Support gilt das Server-Limit; sonst darf es groß sein.
+      if (!supportsChunk && postMax > 0 && total > postMax * 0.95) {
         list.textContent += ' — zu groß (Limit ' + fmt(postMax) + '). Bitte weniger auf einmal.';
         list.classList.add('gal-drop__list--warn');
       }
       list.hidden = false;
     }
+
+    // Ein File in Stücken hochladen; onProgress(0..1).
+    function postForm(fd) {
+      return fetch(chunkUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
+        .then(function (res) {
+          return res.text().then(function (text) {
+            var data;
+            try { data = JSON.parse(text); } catch (e) { throw new Error('Serverantwort ungültig (' + res.status + ')'); }
+            if (!res.ok || !data.ok) { var err = new Error(data && data.error ? data.error : ('Fehler ' + res.status)); err.data = data; throw err; }
+            return data;
+          });
+        });
+    }
+    function randId() {
+      if (window.crypto && crypto.getRandomValues) {
+        var a = new Uint8Array(16); crypto.getRandomValues(a);
+        return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+      }
+      return (Date.now().toString(16) + Math.floor(Math.random() * 1e9).toString(16) + 'abcdef').slice(0, 24);
+    }
+    function delay(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    function uploadFile(file, onProgress) {
+      var id = randId();
+      var offset = 0;
+      function sendNext() {
+        if (offset >= file.size) {
+          var ff = new FormData();
+          ff.append('phase', 'finalize');
+          ff.append('cycle_id', cycleId);
+          if (csrfInput) ff.append('_csrf', csrfInput.value);
+          ff.append('upload_id', id);
+          ff.append('name', file.name);
+          ff.append('size', String(file.size));
+          return postForm(ff);
+        }
+        var end = Math.min(offset + CHUNK, file.size);
+        var blob = file.slice(offset, end);
+        var fd = new FormData();
+        fd.append('phase', 'chunk');
+        fd.append('cycle_id', cycleId);
+        if (csrfInput) fd.append('_csrf', csrfInput.value);
+        fd.append('upload_id', id);
+        fd.append('offset', String(offset));
+        fd.append('chunk', blob, 'chunk');
+        var tries = 0;
+        function attempt() {
+          return postForm(fd).then(function (data) {
+            offset = (typeof data.received === 'number') ? data.received : end;
+            if (onProgress) onProgress(Math.min(offset / file.size, 1));
+            return sendNext();
+          }).catch(function (err) {
+            // Offset-Konflikt: Server hat schon mehr → resynchronisieren.
+            if (err.data && typeof err.data.received === 'number') {
+              offset = err.data.received;
+              if (offset >= file.size) return sendNext();
+            }
+            tries++;
+            if (tries >= 4) throw err;
+            return delay(400 * tries).then(attempt);
+          });
+        }
+        return attempt();
+      }
+      return sendNext();
+    }
+
+    function runChunkUpload(files) {
+      drop.style.display = 'none';
+      list.hidden = true;
+      progress.hidden = false;
+      progress.innerHTML = '';
+      var submitBtn = uploadForm.querySelector('[data-gal-upload-submit]');
+      if (submitBtn) { submitBtn.disabled = true; }
+      var rows = [], errors = 0;
+
+      files.forEach(function (file) {
+        var row = document.createElement('div');
+        row.className = 'gal-prog';
+        row.innerHTML = '<span class="gal-prog__name"></span><span class="gal-prog__bar"><i></i></span><span class="gal-prog__pct">0%</span>';
+        row.querySelector('.gal-prog__name').textContent = file.name + ' (' + fmt(file.size) + ')';
+        progress.appendChild(row);
+        rows.push(row);
+      });
+
+      var chain = Promise.resolve();
+      files.forEach(function (file, idx) {
+        chain = chain.then(function () {
+          var row = rows[idx];
+          var bar = row.querySelector('i');
+          var pct = row.querySelector('.gal-prog__pct');
+          if (maxUpload > 0 && file.size > maxUpload) {
+            row.classList.add('gal-prog--err');
+            pct.textContent = '✗';
+            errors++;
+            var m = document.createElement('div');
+            m.className = 'gal-prog__msg';
+            m.textContent = file.name + ': zu groß (max. ' + fmt(maxUpload) + ').';
+            progress.appendChild(m);
+            return;
+          }
+          return uploadFile(file, function (p) {
+            var v = Math.round(p * 100);
+            bar.style.width = v + '%';
+            pct.textContent = v + '%';
+          }).then(function () {
+            row.classList.add('gal-prog--done');
+            bar.style.width = '100%';
+            pct.textContent = '✓';
+          }).catch(function (err) {
+            row.classList.add('gal-prog--err');
+            pct.textContent = '✗';
+            errors++;
+            var m = document.createElement('div');
+            m.className = 'gal-prog__msg';
+            m.textContent = file.name + ': ' + (err.message || 'Fehler');
+            progress.appendChild(m);
+          });
+        });
+      });
+
+      chain.then(function () {
+        if (errors === 0) {
+          window.location = returnUrl;
+          return;
+        }
+        // Bei Fehlern nicht automatisch neu laden – Meldungen sichtbar lassen.
+        var done = document.createElement('button');
+        done.type = 'button';
+        done.className = 'btn btn--primary';
+        done.style.marginTop = '12px';
+        done.textContent = 'Galerie aktualisieren';
+        done.addEventListener('click', function () { window.location = returnUrl; });
+        progress.appendChild(done);
+        if (submitBtn) { submitBtn.disabled = false; }
+      });
+    }
+
     if (uploadForm) {
       uploadForm.addEventListener('submit', function (e) {
+        var files = inp.files;
+        if (!files || !files.length) { return; } // nichts gewählt → Server meldet es
+        if (supportsChunk) {
+          e.preventDefault();
+          e.stopPropagation(); // kein hängender Lade-Spinner (app.js)
+          runChunkUpload(Array.prototype.slice.call(files));
+          return;
+        }
+        // Fallback ohne Chunk-Support: klassischer Post, aber Größe prüfen.
         var total = totalBytes();
         if (postMax > 0 && total > postMax * 0.95) {
           e.preventDefault();
-          e.stopPropagation(); // verhindert den hängenden Lade-Spinner (app.js)
+          e.stopPropagation();
           renderList();
         }
       });
     }
+
     inp.addEventListener('change', renderList);
     ['dragenter', 'dragover'].forEach(function (ev) {
       drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('gal-drop--over'); });

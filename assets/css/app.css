@@ -699,6 +699,19 @@ input[type="file"] { max-width: 100%; }
 .gal-drop__list { font-size: 13px; word-break: break-word; }
 .gal-drop__list--warn { color: var(--wj-red); font-weight: 600; }
 
+/* Chunk-Upload-Fortschritt */
+.gal-progress { display: flex; flex-direction: column; gap: 8px; }
+.gal-prog { display: grid; grid-template-columns: 1fr 90px 42px; align-items: center; gap: 10px; font-size: 13px; }
+.gal-prog__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gal-prog__bar { height: 8px; background: var(--wj-grey-l); border-radius: 20px; overflow: hidden; }
+.gal-prog__bar i { display: block; height: 100%; width: 0; background: var(--wj-teal); border-radius: 20px; transition: width .2s ease; }
+.gal-prog__pct { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.gal-prog--done .gal-prog__pct { color: var(--wj-teal-d); font-weight: 700; }
+.gal-prog--done .gal-prog__bar i { background: var(--wj-teal-d); }
+.gal-prog--err .gal-prog__pct { color: var(--wj-red); font-weight: 700; }
+.gal-prog--err .gal-prog__bar i { background: var(--wj-red); }
+.gal-prog__msg { color: var(--wj-red); font-size: 12.5px; }
+
 /* Lightbox */
 .gal-lightbox {
   position: fixed; inset: 0; z-index: 60; background: rgba(4,14,32,.92);

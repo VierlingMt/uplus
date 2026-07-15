@@ -7,6 +7,22 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.67.0] - 2026-07-15
+### Hinzugefügt
+- **Mediengalerie – Upload großer Videos (bis 2 GB) per Chunk-Upload:** Große
+  Dateien werden im Browser automatisch in kleine Stücke (5 MB) zerlegt und
+  einzeln übertragen. Damit umgehen wir die PHP-Request-Limits
+  (`post_max_size`/`upload_max_filesize`), die einen 2-GB-Upload sonst verhindern.
+  Der Server hängt die Stücke an eine Temp-Datei an und finalisiert am Ende
+  (Validierung, Verschieben, DB-Eintrag). Mit **Fortschrittsanzeige je Datei**,
+  automatischer **Wiederaufnahme** bei kurzen Aussetzern und Bereinigung
+  verwaister Reste. Ohne passende Browser-Funktionen bleibt der klassische
+  Direkt-Upload als Rückfallebene. Neue Datei: `app/pages/media_chunk.php`.
+
+  Hinweis: Die Temp-Datei belegt während des Uploads einmalig den vollen
+  Speicherplatz der Datei – bei sehr großen Videos auf ausreichendes Kontingent
+  des Webspace achten.
+
 ## [0.66.2] - 2026-07-15
 ### Behoben
 - **Mediengalerie – Lightbox lag beim Laden offen über der Seite:** Eine
