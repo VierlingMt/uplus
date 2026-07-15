@@ -410,7 +410,52 @@ final class Migrator
                         REFERENCES users(id) ON DELETE SET NULL
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             ],
+            [
+                'version' => '2026_07_39_media_taken_at',
+                'name'    => 'Mediengalerie: Aufnahmedatum (EXIF/Video-Metadaten) für Sortierung',
+                'up'      => [self::class, 'mediaTakenAt'],
+            ],
         ];
+    }
+
+    /**
+     * Spalte `taken_at` (Aufnahmedatum) für die Mediengalerie ergänzen und für
+     * vorhandene Medien einmalig aus den Datei-Metadaten (EXIF bzw. mvhd) füllen.
+     * Danach wird die Galerie nach Aufnahmedatum sortiert (Fallback: Upload-Zeit).
+     * Der Backfill ist best effort – Dateien ohne verwertbares Datum bleiben NULL.
+     */
+    public static function mediaTakenAt(PDO $pdo): void
+    {
+        $pdo->exec('ALTER TABLE media_items
+            ADD COLUMN IF NOT EXISTS taken_at DATETIME NULL AFTER size_bytes');
+
+        // Index nur anlegen, wenn er fehlt (portabel für MariaDB und MySQL).
+        $idx = (bool) $pdo->query(
+            "SELECT COUNT(*) FROM information_schema.statistics
+             WHERE table_schema = DATABASE() AND table_name = 'media_items'
+               AND index_name = 'idx_media_taken'"
+        )->fetchColumn();
+        if (!$idx) {
+            $pdo->exec('ALTER TABLE media_items ADD KEY idx_media_taken (taken_at)');
+        }
+
+        // Backfill vorhandener Medien (einmalig, idempotent über taken_at IS NULL).
+        $rows = $pdo->query('SELECT id, stored_name, kind, mime FROM media_items WHERE taken_at IS NULL')
+                    ->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if (!$rows) {
+            return;
+        }
+        $upd = $pdo->prepare('UPDATE media_items SET taken_at = ? WHERE id = ?');
+        foreach ($rows as $r) {
+            $path = Media::dir() . '/' . basename((string) $r['stored_name']);
+            if (!is_file($path)) {
+                continue;
+            }
+            $taken = Media::extractTakenAt($path, (string) $r['kind'], $r['mime'] ?? null);
+            if ($taken !== null) {
+                $upd->execute([$taken, (int) $r['id']]);
+            }
+        }
     }
 
     /**

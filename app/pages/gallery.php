@@ -87,10 +87,11 @@ if (is_post()) {
                 $skipped++;
                 continue;
             }
+            $taken = Media::extractTakenAt(Media::dir() . '/' . $stored, $type['kind'], $type['mime']);
             Database::insert(
-                'INSERT INTO media_items (cycle_id, uploaded_by, kind, stored_name, original_name, mime, size_bytes)
-                 VALUES (?,?,?,?,?,?,?)',
-                [$cycleId, Auth::id(), $type['kind'], $stored, mb_substr($name, 0, 255), $type['mime'], $sz]
+                'INSERT INTO media_items (cycle_id, uploaded_by, kind, stored_name, original_name, mime, size_bytes, taken_at)
+                 VALUES (?,?,?,?,?,?,?,?)',
+                [$cycleId, Auth::id(), $type['kind'], $stored, mb_substr($name, 0, 255), $type['mime'], $sz, $taken]
             );
             $ok++;
         }
@@ -211,6 +212,13 @@ $postMaxBytes = (static function (): int {
     };
 })();
 
+// Anzeige-Datum: Aufnahmedatum, ersatzweise Upload-Zeit.
+$mediaDate = static function (array $m): string {
+    $src = !empty($m['taken_at']) ? (string) $m['taken_at'] : (string) ($m['created_at'] ?? '');
+    $ts = $src !== '' ? strtotime($src) : false;
+    return $ts ? date('d.m.Y', $ts) : '';
+};
+
 // Vorbefüllung fürs Bearbeiten-Modal.
 $fill = fn(array $m) => e(json_encode([
     'id'    => (int) $m['id'],
@@ -268,12 +276,14 @@ ob_start(); ?>
     <div class="gal-grid" data-gal-grid<?= tour_attrs('Galerie', 'Klicke auf ein Bild oder Video, um es groß anzusehen. Eigene Beiträge kannst du bearbeiten oder löschen; die Projektleitung verwaltet alle.', 30) ?>>
       <?php foreach ($items as $m): $mid = (int) $m['id']; $editable = Media::canEdit($m);
         $src = url('media_file', ['id' => $mid]); ?>
+        <?php $dispDate = $mediaDate($m); ?>
         <figure class="gal-tile" data-gal-tile
                 data-id="<?= $mid ?>"
                 data-kind="<?= e($m['kind']) ?>"
                 data-src="<?= e($src) ?>"
                 data-title="<?= e((string) ($m['title'] ?? '')) ?>"
-                data-uploader="<?= e((string) ($m['uploader_name'] ?? '')) ?>">
+                data-uploader="<?= e((string) ($m['uploader_name'] ?? '')) ?>"
+                data-date="<?= e($dispDate) ?>">
           <?php if ($editable): ?>
             <label class="gal-tile__check" title="Auswählen">
               <input type="checkbox" name="ids[]" value="<?= $mid ?>" data-gal-check>
@@ -292,7 +302,7 @@ ob_start(); ?>
           <figcaption class="gal-tile__cap">
             <?php if ($m['title']): ?><span class="gal-tile__title"><?= e($m['title']) ?></span><?php endif; ?>
             <span class="gal-tile__meta">
-              <?= e((string) ($m['uploader_name'] ?? 'Unbekannt')) ?>
+              <?php if ($dispDate !== ''): ?><span class="gal-tile__date">📅 <?= e($dispDate) ?></span> · <?php endif; ?><?= e((string) ($m['uploader_name'] ?? 'Unbekannt')) ?>
               <?php if ($editable): ?>
                 · <button type="button" class="linklike" data-modal-open="editModal" data-fill="<?= $fill($m) ?>">Bearbeiten</button>
               <?php endif; ?>
@@ -403,6 +413,7 @@ ob_start(); ?>
       var src = t.getAttribute('data-src');
       var title = t.getAttribute('data-title') || '';
       var uploader = t.getAttribute('data-uploader') || '';
+      var date = t.getAttribute('data-date') || '';
       stage.innerHTML = '';
       var el;
       if (kind === 'video') {
@@ -414,7 +425,11 @@ ob_start(); ?>
       }
       el.className = 'gal-lightbox__media';
       stage.appendChild(el);
-      cap.textContent = title ? (title + ' · ' + uploader) : uploader;
+      var parts = [];
+      if (title) parts.push(title);
+      if (date) parts.push(date);
+      if (uploader) parts.push(uploader);
+      cap.textContent = parts.join(' · ');
     }
     function openLb(i) { show(i); lb.hidden = false; document.body.classList.add('modal-open'); }
     function closeLb() {

@@ -141,10 +141,11 @@ if ($phase === 'finalize') {
         @unlink($tmpPath);
     }
 
+    $taken = Media::extractTakenAt($dest, $type['kind'], $type['mime']);
     $id = Database::insert(
-        'INSERT INTO media_items (cycle_id, uploaded_by, kind, stored_name, original_name, mime, size_bytes)
-         VALUES (?,?,?,?,?,?,?)',
-        [$cycleId, Auth::id(), $type['kind'], $stored, mb_substr($name, 0, 255), $type['mime'], $size]
+        'INSERT INTO media_items (cycle_id, uploaded_by, kind, stored_name, original_name, mime, size_bytes, taken_at)
+         VALUES (?,?,?,?,?,?,?,?)',
+        [$cycleId, Auth::id(), $type['kind'], $stored, mb_substr($name, 0, 255), $type['mime'], $size, $taken]
     );
     Audit::log('gallery.upload', '1 Medium hochgeladen (' . human_size($size) . ')', 'media', $id);
     jexit(['ok' => true, 'id' => $id]);

@@ -679,6 +679,7 @@ input[type="file"] { max-width: 100%; }
 .gal-tile__cap { padding: 9px 11px; font-size: 13px; }
 .gal-tile__title { display: block; font-weight: 600; color: var(--ink); margin-bottom: 2px; word-break: break-word; }
 .gal-tile__meta { color: var(--muted); font-size: 12px; }
+.gal-tile__date { white-space: nowrap; }
 .gal-tile__check {
   position: absolute; top: 8px; left: 8px; z-index: 2; width: 30px; height: 30px; border-radius: 8px;
   background: rgba(255,255,255,.92); box-shadow: var(--shadow); display: none; align-items: center; justify-content: center; cursor: pointer;

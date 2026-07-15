@@ -7,6 +7,16 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.68.0] - 2026-07-15
+### Hinzugefügt
+- **Mediengalerie – Sortierung nach Aufnahmedatum:** Bilder und Videos werden
+  jetzt nach ihrem **Aufnahmezeitpunkt** einsortiert (neueste zuerst), nicht
+  mehr nach der Upload-Zeit. Das Datum wird beim Hochladen aus den Metadaten
+  gelesen – Fotos über **EXIF** (`DateTimeOriginal`), MP4/MOV-Videos über das
+  **mvhd-Atom** – und als `taken_at` gespeichert; fehlt es, greift als Fallback
+  die Upload-Zeit. Das Datum erscheint zusätzlich an jeder Kachel und in der
+  Großansicht. Bestehende Medien werden per Migration einmalig nachgezogen.
+
 ## [0.67.1] - 2026-07-15
 ### Behoben
 - **Hilfe- und Tour-Buttons reagierten nicht:** Auf Seiten mit Karten ohne

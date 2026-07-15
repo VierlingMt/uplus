@@ -132,12 +132,157 @@ final class Media
             . 'bis ' . human_size(self::maxUploadBytes()) . ' werden automatisch stückweise hochgeladen';
     }
 
+    // --- Aufnahmedatum aus Metadaten ------------------------------------
+
+    /**
+     * Aufnahmedatum (Aufnahmezeitpunkt) aus den Metadaten lesen. Fotos über EXIF,
+     * MP4/MOV-Videos über das mvhd-Atom. Liefert „Y-m-d H:i:s“ oder null, wenn
+     * kein plausibles Datum ermittelbar ist (dann greift die Fallback-Sortierung
+     * nach Upload-Zeit).
+     */
+    public static function extractTakenAt(string $path, string $kind, ?string $mime): ?string
+    {
+        try {
+            if ($kind === self::KIND_IMAGE) {
+                return self::imageTakenAt($path, (string) $mime);
+            }
+            if ($kind === self::KIND_VIDEO) {
+                $ts = self::videoCreationTime($path);
+                return $ts !== null ? date('Y-m-d H:i:s', $ts) : null;
+            }
+        } catch (\Throwable $e) {
+            // Metadaten sind „nice to have“ – niemals den Upload gefährden.
+        }
+        return null;
+    }
+
+    private static function imageTakenAt(string $path, string $mime): ?string
+    {
+        if (!function_exists('exif_read_data')) {
+            return null;
+        }
+        // EXIF gibt es sinnvoll nur bei JPEG/TIFF (PNG/GIF/WEBP i. d. R. ohne).
+        if (!in_array($mime, ['image/jpeg', 'image/tiff'], true)) {
+            return null;
+        }
+        $ex = @exif_read_data($path);
+        if (!is_array($ex)) {
+            return null;
+        }
+        $dt = $ex['DateTimeOriginal'] ?? $ex['DateTimeDigitized'] ?? $ex['DateTime'] ?? null;
+        if (!is_string($dt) || !preg_match('/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/', $dt, $m)) {
+            return null;
+        }
+        $year = (int) $m[1];
+        if ($year < 1990 || $year > 2100) {
+            return null; // unplausibel (z. B. leeres/0000-Datum)
+        }
+        return "{$m[1]}-{$m[2]}-{$m[3]} {$m[4]}:{$m[5]}:{$m[6]}";
+    }
+
+    /** Unix-Zeit aus dem mvhd-Atom eines MP4/MOV (best effort) oder null. */
+    private static function videoCreationTime(string $path): ?int
+    {
+        $fh = @fopen($path, 'rb');
+        if (!$fh) {
+            return null;
+        }
+        try {
+            $size = (int) filesize($path);
+            return self::scanForMvhd($fh, 0, $size, 0);
+        } finally {
+            fclose($fh);
+        }
+    }
+
+    /** Durchsucht die Atome von MP4/MOV nach 'moov' → 'mvhd' (per Seek, ohne alles zu laden). */
+    private static function scanForMvhd($fh, int $start, int $end, int $depth): ?int
+    {
+        if ($depth > 3) {
+            return null;
+        }
+        $pos = $start;
+        while ($pos + 8 <= $end) {
+            fseek($fh, $pos);
+            $hdr = fread($fh, 8);
+            if ($hdr === false || strlen($hdr) < 8) {
+                break;
+            }
+            $size = unpack('N', substr($hdr, 0, 4))[1];
+            $type = substr($hdr, 4, 4);
+            $headerLen = 8;
+            if ($size === 1) { // 64-Bit-Größe folgt
+                $ext = fread($fh, 8);
+                if ($ext === false || strlen($ext) < 8) {
+                    break;
+                }
+                $size = unpack('J', $ext)[1];
+                $headerLen = 16;
+            } elseif ($size === 0) {
+                $size = $end - $pos; // reicht bis zum Ende
+            }
+            if ($size < $headerLen) {
+                break;
+            }
+            $payloadStart = $pos + $headerLen;
+            $payloadEnd   = min($pos + $size, $end);
+
+            if ($type === 'mvhd') {
+                fseek($fh, $payloadStart);
+                $vf = fread($fh, 4); // 1 Byte version + 3 Byte flags
+                if ($vf === false || strlen($vf) < 4) {
+                    return null;
+                }
+                if (ord($vf[0]) === 1) {
+                    $ct = fread($fh, 8);
+                    if ($ct === false || strlen($ct) < 8) {
+                        return null;
+                    }
+                    $secs = unpack('J', $ct)[1];
+                } else {
+                    $ct = fread($fh, 4);
+                    if ($ct === false || strlen($ct) < 4) {
+                        return null;
+                    }
+                    $secs = unpack('N', $ct)[1];
+                }
+                return self::macTimeToUnix((int) $secs);
+            }
+            if ($type === 'moov') {
+                $r = self::scanForMvhd($fh, $payloadStart, $payloadEnd, $depth + 1);
+                if ($r !== null) {
+                    return $r;
+                }
+            }
+            $pos += $size;
+        }
+        return null;
+    }
+
+    /** QuickTime-Zeit (Sekunden seit 1904-01-01) → Unix; null bei 0/unplausibel. */
+    private static function macTimeToUnix(int $secs): ?int
+    {
+        $epoch = 2082844800; // Sekunden zwischen 1904-01-01 und 1970-01-01
+        if ($secs <= $epoch) {
+            return null; // 0 = unbekannt, oder vor 1970
+        }
+        $unix = $secs - $epoch;
+        // Plausibilität: ab 1990 bis knapp in die Zukunft.
+        if ($unix < 631152000 || $unix > time() + 400 * 86400) {
+            return null;
+        }
+        return $unix;
+    }
+
     public static function find(int $id): ?array
     {
         return Database::one('SELECT * FROM media_items WHERE id = ?', [$id]);
     }
 
-    /** Medien eines Zyklus (neueste zuerst) samt Name der hochladenden Person. */
+    /**
+     * Medien eines Zyklus samt Name der hochladenden Person. Sortiert nach
+     * Aufnahmedatum (neueste zuerst); fehlt es, greift die Upload-Zeit.
+     */
     public static function forCycle(int $cycleId): array
     {
         return Database::all(
@@ -145,7 +290,7 @@ final class Media
                FROM media_items m
                LEFT JOIN users u ON u.id = m.uploaded_by
               WHERE m.cycle_id = ?
-              ORDER BY m.created_at DESC, m.id DESC',
+              ORDER BY COALESCE(m.taken_at, m.created_at) DESC, m.id DESC',
             [$cycleId]
         );
     }
