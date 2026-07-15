@@ -274,6 +274,154 @@ final class Media
         return $unix;
     }
 
+    // --- Vorschau-/Ansichtsvarianten (Thumbnails) -----------------------
+
+    /** Varianten und ihre maximale Kantenlänge (Original bleibt unangetastet). */
+    public const VARIANTS = [
+        'thumb' => 500,   // Kacheln in der Galerie
+        'view'  => 1600,  // Lightbox / Großansicht
+    ];
+
+    /** Dateiendung der generierten Varianten (WEBP, sonst JPEG). */
+    public static function derivExt(): string
+    {
+        return function_exists('imagewebp') ? 'webp' : 'jpg';
+    }
+
+    public static function variantDir(string $variant): string
+    {
+        return self::dir() . '/' . $variant;
+    }
+
+    /** Zielpfad einer Variante zu einem Medien-Datensatz. */
+    public static function variantPath(array $item, string $variant): string
+    {
+        $base = pathinfo((string) $item['stored_name'], PATHINFO_FILENAME);
+        return self::variantDir($variant) . '/' . $base . '.' . self::derivExt();
+    }
+
+    /**
+     * Liefert den Pfad zur gewünschten Bildvariante und erzeugt sie bei Bedarf.
+     * Nur für Bilder; sonst (oder bei Fehlern) null → der Aufrufer liefert das
+     * Original aus. Die Variante wird auf der Platte gecacht (einmalig erzeugt).
+     */
+    public static function ensureDerivative(array $item, string $variant): ?string
+    {
+        if (($item['kind'] ?? '') !== self::KIND_IMAGE || !isset(self::VARIANTS[$variant])) {
+            return null;
+        }
+        if (!extension_loaded('gd')) {
+            return null;
+        }
+        $orig = self::dir() . '/' . basename((string) $item['stored_name']);
+        if (!is_file($orig)) {
+            return null;
+        }
+        $dest = self::variantPath($item, $variant);
+        if (is_file($dest) && @filemtime($dest) >= @filemtime($orig)) {
+            return $dest; // bereits aktuell
+        }
+        $dir = self::variantDir($variant);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+        if (!is_dir($dir) || !is_writable($dir)) {
+            return null;
+        }
+        try {
+            return self::generateImageVariant($orig, $dest, self::VARIANTS[$variant]) ? $dest : null;
+        } catch (\Throwable $e) {
+            @unlink($dest);
+            return null;
+        }
+    }
+
+    /** Alle Vorschau-/Ansichtsvarianten eines Bildes (idempotent) erzeugen. */
+    public static function buildDerivatives(array $item): void
+    {
+        if (($item['kind'] ?? '') !== self::KIND_IMAGE) {
+            return;
+        }
+        foreach (array_keys(self::VARIANTS) as $v) {
+            self::ensureDerivative($item, $v);
+        }
+    }
+
+    /** Verkleinerte Variante mit GD erzeugen (EXIF-Ausrichtung berücksichtigt). */
+    private static function generateImageVariant(string $src, string $dest, int $maxDim): bool
+    {
+        $info = @getimagesize($src);
+        if ($info === false) {
+            return false;
+        }
+        [$w, $h] = $info;
+        $type = $info[2];
+        if ($w < 1 || $h < 1) {
+            return false;
+        }
+
+        $srcImg = match ($type) {
+            IMAGETYPE_JPEG => @imagecreatefromjpeg($src),
+            IMAGETYPE_PNG  => @imagecreatefrompng($src),
+            IMAGETYPE_GIF  => @imagecreatefromgif($src),
+            IMAGETYPE_WEBP => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($src) : false,
+            default        => false,
+        };
+        if (!$srcImg) {
+            return false;
+        }
+
+        $scale = min(1.0, $maxDim / max($w, $h)); // nie hochskalieren
+        $nw = max(1, (int) round($w * $scale));
+        $nh = max(1, (int) round($h * $scale));
+
+        $useWebp = self::derivExt() === 'webp';
+        $dst = imagecreatetruecolor($nw, $nh);
+        if ($useWebp) {
+            imagealphablending($dst, false);
+            imagesavealpha($dst, true);
+            imagefill($dst, 0, 0, imagecolorallocatealpha($dst, 0, 0, 0, 127));
+        } else {
+            // JPEG kennt keine Transparenz → weißer Hintergrund.
+            imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255));
+        }
+        imagecopyresampled($dst, $srcImg, 0, 0, 0, 0, $nw, $nh, $w, $h);
+        imagedestroy($srcImg);
+
+        // Handy-Fotos: Ausrichtung aus EXIF korrigieren (nur JPEG).
+        if ($type === IMAGETYPE_JPEG && function_exists('exif_read_data')) {
+            $ex = @exif_read_data($src);
+            $angle = match ((int) ($ex['Orientation'] ?? 0)) {
+                3 => 180,
+                6 => -90,
+                8 => 90,
+                default => 0,
+            };
+            if ($angle !== 0 && function_exists('imagerotate')) {
+                $bg = $useWebp ? imagecolorallocatealpha($dst, 0, 0, 0, 127) : imagecolorallocate($dst, 255, 255, 255);
+                $rot = imagerotate($dst, $angle, $bg);
+                if ($rot !== false) {
+                    imagedestroy($dst);
+                    $dst = $rot;
+                    if ($useWebp) { imagealphablending($dst, false); imagesavealpha($dst, true); }
+                }
+            }
+        }
+
+        $ok = $useWebp ? @imagewebp($dst, $dest, 82) : @imagejpeg($dst, $dest, 82);
+        imagedestroy($dst);
+        return (bool) $ok;
+    }
+
+    /** Original samt aller generierten Varianten löschen. */
+    public static function deleteFiles(array $item): void
+    {
+        @unlink(self::dir() . '/' . basename((string) $item['stored_name']));
+        foreach (array_keys(self::VARIANTS) as $v) {
+            @unlink(self::variantPath($item, $v));
+        }
+    }
+
     public static function find(int $id): ?array
     {
         return Database::one('SELECT * FROM media_items WHERE id = ?', [$id]);

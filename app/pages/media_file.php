@@ -1,9 +1,15 @@
 <?php
 /**
- * Mediendatei ausliefern (mit Auth-Prüfung). Bilder & Videos der Galerie liegen
- * außerhalb des Web-Roots und werden nur über diesen Controller ausgegeben.
- * Für Videos wird HTTP-Range (206) unterstützt, damit Abspielen/Spulen im
- * Browser zuverlässig funktioniert. Jede:r angemeldete Nutzer:in darf ansehen.
+ * Mediendatei ausliefern (mit Auth-Prüfung). Galerie-Medien liegen außerhalb
+ * des Web-Roots und werden nur über diesen Controller ausgegeben.
+ *
+ *   (ohne v)      → Original (Bild inline, Video mit HTTP-Range zum Streamen)
+ *   v=thumb       → kleine Vorschau für die Kacheln (schnelles Laden)
+ *   v=view        → mittlere Ansicht für die Lightbox
+ *   download=1    → Original als Download (Originalgröße)
+ *
+ * Für Videos gibt es keine Bildvarianten; dort wird immer das Original mit
+ * Range-Unterstützung geliefert.
  */
 declare(strict_types=1);
 
@@ -15,20 +21,39 @@ if (!$m) {
     exit('Nicht gefunden.');
 }
 
+$download = (bool) input('download');
+$variant  = (string) input('v');
+
+// Auszuliefernden Pfad bestimmen: Download & Video immer Original; bei Bildern
+// die angeforderte Variante (bei Bedarf erzeugt), sonst das Original.
 $path = Media::dir() . '/' . basename((string) $m['stored_name']);
+if (!$download && !$variant && $m['kind'] === Media::KIND_IMAGE) {
+    // Ohne Angabe zeigen wir bei Bildern die „Ansicht“ (spart Bandbreite);
+    // das Original gibt es über download=1.
+    $variant = 'view';
+}
+if (!$download && $variant && $m['kind'] === Media::KIND_IMAGE) {
+    $deriv = Media::ensureDerivative($m, $variant);
+    if ($deriv !== null && is_file($deriv)) {
+        $path = $deriv;
+    }
+}
+
 if (!is_file($path)) {
     http_response_code(404);
     exit('Datei fehlt.');
 }
 
-$size = filesize($path);
-$mime = (string) ($m['mime'] ?: (mime_content_type($path) ?: 'application/octet-stream'));
-$download = (bool) input('download');
+$size = (int) filesize($path);
+$isOriginal = ($path === Media::dir() . '/' . basename((string) $m['stored_name']));
+$mime = $isOriginal
+    ? (string) ($m['mime'] ?: (mime_content_type($path) ?: 'application/octet-stream'))
+    : (mime_content_type($path) ?: 'image/webp');
 
 header('Content-Type: ' . $mime);
 header('X-Content-Type-Options: nosniff');
 header('Accept-Ranges: bytes');
-header('Cache-Control: private, max-age=86400');
+header('Cache-Control: private, max-age=604800'); // Varianten & Originale sind unveränderlich
 
 if ($download) {
     $name = (string) ($m['original_name'] ?: $m['stored_name']);
@@ -48,7 +73,6 @@ if ($range !== '' && preg_match('/bytes=(\d*)-(\d*)/', $range, $mm)) {
         $end = (int) $mm[2];
     }
     if ($mm[1] === '' && $mm[2] !== '') {
-        // Suffix-Range: letzte N Bytes.
         $start = max(0, $size - (int) $mm[2]);
         $end   = $size - 1;
     }
@@ -65,7 +89,6 @@ if ($range !== '' && preg_match('/bytes=(\d*)-(\d*)/', $range, $mm)) {
 $length = $end - $start + 1;
 header('Content-Length: ' . $length);
 
-// Ausgabepuffer leeren, damit große Dateien nicht in den Speicher passen müssen.
 while (ob_get_level() > 0) {
     ob_end_clean();
 }

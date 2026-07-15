@@ -93,6 +93,8 @@ if (is_post()) {
                  VALUES (?,?,?,?,?,?,?,?)',
                 [$cycleId, Auth::id(), $type['kind'], $stored, mb_substr($name, 0, 255), $type['mime'], $sz, $taken]
             );
+            // Vorschau-/Ansichtsvarianten erzeugen (nur Bilder; best effort).
+            Media::buildDerivatives(['stored_name' => $stored, 'kind' => $type['kind']]);
             $ok++;
         }
 
@@ -129,7 +131,7 @@ if (is_post()) {
     if ($action === 'delete') {
         $item = Media::find((int) input('id'));
         if ($item && Media::canEdit($item)) {
-            @unlink(Media::dir() . '/' . basename((string) $item['stored_name']));
+            Media::deleteFiles($item);
             Database::run('DELETE FROM media_items WHERE id = ?', [(int) $item['id']]);
             Audit::log('gallery.delete', 'Medium gelöscht #' . (int) $item['id'], 'media', (int) $item['id']);
             flash('success', 'Medium gelöscht.');
@@ -148,7 +150,7 @@ if (is_post()) {
             if ($id <= 0) { continue; }
             $item = Media::find($id);
             if ($item && Media::canEdit($item)) {
-                @unlink(Media::dir() . '/' . basename((string) $item['stored_name']));
+                Media::deleteFiles($item);
                 Database::run('DELETE FROM media_items WHERE id = ?', [$id]);
                 $del++;
             }
@@ -275,12 +277,18 @@ ob_start(); ?>
 
     <div class="gal-grid" data-gal-grid<?= tour_attrs('Galerie', 'Klicke auf ein Bild oder Video, um es groß anzusehen. Eigene Beiträge kannst du bearbeiten oder löschen; die Projektleitung verwaltet alle.', 30) ?>>
       <?php foreach ($items as $m): $mid = (int) $m['id']; $editable = Media::canEdit($m);
-        $src = url('media_file', ['id' => $mid]); ?>
-        <?php $dispDate = $mediaDate($m); ?>
+        $isImg    = $m['kind'] === Media::KIND_IMAGE;
+        $thumbUrl = url('media_file', ['id' => $mid, 'v' => 'thumb']);
+        $viewUrl  = url('media_file', ['id' => $mid, 'v' => 'view']);
+        $playUrl  = url('media_file', ['id' => $mid]);
+        $origUrl  = url('media_file', ['id' => $mid, 'download' => 1]);
+        $lbSrc    = $isImg ? $viewUrl : $playUrl; // Lightbox: Bild = Ansicht, Video = Original-Stream
+        $dispDate = $mediaDate($m); ?>
         <figure class="gal-tile" data-gal-tile
                 data-id="<?= $mid ?>"
                 data-kind="<?= e($m['kind']) ?>"
-                data-src="<?= e($src) ?>"
+                data-src="<?= e($lbSrc) ?>"
+                data-download="<?= e($origUrl) ?>"
                 data-title="<?= e((string) ($m['title'] ?? '')) ?>"
                 data-uploader="<?= e((string) ($m['uploader_name'] ?? '')) ?>"
                 data-date="<?= e($dispDate) ?>">
@@ -290,11 +298,11 @@ ob_start(); ?>
             </label>
           <?php endif; ?>
           <button type="button" class="gal-tile__view" data-gal-open aria-label="Ansehen">
-            <?php if ($m['kind'] === Media::KIND_IMAGE): ?>
-              <img src="<?= e($src) ?>" alt="<?= e((string) ($m['title'] ?? 'Bild')) ?>" loading="lazy">
+            <?php if ($isImg): ?>
+              <img src="<?= e($thumbUrl) ?>" alt="<?= e((string) ($m['title'] ?? 'Bild')) ?>" loading="lazy">
             <?php else: ?>
               <span class="gal-tile__video">
-                <video src="<?= e($src) ?>#t=0.1" preload="metadata" muted playsinline></video>
+                <video src="<?= e($playUrl) ?>#t=0.1" preload="metadata" muted playsinline></video>
                 <span class="gal-tile__play" aria-hidden="true">▶</span>
               </span>
             <?php endif; ?>
@@ -381,7 +389,10 @@ ob_start(); ?>
 
 <!-- Lightbox -->
 <div class="gal-lightbox" id="galLightbox" hidden>
-  <button type="button" class="gal-lightbox__close" data-gal-lb-close aria-label="Schließen">&times;</button>
+  <div class="gal-lightbox__tools">
+    <a class="gal-lightbox__tool" data-gal-lb-dl download title="Original herunterladen" aria-label="Original herunterladen">⬇</a>
+    <button type="button" class="gal-lightbox__tool gal-lightbox__close" data-gal-lb-close aria-label="Schließen">&times;</button>
+  </div>
   <button type="button" class="gal-lightbox__nav gal-lightbox__nav--prev" data-gal-lb-prev aria-label="Vorheriges">‹</button>
   <div class="gal-lightbox__stage" data-gal-lb-stage></div>
   <button type="button" class="gal-lightbox__nav gal-lightbox__nav--next" data-gal-lb-next aria-label="Nächstes">›</button>
@@ -397,6 +408,7 @@ ob_start(); ?>
   if (grid && lb) {
     var stage = lb.querySelector('[data-gal-lb-stage]');
     var cap = lb.querySelector('[data-gal-lb-cap]');
+    var dl = lb.querySelector('[data-gal-lb-dl]');
     var tiles = [], idx = -1;
 
     function collect() {
@@ -425,6 +437,7 @@ ob_start(); ?>
       }
       el.className = 'gal-lightbox__media';
       stage.appendChild(el);
+      if (dl) dl.setAttribute('href', t.getAttribute('data-download') || t.getAttribute('data-src') || '#');
       var parts = [];
       if (title) parts.push(title);
       if (date) parts.push(date);

@@ -147,6 +147,8 @@ if ($phase === 'finalize') {
          VALUES (?,?,?,?,?,?,?,?)',
         [$cycleId, Auth::id(), $type['kind'], $stored, mb_substr($name, 0, 255), $type['mime'], $size, $taken]
     );
+    // Vorschau-/Ansichtsvarianten erzeugen (nur Bilder; best effort).
+    Media::buildDerivatives(['stored_name' => $stored, 'kind' => $type['kind']]);
     Audit::log('gallery.upload', '1 Medium hochgeladen (' . human_size($size) . ')', 'media', $id);
     jexit(['ok' => true, 'id' => $id]);
 }

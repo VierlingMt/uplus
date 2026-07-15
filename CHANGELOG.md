@@ -7,6 +7,20 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.69.0] - 2026-07-15
+### Hinzugefügt
+- **Mediengalerie – Vorschaubilder für schnelles Laden:** Zu jedem Bild werden
+  serverseitig zwei verkleinerte Varianten erzeugt – ein **Thumbnail** für die
+  Kacheln und eine **Ansicht** für die Großansicht (Lightbox). Statt des vollen
+  Originals (oft mehrere MB) lädt die Galerie so nur wenige KB je Bild, was das
+  Öffnen drastisch beschleunigt. Die Handy-Ausrichtung (EXIF) wird dabei
+  korrigiert, WEBP mit JPEG-Fallback genutzt. Varianten entstehen beim Hochladen
+  und werden bei bestehenden Bildern beim ersten Ansehen automatisch nachgezogen
+  (auf der Platte gecacht).
+- **Original herunterladen:** In der Großansicht gibt es einen **Download-Knopf**,
+  der stets das **Original in voller Größe** liefert. Videos werden weiterhin per
+  HTTP-Range gestreamt (nur die benötigten Abschnitte).
+
 ## [0.68.0] - 2026-07-15
 ### Hinzugefügt
 - **Mediengalerie – Sortierung nach Aufnahmedatum:** Bilder und Videos werden
