@@ -7,6 +7,15 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.73.2] - 2026-07-16
+### Behoben
+- **Präsentation – Vollbild nutzt die Fläche jetzt voll:** Im Vollbild blieb die
+  Schrift zu klein (feste Obergrenze), sodass unten viel leerer Platz blieb. Die
+  Schrift skaliert jetzt **ohne Obergrenze proportional** mit der Folie (klein auf
+  dem Handy, groß im Vollbild), und die Inhaltsfolien sind **vertikal zentriert** –
+  so wird die Folienfläche in jeder Größe sauber ausgenutzt, ohne dass etwas
+  abgeschnitten wird.
+
 ## [0.73.1] - 2026-07-16
 ### Behoben
 - **Präsentation – Folien auf schmalen Displays abgeschnitten:** Auf dem Handy

@@ -37,14 +37,18 @@
   display: flex;
   flex-direction: column;
   /* Schriftgröße = fester Anteil der Folienbreite (cqw). Da alle Maße in em/%
-     davon abgeleitet sind, skaliert der gesamte Folieninhalt proportional und
-     bleibt im 16:9-Rahmen. Niedrige Untergrenze, damit auch auf schmalen
-     Displays nichts abgeschnitten wird. Fallback (ohne cqw) via vw. */
-  font-size: clamp(7px, 2.4cqw, 30px);
+     davon abgeleitet sind, skaliert der gesamte Folieninhalt proportional mit der
+     Folie – klein auf dem Handy, groß im Vollbild – und bleibt stets im 16:9-
+     Rahmen. Nur eine niedrige Untergrenze, KEINE Obergrenze, damit große Bild-
+     schirme (Vollbild) voll ausgenutzt werden. Fallback (ohne cqw) via vw. */
+  font-size: max(7px, 2.4cqw);
 }
 @supports not (font-size: 1cqw) {
-  .ps-slide__inner { font-size: clamp(7px, 2.2vw, 26px); }
+  .ps-slide__inner { font-size: max(7px, 2.2vw); }
 }
+/* Inhaltsfolien vertikal zentrieren, damit auch kurze Folien die Fläche nutzen
+   (die Titelfolie regelt ihre Verteilung selbst über .ps-title). */
+.ps-slide__inner:not(.ps-title) { justify-content: center; }
 
 /* Seitenzahl unten rechts (klein) */
 .ps-pageno {
@@ -53,7 +57,7 @@
   bottom: 2.2%;
   z-index: 4;
   font-family: "Chivo", system-ui, sans-serif;
-  font-size: clamp(8px, 1.05cqw, 13px);
+  font-size: max(9px, 1.15cqw);
   color: var(--ps-muted);
   font-variant-numeric: tabular-nums;
   letter-spacing: .04em;
