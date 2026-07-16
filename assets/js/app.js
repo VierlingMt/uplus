@@ -184,6 +184,12 @@
       confirmDialog(f.getAttribute('data-confirm'), function () {
         f.__confirmed = true;
         if (typeof f.requestSubmit === 'function') { f.requestSubmit(); } else { f.submit(); }
+      }, {
+        // Standard = Löschen (rot). Für nicht-zerstörerische Aktionen (z. B. „aus
+        // Vorlage erstellen") lassen sich Überschrift, Knopf und Optik anpassen.
+        title:   f.getAttribute('data-confirm-title'),
+        okLabel: f.getAttribute('data-confirm-ok'),
+        kind:    f.getAttribute('data-confirm-kind')
       });
       return;
     }
@@ -541,17 +547,29 @@
   // ---------------------------------------------------------------------------
 
   // Sexy Bestätigungs-Dialog – ersetzt window.confirm für [data-confirm].
-  function confirmDialog(message, onOk) {
+  // opts (optional): { title, okLabel, kind }. Standard ist eine Lösch-Bestätigung
+  // (rot). Mit kind !== 'danger' (z. B. 'primary') wird der Dialog neutral/positiv
+  // dargestellt – für nicht-zerstörerische Aktionen wie „aus Vorlage erstellen".
+  function confirmDialog(message, onOk, opts) {
+    opts = opts || {};
+    var danger  = opts.kind ? opts.kind === 'danger' : true;
+    var title   = opts.title   || (danger ? 'Wirklich löschen?' : 'Bitte bestätigen');
+    var okLabel = opts.okLabel || (danger ? 'Löschen' : 'OK');
+    var icon    = danger ? '⚠️' : '❓';
+    var okCls   = danger ? 'btn--danger' : 'btn--primary';
     var ov = document.createElement('div');
     ov.className = 'modal-overlay';
     ov.innerHTML =
       '<div class="modal modal--confirm" role="alertdialog" aria-modal="true">' +
-      '<h3><span aria-hidden="true">⚠️</span> Wirklich löschen?</h3>' +
+      '<h3><span aria-hidden="true"></span> <span data-title></span></h3>' +
       '<p></p>' +
       '<div class="modal__foot">' +
       '<button type="button" class="btn btn--ghost" data-cancel>Abbrechen</button>' +
-      '<button type="button" class="btn btn--danger" data-ok>Löschen</button>' +
+      '<button type="button" class="btn ' + okCls + '" data-ok></button>' +
       '</div></div>';
+    ov.querySelector('h3 span[aria-hidden]').textContent = icon;
+    ov.querySelector('[data-title]').textContent = title;
+    ov.querySelector('[data-ok]').textContent = okLabel;
     ov.querySelector('p').textContent = message;
     document.body.appendChild(ov);
     document.body.classList.add('modal-open');

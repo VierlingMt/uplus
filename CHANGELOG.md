@@ -7,6 +7,15 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.75.2] - 2026-07-16
+### Behoben
+- **Bestätigungsdialog „Aus Vorlage erstellen":** Beim Erstellen der
+  Moderationskärtchen aus der Vorlage zeigte der Bestätigungsdialog
+  fälschlich „Wirklich löschen?" mit rotem „Löschen"-Knopf. Der Dialog
+  unterscheidet jetzt zwischen zerstörerischen Aktionen (weiterhin rot,
+  „Löschen") und normalen Aktionen: „Aus Vorlage erstellen" fragt jetzt
+  neutral „Aus Vorlage erstellen?" mit blauem Knopf „Karten erstellen".
+
 ## [0.75.1] - 2026-07-16
 ### Behoben
 - **Bild-Ablage – Logo/Platzhalter überlagerten sich:** Beim Bearbeiten (z. B. eines

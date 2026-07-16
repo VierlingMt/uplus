@@ -102,7 +102,9 @@ ob_start(); ?>
     <p>Für <strong><?= e($year) ?></strong> gibt es noch keine Moderationskärtchen.</p>
     <?php if ($canWrite): ?>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-        <form method="post" action="<?= url('moderation') ?>" data-confirm="Kompletten Moderationsablauf aus der Vorlage erstellen?">
+        <form method="post" action="<?= url('moderation') ?>"
+              data-confirm="Der komplette, bewährte Moderationsablauf wird als Karten angelegt. Danach kannst du alles frei anpassen."
+              data-confirm-title="Aus Vorlage erstellen?" data-confirm-ok="Karten erstellen" data-confirm-kind="primary">
           <?= Csrf::field() ?><input type="hidden" name="action" value="seed_cards"><input type="hidden" name="cycle" value="<?= $cycleId ?>">
           <button class="btn btn--teal">🗂 Aus Vorlage erstellen</button>
         </form>
