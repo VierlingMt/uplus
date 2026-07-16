@@ -7,6 +7,16 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.75.1] - 2026-07-16
+### Behoben
+- **Bild-Ablage – Logo/Platzhalter überlagerten sich:** Beim Bearbeiten (z. B. eines
+  Sponsors mit Logo) blieb der Platzhaltertext „Bild hierher ziehen …" sichtbar und
+  das Logo lief aus der Ablage heraus (mit horizontalem Scrollbalken). Ursache war,
+  dass die CSS-Klasse mit eigenem `display:flex` die Browser-Regel `[hidden]`
+  überstimmte, sodass ausgeblendete Elemente doch angezeigt wurden. Das `hidden`-
+  Attribut greift jetzt zuverlässig – **in allen Bildfeldern** (Sponsoren, Schulen,
+  Jury, Teams, Materialien, Profilfoto, Galerie …).
+
 ## [0.75.0] - 2026-07-16
 ### Hinzugefügt
 - **Moderationskärtchen für den PitchDay:** Ein neues Modul „Moderationskärtchen"

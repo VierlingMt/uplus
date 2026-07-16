@@ -386,6 +386,13 @@ table.data tr:hover td { background: #fafcfe; }
   cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
 .imgdrop__clear:hover { background: var(--wj-red); }
+/* `hidden` durchsetzen: Klassen mit eigenem `display` (flex) überstimmen sonst
+   die Browser-Regel `[hidden]{display:none}` (gleiche Spezifität, aber niedrigere
+   Herkunft) – dann erschienen Platzhalter/× trotz Bild gleichzeitig und das Logo
+   lief aus der Ablage heraus. Gilt für alle Bildfelder (image_field). */
+.imgdrop__img[hidden],
+.imgdrop__placeholder[hidden],
+.imgdrop__clear[hidden] { display: none; }
 
 /* Avatare (Nutzerliste, Topbar, Profil) */
 .avatar {
