@@ -438,6 +438,12 @@ final class Migrator
                         REFERENCES users(id) ON DELETE SET NULL
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             ],
+            [
+                'version' => '2026_07_41_share_max_downloads',
+                'name'    => 'Mediengalerie: Share-Links mit begrenzter Download-Anzahl (Standard 2)',
+                'up'      => 'ALTER TABLE media_shares
+                    ADD COLUMN IF NOT EXISTS max_downloads INT UNSIGNED NOT NULL DEFAULT 2 AFTER downloads',
+            ],
         ];
     }
 

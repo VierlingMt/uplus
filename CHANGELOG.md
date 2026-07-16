@@ -7,6 +7,16 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.72.0] - 2026-07-15
+### Geändert
+- **Mediengalerie – Teilen-Links jetzt bis zu 2× nutzbar mit Info-Seite:** Ein
+  geteilter Link kann nun **zweimal** heruntergeladen werden (statt nur einmal)
+  und läuft weiterhin nach 7 Tagen ab. Wer den Link öffnet, sieht zuerst eine
+  **Info-Seite** (ohne Anmeldung) mit Anzahl der Medien, Größe, Gültigkeit und
+  **verbleibenden Downloads** und startet den Download per Knopf. Nach dem
+  letzten erlaubten Download löscht sich der Link automatisch. Neue Spalte
+  `media_shares.max_downloads` (Standard 2).
+
 ## [0.71.0] - 2026-07-15
 ### Hinzugefügt
 - **Mediengalerie – teilbare, temporäre Download-Links:** Über „🔗 Teilen-Link"

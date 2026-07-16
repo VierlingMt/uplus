@@ -514,31 +514,51 @@ final class Media
 
     // --- Teilbare, temporäre Download-Links -----------------------------
 
-    public const SHARE_DEFAULT_DAYS = 7;
-    public const SHARE_MAX_DAYS     = 90;
+    public const SHARE_DEFAULT_DAYS      = 7;
+    public const SHARE_MAX_DAYS          = 90;
+    public const SHARE_DEFAULT_DOWNLOADS = 2;
 
     /**
      * Teilbaren Download-Link anlegen. Der Link ist über ein zufälliges Token
-     * öffentlich erreichbar (zum Weitergeben) und läuft nach $days Tagen ab;
-     * bei $oneTime löscht er sich zusätzlich nach dem ersten erfolgreichen
-     * Download. @return array{token:string,expires_at:string}
+     * öffentlich erreichbar (zum Weitergeben), läuft nach $days Tagen ab und ist
+     * höchstens $maxDownloads-mal nutzbar (danach löscht er sich).
+     * @return array{token:string,expires_at:string,max_downloads:int}
      */
-    public static function createShare(array $ids, ?int $cycleId, int $days, bool $oneTime, ?int $userId): array
+    public static function createShare(array $ids, ?int $cycleId, int $days, int $maxDownloads, ?int $userId): array
     {
         $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn($i) => $i > 0)));
         $days = max(1, min(self::SHARE_MAX_DAYS, $days));
+        $maxDownloads = max(1, min(100, $maxDownloads));
         $token = bin2hex(random_bytes(24)); // 48 Hex-Zeichen
         // Ablauf in SQL berechnen (wie MagicLink) – vermeidet PHP/MySQL-Zeitzonenversatz.
         Database::run(
-            'INSERT INTO media_shares (token, cycle_id, item_ids, created_by, one_time, expires_at)
+            'INSERT INTO media_shares (token, cycle_id, item_ids, created_by, max_downloads, expires_at)
              VALUES (?,?,?,?,?, DATE_ADD(NOW(), INTERVAL ? DAY))',
-            [$token, $cycleId ?: null, json_encode($ids), $userId, $oneTime ? 1 : 0, $days]
+            [$token, $cycleId ?: null, json_encode($ids), $userId, $maxDownloads, $days]
         );
         $row = Database::one('SELECT expires_at FROM media_shares WHERE token = ?', [$token]);
         return [
-            'token'      => $token,
-            'expires_at' => (string) ($row['expires_at'] ?? date('Y-m-d H:i:s', time() + $days * 86400)),
+            'token'         => $token,
+            'expires_at'    => (string) ($row['expires_at'] ?? date('Y-m-d H:i:s', time() + $days * 86400)),
+            'max_downloads' => $maxDownloads,
         ];
+    }
+
+    /**
+     * Einen erfolgreichen Download eines Share-Links verbuchen. Erhöht den Zähler
+     * und löscht den Link, sobald die erlaubte Anzahl erreicht ist.
+     * @return int Verbleibende Downloads nach diesem Zugriff.
+     */
+    public static function registerShareDownload(array $share): int
+    {
+        Database::run('UPDATE media_shares SET downloads = downloads + 1 WHERE id = ?', [(int) $share['id']]);
+        $done = (int) $share['downloads'] + 1;
+        $max  = max(1, (int) ($share['max_downloads'] ?? self::SHARE_DEFAULT_DOWNLOADS));
+        $remaining = max(0, $max - $done);
+        if ($remaining <= 0) {
+            self::deleteShare((int) $share['id']);
+        }
+        return $remaining;
     }
 
     /** Gültigen (nicht abgelaufenen) Share zu einem Token finden. */

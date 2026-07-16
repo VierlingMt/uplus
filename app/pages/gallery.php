@@ -46,13 +46,15 @@ if (is_post()) {
         }
         Media::deleteExpiredShares();
         $days  = (int) input('days', Media::SHARE_DEFAULT_DAYS);
-        $share = Media::createShare($ids, $cid ?: null, $days, true, Auth::id());
-        Audit::log('gallery.share', count($ids) . ' Medien per Link geteilt (' . $days . ' Tage, einmalig)', 'cycle', $cid);
+        $share = Media::createShare($ids, $cid ?: null, $days, Media::SHARE_DEFAULT_DOWNLOADS, Auth::id());
+        Audit::log('gallery.share', count($ids) . ' Medien per Link geteilt (' . $days . ' Tage, '
+            . Media::SHARE_DEFAULT_DOWNLOADS . '× nutzbar)', 'cycle', $cid);
         echo json_encode([
-            'ok'      => true,
-            'url'     => abs_url('share', ['t' => $share['token']]),
-            'expires' => date('d.m.Y', (int) strtotime($share['expires_at'])),
-            'count'   => count($ids),
+            'ok'       => true,
+            'url'      => abs_url('share', ['t' => $share['token']]),
+            'expires'  => date('d.m.Y', (int) strtotime($share['expires_at'])),
+            'count'    => count($ids),
+            'max'      => (int) $share['max_downloads'],
         ]);
         exit;
     }
@@ -490,8 +492,10 @@ ob_start(); ?>
       <p class="muted" style="margin-top:0">
         Jede:r mit diesem Link kann die Medien herunterladen – <strong>ohne Anmeldung</strong>.
         Der Link läuft <strong>nach <?= (int) Media::SHARE_DEFAULT_DAYS ?> Tagen</strong> ab
-        (gültig bis <span data-share-expires>–</span>) und löscht sich nach dem ersten
-        vollständigen Download automatisch. Enthält <span data-share-count>0</span> Medien.
+        (gültig bis <span data-share-expires>–</span>) und ist <strong>bis zu
+        <?= (int) Media::SHARE_DEFAULT_DOWNLOADS ?>×</strong> nutzbar; danach löscht er sich
+        automatisch. Enthält <span data-share-count>0</span> Medien. Wer den Link öffnet, sieht
+        eine Info-Seite mit den verbleibenden Downloads.
       </p>
       <div class="field">
         <label>Link</label>
