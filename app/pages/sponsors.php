@@ -22,17 +22,18 @@ if (is_post()) {
         $fields = [
             $name, trim((string) input('address')) ?: null, trim((string) input('contact_name')) ?: null,
             trim((string) input('email')) ?: null, trim((string) input('website')) ?: null,
+            trim((string) input('notes')) ?: null,
         ];
         $logo = save_image('logo', 'sp', 'logos');
         if ($id > 0) {
-            Database::run('UPDATE sponsors SET name=?, address=?, contact_name=?, email=?, website=? WHERE id=?',
+            Database::run('UPDATE sponsors SET name=?, address=?, contact_name=?, email=?, website=?, notes=? WHERE id=?',
                 array_merge($fields, [$id]));
             if ($logo) { Database::run('UPDATE sponsors SET logo_path=? WHERE id=?', [$logo, $id]); }
             Audit::log('sponsor.update', 'Sponsor bearbeitet: ' . $name, 'sponsor', $id);
             flash('success', 'Sponsor gespeichert.');
             redirect(url('sponsors', ['edit' => $id]));
         } else {
-            $nid = Database::insert('INSERT INTO sponsors (name, address, contact_name, email, website, logo_path) VALUES (?,?,?,?,?,?)',
+            $nid = Database::insert('INSERT INTO sponsors (name, address, contact_name, email, website, notes, logo_path) VALUES (?,?,?,?,?,?,?)',
                 array_merge($fields, [$logo]));
             Audit::log('sponsor.create', 'Sponsor angelegt: ' . $name, 'sponsor', $nid);
             flash('success', 'Sponsor angelegt.');
@@ -100,8 +101,10 @@ $money = fn($a) => number_format((float) $a, 2, ',', '.') . ' €';
 $fill = fn(array $s) => e(json_encode([
     'id' => (int) $s['id'], 'name' => $s['name'], 'address' => $s['address'],
     'contact_name' => $s['contact_name'], 'email' => $s['email'], 'website' => $s['website'],
+    'notes' => $s['notes'] ?? '',
 ], JSON_UNESCAPED_UNICODE));
 $imgs = fn(array $s) => $s['logo_path'] ? e(json_encode(['logo' => asset($s['logo_path'])], JSON_UNESCAPED_UNICODE)) : '';
+$noteAuthor = trim((string) (Auth::user()['name'] ?? ''));
 ob_start(); ?>
 <div class="page-head">
   <h1>Sponsoren</h1>
@@ -125,6 +128,9 @@ ob_start(); ?>
           <?php if ($edit['email']): ?><div class="field" style="margin:0"><label>E-Mail</label><div><a href="mailto:<?= e($edit['email']) ?>"><?= e($edit['email']) ?></a></div></div><?php endif; ?>
           <?php if ($edit['website']): ?><div class="field" style="margin:0"><label>Website</label><div><?= e($edit['website']) ?></div></div><?php endif; ?>
         </div>
+        <?php if (trim((string) ($edit['notes'] ?? '')) !== ''): ?>
+          <div class="field" style="margin:12px 0 0"><label>Notizen / Absprachen</label><div class="muted" style="white-space:pre-wrap"><?= e($edit['notes']) ?></div></div>
+        <?php endif; ?>
       </div>
     </div>
 
@@ -226,6 +232,10 @@ ob_start(); ?>
       <div class="grid cols-2">
         <div class="field"><label>E-Mail</label><input type="email" name="email"></div>
         <div class="field"><label>Website</label><input type="text" name="website"></div>
+      </div>
+      <div class="field">
+        <label>Notizen / Absprachen</label>
+        <textarea name="notes" rows="5" data-note-log data-note-author="<?= e($noteAuthor) ?>" placeholder="Beim Klick ins Feld wird automatisch eine neue Zeile mit Datum und Name eingefügt."></textarea>
       </div>
       <?= image_field('logo', null, [
           'label' => 'Logo', 'aspect' => null, 'shape' => 'rect', 'format' => 'png',

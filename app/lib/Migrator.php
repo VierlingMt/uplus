@@ -444,6 +444,12 @@ final class Migrator
                 'up'      => 'ALTER TABLE media_shares
                     ADD COLUMN IF NOT EXISTS max_downloads INT UNSIGNED NOT NULL DEFAULT 2 AFTER downloads',
             ],
+            [
+                'version' => '2026_07_42_sponsor_notes',
+                'name'    => 'Sponsoren: Notizfeld für Absprachen (datierte Einträge)',
+                'up'      => 'ALTER TABLE sponsors
+                    ADD COLUMN IF NOT EXISTS notes MEDIUMTEXT NULL AFTER website',
+            ],
         ];
     }
 

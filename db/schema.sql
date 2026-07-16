@@ -306,6 +306,7 @@ CREATE TABLE IF NOT EXISTS sponsors (
     contact_name VARCHAR(190) NULL,
     email        VARCHAR(190) NULL,
     website      VARCHAR(255) NULL,
+    notes        MEDIUMTEXT NULL,
     created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_sponsors_name (name)

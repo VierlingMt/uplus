@@ -7,6 +7,20 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.74.0] - 2026-07-16
+### Hinzugefügt
+- **Sponsoren – Notizfeld für Absprachen:** Im Sponsor-Formular gibt es jetzt ein
+  Feld „Notizen / Absprachen". **Beim Klick ins Feld** wird automatisch eine neue
+  Zeile mit **Datum und Name** vorangestellt (z. B. `16.07.2026 Martin Vierling: `),
+  sodass Absprachen datiert und zurechenbar festgehalten werden. Die Notizen werden
+  in der Sponsor-Detailansicht angezeigt.
+
+### Geändert
+- **Modals schließen nicht mehr bei Klick daneben:** Ein Klick auf den abgedunkelten
+  Hintergrund schließt Dialoge (Formulare, Bestätigungen, PDF- und Zuschnitt-Ansicht)
+  bewusst **nicht** mehr – so gehen Eingaben nicht durch einen versehentlichen Klick
+  verloren. Schließen weiterhin über **ESC**, das **×** oder **„Abbrechen/Schließen"**.
+
 ## [0.73.2] - 2026-07-16
 ### Behoben
 - **Präsentation – Vollbild nutzt die Fläche jetzt voll:** Im Vollbild blieb die

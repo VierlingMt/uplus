@@ -515,7 +515,7 @@
       }
       function onKey(e) { if (e.key === 'Escape') close(); }
       ov.querySelector('[data-close]').addEventListener('click', close);
-      ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+      // Klick auf den Hintergrund schließt bewusst nicht (nur ESC oder „Schließen").
       document.addEventListener('keydown', onKey);
     }
 
@@ -562,7 +562,7 @@
     }
     function onKey(ev) { if (ev.key === 'Escape') done(); }
     ov.querySelector('[data-cancel]').addEventListener('click', done);
-    ov.addEventListener('click', function (ev) { if (ev.target === ov) done(); });
+    // Klick auf den Hintergrund schließt bewusst nicht (nur ESC oder „Abbrechen").
     ov.querySelector('[data-ok]').addEventListener('click', function () { done(); onOk(); });
     document.addEventListener('keydown', onKey);
     setTimeout(function () { ov.querySelector('[data-ok]').focus(); }, 30);
@@ -677,9 +677,9 @@
       }
       var closer = e.target.closest('[data-modal-close]');
       if (closer) { e.preventDefault(); close(closer.closest('.modal-overlay')); return; }
-      if (e.target.classList && e.target.classList.contains('modal-overlay') && !e.target.hasAttribute('data-modal-static')) {
-        close(e.target);
-      }
+      // Klick auf den Hintergrund (Overlay) schließt bewusst NICHT – so gehen
+      // Eingaben nicht durch einen versehentlichen Klick daneben verloren.
+      // Schließen nur über ESC, das ×-Symbol oder „Abbrechen/Schließen".
     });
 
     document.addEventListener('keydown', function (e) {
@@ -702,6 +702,39 @@
     });
 
     window.UplusModal = { open: open, close: close };
+  })();
+
+  // ---------------------------------------------------------------------------
+  // Protokoll-Notizfelder ([data-note-log]): Beim ersten Fokus (Klick) automatisch
+  // eine neue Zeile mit Datum und Name als Präfix anlegen, damit Absprachen
+  // datiert und zurechenbar festgehalten werden. Ist die letzte Zeile bereits ein
+  // frischer (noch leerer) Eintrag von heute, wird nur der Cursor ans Ende gesetzt.
+  // ---------------------------------------------------------------------------
+  (function initNoteLog() {
+    function prefix(author) {
+      var d = new Date();
+      var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+      var stamp = pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear();
+      return author ? stamp + ' ' + author + ': ' : stamp + ': ';
+    }
+    document.addEventListener('focusin', function (e) {
+      var el = e.target;
+      if (!el || !el.matches || !el.matches('textarea[data-note-log]')) return;
+      var pfx = prefix(el.getAttribute('data-note-author') || '');
+      var val = el.value;
+      var lines = val.split('\n');
+      var last = lines[lines.length - 1];
+      var trimEnd = function (s) { return s.replace(/\s+$/, ''); };
+      // Bereits ein offener, leerer Eintrag von heute? Dann nur Cursor ans Ende.
+      if (trimEnd(last) !== trimEnd(pfx)) {
+        var sep = (val.length && !/\n$/.test(val)) ? '\n' : '';
+        el.value = val + sep + pfx;
+      }
+      var end = el.value.length;
+      try { el.setSelectionRange(end, end); } catch (err) {}
+      // Ans Ende scrollen, falls der Text den sichtbaren Bereich überschreitet.
+      el.scrollTop = el.scrollHeight;
+    });
   })();
 
   // ---------------------------------------------------------------------------
@@ -860,10 +893,10 @@
       if (e && e.detail && typeof e.detail.ratio === 'number') modal.zoom.value = e.detail.ratio;
     });
     q('cancel').addEventListener('click', closeModal);
+    // Hinweis: Klick auf den Hintergrund schließt bewusst nicht (nur ESC/Abbrechen).
     q('apply').addEventListener('click', function () {
       if (modal.onApply) modal.onApply();
     });
-    ov.addEventListener('click', function (e) { if (e.target === ov) closeModal(); });
     document.addEventListener('keydown', function (e) {
       if (!ov.hidden && e.key === 'Escape') closeModal();
     });
