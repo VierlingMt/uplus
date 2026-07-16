@@ -31,6 +31,14 @@ if (is_post()) {
         Settings::set('current_phase', (string) input('current_phase', 'evaluation'));
         Audit::log('settings.general', 'Allgemeine Einstellungen geändert (Phase: ' . (string) input('current_phase', 'evaluation') . ')');
         flash('success', 'Allgemeine Einstellungen gespeichert.');
+    } elseif ($section === 'social') {
+        $urls = [];
+        foreach (array_keys(Social::CHANNELS) as $sk) {
+            $urls[$sk] = (string) input('social_' . $sk, '');
+        }
+        Social::save($urls);
+        Audit::log('settings.social', 'Social-Media-Links geändert');
+        flash('success', 'Social-Media-Links gespeichert.');
     } elseif ($section === 'security') {
         Settings::set('require_2fa', input('require_2fa') ? '1' : '0');
         Audit::log('settings.security', 'Sicherheitseinstellungen geändert (2FA: ' . (input('require_2fa') ? 'an' : 'aus') . ')');
@@ -262,6 +270,26 @@ ob_start(); ?>
         </div>
         <div class="help">Verschickt eine gestaltete Test-Mail über den aktuellen Absender – praktisch
           zum Prüfen der Zustellbarkeit (z. B. die Adresse von mail-tester.com eintragen).</div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Social Media -->
+  <div class="card" id="social">
+    <div class="card__head">Social Media</div>
+    <div class="card__body">
+      <p class="muted" style="font-size:14px">Zentrale Links zu den Kanälen der Wirtschaftsjunioren Forchheim.
+        Sie werden an mehreren Stellen genutzt (u. a. auf der Titelfolie der Präsentation) und
+        erscheinen nur, wenn eine Adresse hinterlegt ist. Leer lassen zum Ausblenden.</p>
+      <form method="post" action="<?= url('admin') ?>">
+        <?= Csrf::field() ?><input type="hidden" name="section" value="social">
+        <?php foreach (Social::all() as $sk => $c): ?>
+          <div class="field">
+            <label><?= $c['icon'] ?> <?= e($c['label']) ?></label>
+            <input type="url" name="social_<?= e($sk) ?>" value="<?= e($c['url']) ?>" placeholder="<?= e($c['placeholder']) ?>" autocomplete="off">
+          </div>
+        <?php endforeach; ?>
+        <div class="mt"><button class="btn btn--primary">Speichern</button></div>
       </form>
     </div>
   </div>

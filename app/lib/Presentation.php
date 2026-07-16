@@ -49,45 +49,8 @@ final class Presentation
         ['key' => 'team',         'type' => 'team',     'title' => 'Unser Team'],
     ];
 
-    /**
-     * Social-Media-Kanäle der Wirtschaftsjunioren – auf der Titelfolie verlinkt
-     * und in der App pflegbar (global, da jahresunabhängig). Wert = vollständige
-     * URL im settings-Eintrag `presentation_social_<key>`.
-     * key => [Anzeigename, Symbol].
-     * @var array<string,array{0:string,1:string}>
-     */
-    public const SOCIALS = [
-        'website'   => ['Web', '🌐'],
-        'instagram' => ['Instagram', '📷'],
-        'facebook'  => ['Facebook', '📘'],
-        'linkedin'  => ['LinkedIn', '💼'],
-        'youtube'   => ['YouTube', '▶'],
-    ];
-
-    /** Gepflegte, nicht-leere Social-Media-Links. @return array<string,array{label:string,icon:string,url:string}> */
-    public static function socials(): array
-    {
-        $out = [];
-        foreach (self::SOCIALS as $k => [$label, $icon]) {
-            $url = trim((string) Settings::get('presentation_social_' . $k, ''));
-            if ($url !== '') {
-                $out[$k] = ['label' => $label, 'icon' => $icon, 'url' => $url];
-            }
-        }
-        return $out;
-    }
-
-    /** Social-Media-Links speichern (global). @param array<string,string> $urls key => URL */
-    public static function saveSocials(array $urls): void
-    {
-        foreach (array_keys(self::SOCIALS) as $k) {
-            $url = trim((string) ($urls[$k] ?? ''));
-            Settings::set('presentation_social_' . $k, $url !== '' ? $url : null);
-        }
-    }
-
-    /** Folientypen, deren Text in der App gepflegt wird. */
-    private const EDITABLE_TYPES = ['title', 'text'];
+    /** Folientypen, deren Text in der App gepflegt wird (Titel-/Textteil der Folie). */
+    private const EDITABLE_TYPES = ['title', 'text', 'pitchday'];
 
     /**
      * Vorbelegte Texte (globale Vorlage, cycle_id = NULL). Aus der ursprünglichen
@@ -362,26 +325,43 @@ final class Presentation
     private static function renderTitle(array $ctx, array $text): void
     {
         $year = $ctx['year_label'];
-        $socials = self::socials();
+        $socials = Social::links();
         ?>
         <div class="ps-slide__inner ps-title">
+          <?php // WJ-CI (Design-Guide S. 13): Wort-Bildmarke oben links, Projektlogo oben rechts. ?>
           <div class="ps-title__logos">
-            <img class="ps-title__logo" src="<?= asset('img/logo.svg') ?>" alt="Unternehmen Plus">
             <img class="ps-title__wj" src="<?= asset('img/wj/wj-forchheim-color.svg') ?>" alt="Wirtschaftsjunioren Forchheim">
+            <img class="ps-title__logo" src="<?= asset('img/logo.svg') ?>" alt="Unternehmen Plus">
           </div>
-          <?php if ($year !== ''): ?><div class="ps-title__year"><?= e($year) ?></div><?php endif; ?>
-          <h1 class="ps-title__h"><?= e($text['title']) ?></h1>
-          <div class="ps-title__brand">Unternehmen&nbsp;Plus</div>
-          <?php if ($text['subtitle'] !== ''): ?><p class="ps-title__sub"><?= e($text['subtitle']) ?></p><?php endif; ?>
-          <?php if (trim($text['body']) !== ''): ?><div class="ps-title__meta"><?= render_markdown($text['body']) ?></div><?php endif; ?>
-          <?php if ($socials): ?>
-            <div class="ps-social">
-              <span class="ps-social__lead">Folgt uns:</span>
-              <?php foreach ($socials as $s): ?>
-                <a class="ps-social__link" href="<?= e($s['url']) ?>" target="_blank" rel="noopener">
-                  <span class="ps-social__ic" aria-hidden="true"><?= $s['icon'] ?></span><?= e($s['label']) ?>
-                </a>
-              <?php endforeach; ?>
+          <div class="ps-title__hero">
+            <?php if ($year !== ''): ?><div class="ps-title__year"><?= e($year) ?></div><?php endif; ?>
+            <h1 class="ps-title__h"><?= e($text['title']) ?></h1>
+            <div class="ps-title__brand">Unternehmen&nbsp;Plus</div>
+            <?php if ($text['subtitle'] !== ''): ?><p class="ps-title__sub"><?= e($text['subtitle']) ?></p><?php endif; ?>
+            <?php if (trim($text['body']) !== ''): ?><div class="ps-title__meta"><?= render_markdown($text['body']) ?></div><?php endif; ?>
+            <?php if ($socials): ?>
+              <div class="ps-social">
+                <span class="ps-social__lead">Folgt uns:</span>
+                <?php foreach ($socials as $s): ?>
+                  <a class="ps-social__link" href="<?= e($s['url']) ?>" target="_blank" rel="noopener">
+                    <span class="ps-social__ic" aria-hidden="true"><?= $s['icon'] ?></span><?= e($s['label']) ?>
+                  </a>
+                <?php endforeach; ?>
+              </div>
+            <?php endif; ?>
+          </div>
+          <?php if (!empty($ctx['sponsors'])): ?>
+            <div class="ps-sponsors ps-sponsors--title">
+              <div class="ps-sponsors__head">Mit Unterstützung von</div>
+              <div class="ps-sponsors__row">
+                <?php foreach ($ctx['sponsors'] as $s): ?>
+                  <?php if (!empty($s['logo_path'])): ?>
+                    <img src="<?= asset($s['logo_path']) ?>" alt="<?= e($s['name']) ?>">
+                  <?php else: ?>
+                    <span class="ps-sponsors__name"><?= e($s['name']) ?></span>
+                  <?php endif; ?>
+                <?php endforeach; ?>
+              </div>
             </div>
           <?php endif; ?>
         </div>
@@ -457,7 +437,6 @@ final class Presentation
     private static function renderTeam(array $ctx): void
     {
         $leads = $ctx['leads'];
-        $sponsors = $ctx['sponsors'];
         ?>
         <div class="ps-slide__inner">
           <?= self::kicker($ctx['year_label']) ?>
@@ -484,20 +463,6 @@ final class Presentation
             </div>
           <?php else: ?>
             <p class="ps-muted">Noch keine Projektleitung hinterlegt (unter „Jury &amp; Nutzer" pflegbar).</p>
-          <?php endif; ?>
-          <?php if ($sponsors): ?>
-            <div class="ps-sponsors">
-              <div class="ps-sponsors__head">Mit Unterstützung von</div>
-              <div class="ps-sponsors__row">
-                <?php foreach ($sponsors as $s): ?>
-                  <?php if (!empty($s['logo_path'])): ?>
-                    <img src="<?= asset($s['logo_path']) ?>" alt="<?= e($s['name']) ?>">
-                  <?php else: ?>
-                    <span class="ps-sponsors__name"><?= e($s['name']) ?></span>
-                  <?php endif; ?>
-                <?php endforeach; ?>
-              </div>
-            </div>
           <?php endif; ?>
         </div>
         <?php

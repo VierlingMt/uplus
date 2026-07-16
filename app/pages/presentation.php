@@ -37,14 +37,6 @@ if (is_post()) {
                 trim((string) input('subtitle')),
                 (string) input('body')
             );
-            // Auf der Titelfolie zugleich die (globalen) Social-Media-Links pflegen.
-            if ($key === 'title') {
-                $urls = [];
-                foreach (array_keys(Presentation::SOCIALS) as $sk) {
-                    $urls[$sk] = (string) input('social_' . $sk, '');
-                }
-                Presentation::saveSocials($urls);
-            }
             Audit::log('presentation.slide_save', 'Präsentationsfolie gespeichert: ' . $key, 'cycle', $cycleId);
             flash('success', 'Folie gespeichert.');
         } elseif ($action === 'reset_slide') {
@@ -155,16 +147,12 @@ ob_start(); ?>
             <textarea name="body" rows="<?= $k === 'title' ? 3 : 10 ?>" style="font-family:inherit"><?= e($t['body']) ?></textarea>
             <div class="muted" style="font-size:12px;margin-top:4px">Einfaches Markdown: <code>- </code> für Aufzählungen, <code>**fett**</code>, Leerzeile = neuer Absatz.</div>
           </div>
-          <?php if ($k === 'title'): $sc = Presentation::socials(); ?>
+          <?php if ($k === 'title'): ?>
             <div class="field">
-              <label>Social-Media-Links <span class="muted" style="font-weight:400">(gelten für alle Jahre – leer lassen zum Ausblenden)</span></label>
-              <?php foreach (Presentation::SOCIALS as $sk => [$slabel, $sic]): ?>
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                  <span style="width:104px;flex:0 0 auto"><?= $sic ?> <?= e($slabel) ?></span>
-                  <input type="url" name="social_<?= e($sk) ?>" value="<?= e($sc[$sk]['url'] ?? '') ?>"
-                         placeholder="https://…" style="flex:1">
-                </div>
-              <?php endforeach; ?>
+              <label>Social-Media-Links</label>
+              <div class="muted" style="font-size:13px">Die Social-Media-Links (Web, Instagram, Facebook …) werden zentral
+                <?php if (Access::canWrite('admin')): ?><a href="<?= url('admin') ?>#social">im Admin</a><?php else: ?>im Admin<?php endif; ?>
+                gepflegt und erscheinen dann automatisch auf der Titelfolie.</div>
             </div>
           <?php endif; ?>
           <div class="modal__foot" style="justify-content:space-between">

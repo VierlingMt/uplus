@@ -7,6 +7,23 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.73.0] - 2026-07-16
+### Geändert
+- **Social-Media-Links jetzt zentral im Admin:** Die Links (Web, Instagram,
+  Facebook, LinkedIn, YouTube) werden unter **Admin → Social Media** gepflegt
+  (neuer `Social`-Helfer, Settings `social_*`) und sind dadurch app-weit
+  wiederverwendbar. Sie erscheinen weiterhin automatisch auf der Titelfolie der
+  Präsentation.
+- **Präsentation – Titelfolie nach WJ-CI:** Logo-Anordnung gemäß WJ-Design-Guide –
+  **WJ-Wort-Bildmarke oben links, Projektlogo (Unternehmen Plus) oben rechts**. Der
+  **Sponsoren-Streifen** sitzt jetzt auf der **Titelfolie** (statt unter „Unser
+  Team").
+### Behoben
+- **Präsentation – Pitch-Day-Folie:** Der beschreibende **Text (links) fehlte** und
+  ließ sich nicht bearbeiten, weil die Folie nicht als Textfolie geführt war. Die
+  Folie ist jetzt pflegbar (Text links, dynamische Preise rechts) und zeigt den
+  hinterlegten Text.
+
 ## [0.72.0] - 2026-07-15
 ### Geändert
 - **Mediengalerie – Teilen-Links jetzt bis zu 2× nutzbar mit Info-Seite:** Ein
@@ -161,7 +178,6 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
   die App – neuer Bereich, neues Modul, andere Rolle –, aktualisieren sich Hilfe
   und Tour **automatisch mit** (neue Dateien: `app/lib/Help.php`,
   `assets/js/help.js`, `assets/css/help.css`).
-
 ## [0.64.0] - 2026-07-15
 ### Hinzugefügt
 - **Präsentation – Titelfolie mit WJ-Logo & Social-Media:** Auf der Startfolie

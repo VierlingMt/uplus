@@ -89,14 +89,18 @@
 /* ---------- Titelfolie ---------- */
 .ps-title {
   align-items: flex-start;
-  justify-content: center;
+  justify-content: flex-start;
   background:
     radial-gradient(120% 90% at 100% 0%, rgba(15, 138, 126, .10), transparent 60%),
     linear-gradient(140deg, #f5f8ff 0%, #eaf0fb 100%);
 }
-.ps-title__logos { display: flex; align-items: center; gap: 1.4em; margin-bottom: 1em; }
-.ps-title__logo { height: 2.6em; }
-.ps-title__wj { height: 1.9em; }
+/* WJ-CI: Wort-Bildmarke oben links, Projektlogo oben rechts (Design-Guide S. 13). */
+.ps-title__logos { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: .9em; }
+.ps-title__logo { height: 2.9em; }
+.ps-title__wj { height: 2.1em; }
+/* Hero-Block (Jahr … Social) vertikal in den verbleibenden Raum zentrieren. */
+.ps-title__hero { margin: auto 0; width: 100%; }
+.ps-sponsors--title { margin-top: auto; padding-top: 1em; }
 /* Social-Media-Leiste unten auf der Titelfolie */
 .ps-social { display: flex; flex-wrap: wrap; align-items: center; gap: .5em .9em; margin-top: 1em;
   font-family: "Chivo", system-ui, sans-serif; font-size: .5em; }
