@@ -12,7 +12,7 @@ $route = (string) ($_GET['r'] ?? 'dashboard');
 
 // Oeffentliche Routen (ohne Login). Passkey-Endpunkte prüfen die Anmeldung
 // je Aktion selbst (login/login_options öffentlich, register* nur angemeldet).
-$public = ['login', 'confirm_email', 'passkey'];
+$public = ['login', 'confirm_email', 'passkey', 'share'];
 
 try {
     if (!in_array($route, $public, true)) {
@@ -37,6 +37,10 @@ try {
 
         case 'passkey':
             require APP_PATH . '/pages/passkey.php';
+            break;
+
+        case 'share':
+            require APP_PATH . '/pages/share.php';
             break;
 
         case 'logout':

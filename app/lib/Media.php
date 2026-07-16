@@ -422,6 +422,155 @@ final class Media
         }
     }
 
+    // --- ZIP-Erstellung (ganze Galerie / Auswahl / Share) ---------------
+
+    /**
+     * Medien anhand einer ID-Liste laden (nur existierende), sortiert nach
+     * Aufnahmedatum. Für Auswahl-Downloads und geteilte Links.
+     */
+    public static function byIds(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn($i) => $i > 0)));
+        if (!$ids) {
+            return [];
+        }
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        return Database::all(
+            "SELECT m.*, u.name AS uploader_name
+               FROM media_items m
+               LEFT JOIN users u ON u.id = m.uploaded_by
+              WHERE m.id IN ($in)
+              ORDER BY COALESCE(m.taken_at, m.created_at) DESC, m.id DESC",
+            $ids
+        );
+    }
+
+    /**
+     * Baut aus den übergebenen Medien ein ZIP (Originale, ohne erneute
+     * Kompression) im Temp-Ordner und liefert den Pfad – oder null bei Fehler
+     * bzw. wenn keine Datei gepackt werden konnte. Alte ZIP-Reste (>1 h) werden
+     * dabei aufgeräumt. Der Aufrufer streamt die Datei und löscht sie danach.
+     */
+    public static function buildZip(array $items): ?string
+    {
+        if (!class_exists('ZipArchive') || !$items || !self::ensureTmpDir()) {
+            return null;
+        }
+        foreach (glob(self::tmpDir() . '/zip_*.zip') ?: [] as $old) {
+            if (@filemtime($old) < time() - 3600) {
+                @unlink($old);
+            }
+        }
+        $zipPath = self::tmpDir() . '/zip_' . bin2hex(random_bytes(8)) . '.zip';
+        $zip = new ZipArchive();
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            return null;
+        }
+        $used = [];
+        $added = 0;
+        foreach ($items as $m) {
+            $path = self::dir() . '/' . basename((string) $m['stored_name']);
+            if (!is_file($path)) {
+                continue;
+            }
+            $entry = self::zipEntryName($m, $used);
+            if ($zip->addFile($path, $entry)) {
+                if (method_exists($zip, 'setCompressionName')) {
+                    @$zip->setCompressionName($entry, ZipArchive::CM_STORE);
+                }
+                $added++;
+            }
+        }
+        if ($added === 0 || !$zip->close()) {
+            @$zip->close();
+            @unlink($zipPath);
+            return null;
+        }
+        return $zipPath;
+    }
+
+    /** Sprechenden, eindeutigen ZIP-Eintragsnamen bilden: „JJJJ-MM-TT_Person_Original.ext". */
+    private static function zipEntryName(array $m, array &$used): string
+    {
+        $src  = !empty($m['taken_at']) ? (string) $m['taken_at'] : (string) ($m['created_at'] ?? '');
+        $ts   = $src !== '' ? strtotime($src) : false;
+        $date = $ts ? date('Y-m-d', $ts) : '0000-00-00';
+        $orig = (string) ($m['original_name'] ?: $m['stored_name']);
+        $ext  = strtolower((string) preg_replace('/[^A-Za-z0-9]/', '', pathinfo($orig, PATHINFO_EXTENSION)));
+        $base = pathinfo($orig, PATHINFO_FILENAME);
+        $who  = (string) ($m['uploader_name'] ?? '');
+        $san  = static fn(string $s): string => trim((string) preg_replace('/[^\p{L}\p{N}_-]+/u', '_', $s), '_');
+        $name = mb_substr($date . ($who !== '' ? '_' . $san($who) : '') . '_' . ($san($base) ?: 'medium'), 0, 120);
+        $file = $name . ($ext !== '' ? '.' . $ext : '');
+        $try = $file;
+        $i = 2;
+        while (isset($used[mb_strtolower($try)])) {
+            $try = $name . '_' . $i . ($ext !== '' ? '.' . $ext : '');
+            $i++;
+        }
+        $used[mb_strtolower($try)] = true;
+        return $try;
+    }
+
+    // --- Teilbare, temporäre Download-Links -----------------------------
+
+    public const SHARE_DEFAULT_DAYS = 7;
+    public const SHARE_MAX_DAYS     = 90;
+
+    /**
+     * Teilbaren Download-Link anlegen. Der Link ist über ein zufälliges Token
+     * öffentlich erreichbar (zum Weitergeben) und läuft nach $days Tagen ab;
+     * bei $oneTime löscht er sich zusätzlich nach dem ersten erfolgreichen
+     * Download. @return array{token:string,expires_at:string}
+     */
+    public static function createShare(array $ids, ?int $cycleId, int $days, bool $oneTime, ?int $userId): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn($i) => $i > 0)));
+        $days = max(1, min(self::SHARE_MAX_DAYS, $days));
+        $token = bin2hex(random_bytes(24)); // 48 Hex-Zeichen
+        // Ablauf in SQL berechnen (wie MagicLink) – vermeidet PHP/MySQL-Zeitzonenversatz.
+        Database::run(
+            'INSERT INTO media_shares (token, cycle_id, item_ids, created_by, one_time, expires_at)
+             VALUES (?,?,?,?,?, DATE_ADD(NOW(), INTERVAL ? DAY))',
+            [$token, $cycleId ?: null, json_encode($ids), $userId, $oneTime ? 1 : 0, $days]
+        );
+        $row = Database::one('SELECT expires_at FROM media_shares WHERE token = ?', [$token]);
+        return [
+            'token'      => $token,
+            'expires_at' => (string) ($row['expires_at'] ?? date('Y-m-d H:i:s', time() + $days * 86400)),
+        ];
+    }
+
+    /** Gültigen (nicht abgelaufenen) Share zu einem Token finden. */
+    public static function findShareByToken(string $token): ?array
+    {
+        if (!preg_match('/^[a-f0-9]{48}$/', $token)) {
+            return null;
+        }
+        return Database::one(
+            'SELECT * FROM media_shares WHERE token = ? AND expires_at > NOW()',
+            [$token]
+        );
+    }
+
+    /** Zu einem Share gehörende, noch existierende Medien laden. */
+    public static function shareItems(array $share): array
+    {
+        $ids = json_decode((string) $share['item_ids'], true);
+        return is_array($ids) ? self::byIds($ids) : [];
+    }
+
+    public static function deleteShare(int $id): void
+    {
+        Database::run('DELETE FROM media_shares WHERE id = ?', [$id]);
+    }
+
+    /** Abgelaufene Share-Links aufräumen (bei jedem Zugriff aufgerufen). */
+    public static function deleteExpiredShares(): void
+    {
+        Database::run('DELETE FROM media_shares WHERE expires_at < NOW()');
+    }
+
     public static function find(int $id): ?array
     {
         return Database::one('SELECT * FROM media_items WHERE id = ?', [$id]);

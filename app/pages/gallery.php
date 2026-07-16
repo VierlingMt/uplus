@@ -26,6 +26,37 @@ if (is_post()) {
     Csrf::check();
     $action = (string) input('action');
 
+    // Teilbaren, temporären Download-Link erstellen (JSON-Antwort für AJAX).
+    if ($action === 'create_share') {
+        header('Content-Type: application/json; charset=utf-8');
+        $cid   = (int) input('cycle_id');
+        $scope = (string) input('scope');
+        if ($scope === 'selection') {
+            $ids = array_map('intval', (array) input('ids', []));
+        } else {
+            $ids = array_map(
+                static fn($r) => (int) $r['id'],
+                Database::all('SELECT id FROM media_items WHERE cycle_id = ?', [$cid])
+            );
+        }
+        $ids = array_values(array_filter($ids, static fn($i) => $i > 0));
+        if (!$ids) {
+            echo json_encode(['ok' => false, 'error' => 'Keine Medien ausgewählt.']);
+            exit;
+        }
+        Media::deleteExpiredShares();
+        $days  = (int) input('days', Media::SHARE_DEFAULT_DAYS);
+        $share = Media::createShare($ids, $cid ?: null, $days, true, Auth::id());
+        Audit::log('gallery.share', count($ids) . ' Medien per Link geteilt (' . $days . ' Tage, einmalig)', 'cycle', $cid);
+        echo json_encode([
+            'ok'      => true,
+            'url'     => abs_url('share', ['t' => $share['token']]),
+            'expires' => date('d.m.Y', (int) strtotime($share['expires_at'])),
+            'count'   => count($ids),
+        ]);
+        exit;
+    }
+
     // Mehrere Dateien auf einmal hochladen.
     if ($action === 'upload') {
         $cycleId = (int) input('cycle_id');
@@ -296,7 +327,8 @@ ob_start(); ?>
   </div></div>
 <?php else: ?>
 
-  <form method="post" action="<?= url('gallery') ?>" id="bulkForm" data-confirm="Ausgewählte Medien wirklich löschen?">
+  <form method="post" action="<?= url('gallery') ?>" id="bulkForm" data-confirm="Ausgewählte Medien wirklich löschen?"
+        data-gal-endpoint="<?= e(url('gallery')) ?>" data-gal-cycle="<?= $selId ?>">
     <?= Csrf::field() ?>
     <input type="hidden" name="action" value="bulk_delete">
     <input type="hidden" name="cycle_id" value="<?= $selId ?>">
@@ -310,10 +342,13 @@ ob_start(); ?>
         <?php endforeach; ?>
       </div>
       <div class="gal-toolbar__sp"></div>
-      <a class="btn btn--ghost btn--sm" href="<?= url('media_zip', ['cycle' => $selId]) ?>" title="Alle Medien dieses Jahres als ZIP herunterladen">⬇ Galerie herunterladen</a>
+      <a class="btn btn--ghost btn--sm" href="<?= url('media_zip', ['cycle' => $selId]) ?>" title="Alle Medien dieses Jahres als ZIP herunterladen">⬇ Galerie</a>
+      <button type="button" class="btn btn--ghost btn--sm no-spinner" data-gal-share="cycle" title="Teilbaren Download-Link für die ganze Galerie erstellen">🔗 Teilen-Link</button>
       <button type="button" class="btn btn--ghost btn--sm no-spinner" data-gal-select-toggle>Mehrfachauswahl</button>
       <div class="gal-bulk" hidden data-gal-bulk>
         <span class="muted"><span data-gal-count>0</span> ausgewählt</span>
+        <button type="button" class="btn btn--ghost btn--sm no-spinner" data-gal-bulk-download disabled>⬇ Herunterladen</button>
+        <button type="button" class="btn btn--ghost btn--sm no-spinner" data-gal-share="selection" data-gal-bulk-share disabled>🔗 Teilen-Link</button>
         <button class="btn btn--danger btn--sm" data-gal-bulk-delete disabled>Löschen</button>
       </div>
     </div>
@@ -343,11 +378,9 @@ ob_start(); ?>
                 data-title="<?= e((string) ($m['title'] ?? '')) ?>"
                 data-uploader="<?= e((string) ($m['uploader_name'] ?? '')) ?>"
                 data-date="<?= e($dispDate) ?>">
-          <?php if ($editable): ?>
-            <label class="gal-tile__check" title="Auswählen">
-              <input type="checkbox" name="ids[]" value="<?= $mid ?>" data-gal-check>
-            </label>
-          <?php endif; ?>
+          <label class="gal-tile__check" title="Auswählen">
+            <input type="checkbox" name="ids[]" value="<?= $mid ?>" data-gal-check data-editable="<?= $editable ? '1' : '0' ?>">
+          </label>
           <button type="button" class="gal-tile__view" data-gal-open aria-label="Ansehen">
             <?php if ($isImg): ?>
               <img src="<?= e($thumbUrl) ?>" alt="<?= e((string) ($m['title'] ?? 'Bild')) ?>" loading="lazy">
@@ -440,6 +473,39 @@ ob_start(); ?>
   <input type="hidden" name="id" value="0" data-gal-delete-id>
 </form>
 
+<!-- Verstecktes Formular für den Download der Auswahl (POST an media_zip) -->
+<form method="post" action="<?= url('media_zip') ?>" id="galZipForm" hidden>
+  <input type="hidden" name="cycle" value="<?= $selId ?>">
+  <span data-gal-zip-ids></span>
+</form>
+
+<!-- Modal: erstellter Teilen-Link -->
+<div class="modal-overlay" id="shareModal" hidden>
+  <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="shareModalTitle">
+    <div class="modal__head">
+      <h3 id="shareModalTitle">🔗 Download-Link zum Teilen</h3>
+      <button type="button" class="modal__close" data-modal-close aria-label="Schließen">&times;</button>
+    </div>
+    <div class="modal__body">
+      <p class="muted" style="margin-top:0">
+        Jede:r mit diesem Link kann die Medien herunterladen – <strong>ohne Anmeldung</strong>.
+        Der Link läuft <strong>nach <?= (int) Media::SHARE_DEFAULT_DAYS ?> Tagen</strong> ab
+        (gültig bis <span data-share-expires>–</span>) und löscht sich nach dem ersten
+        vollständigen Download automatisch. Enthält <span data-share-count>0</span> Medien.
+      </p>
+      <div class="field">
+        <label>Link</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="text" data-share-url readonly style="flex:1 1 220px" onclick="this.select()">
+          <button type="button" class="btn btn--primary" data-share-copy>Kopieren</button>
+        </div>
+        <p class="muted" data-share-copied hidden style="color:var(--wj-teal-d);font-size:13px;margin:6px 0 0">✓ In die Zwischenablage kopiert</p>
+      </div>
+    </div>
+    <div class="modal__foot"><button type="button" class="btn btn--ghost" data-modal-close>Schließen</button></div>
+  </div>
+</div>
+
 <!-- Lightbox -->
 <div class="gal-lightbox" id="galLightbox" hidden>
   <div class="gal-lightbox__tools">
@@ -523,19 +589,32 @@ ob_start(); ?>
     });
   }
 
-  // --- Mehrfachauswahl (Bulk) --------------------------------------------
+  // --- Mehrfachauswahl (Bulk) + Teilen-Link -------------------------------
   var bulkForm = document.getElementById('bulkForm');
   if (bulkForm) {
     var toggle = bulkForm.querySelector('[data-gal-select-toggle]');
     var bulkBox = bulkForm.querySelector('[data-gal-bulk]');
     var countEl = bulkForm.querySelector('[data-gal-count]');
     var delBtn = bulkForm.querySelector('[data-gal-bulk-delete]');
+    var dlBtn = bulkForm.querySelector('[data-gal-bulk-download]');
+    var shareSelBtn = bulkForm.querySelector('[data-gal-bulk-share]');
     var checks = Array.prototype.slice.call(bulkForm.querySelectorAll('[data-gal-check]'));
+    var endpoint = bulkForm.getAttribute('data-gal-endpoint');
+    var galCycle = bulkForm.getAttribute('data-gal-cycle');
+    var csrf2 = (bulkForm.querySelector('[name="_csrf"]') || {}).value || '';
 
+    function checkedIds() {
+      return checks.filter(function (c) { return c.checked; }).map(function (c) { return c.value; });
+    }
+    function checkedEditable() {
+      return checks.filter(function (c) { return c.checked && c.getAttribute('data-editable') === '1'; }).length;
+    }
     function refresh() {
-      var n = checks.filter(function (c) { return c.checked; }).length;
+      var n = checkedIds().length;
       countEl.textContent = n;
-      delBtn.disabled = n === 0;
+      if (dlBtn) dlBtn.disabled = n === 0;
+      if (shareSelBtn) shareSelBtn.disabled = n === 0;
+      if (delBtn) delBtn.disabled = checkedEditable() === 0; // Löschen nur bei eigenen
     }
     if (toggle) {
       toggle.addEventListener('click', function () {
@@ -548,8 +627,80 @@ ob_start(); ?>
     checks.forEach(function (c) { c.addEventListener('change', refresh); });
     if (delBtn) {
       delBtn.addEventListener('click', function (e) {
-        if (!checks.some(function (c) { return c.checked; })) { e.preventDefault(); }
+        if (!checkedIds().length) { e.preventDefault(); }
       });
+    }
+
+    // Auswahl herunterladen: verstecktes Formular mit ids füllen und absenden.
+    if (dlBtn) {
+      dlBtn.addEventListener('click', function () {
+        var ids = checkedIds();
+        if (!ids.length) return;
+        var zf = document.getElementById('galZipForm');
+        var box = zf.querySelector('[data-gal-zip-ids]');
+        box.innerHTML = '';
+        ids.forEach(function (id) {
+          var inp = document.createElement('input');
+          inp.type = 'hidden'; inp.name = 'ids[]'; inp.value = id;
+          box.appendChild(inp);
+        });
+        zf.submit();
+      });
+    }
+
+    // --- Teilen-Link erstellen (ganze Galerie oder Auswahl) ---------------
+    var shareModal = document.getElementById('shareModal');
+    function openShareModal(url, count, expires) {
+      if (!shareModal) return;
+      shareModal.querySelector('[data-share-url]').value = url;
+      shareModal.querySelector('[data-share-count]').textContent = count;
+      shareModal.querySelector('[data-share-expires]').textContent = expires;
+      var copied = shareModal.querySelector('[data-share-copied]');
+      if (copied) copied.hidden = true;
+      shareModal.hidden = false;
+      document.body.classList.add('modal-open');
+      var inp = shareModal.querySelector('[data-share-url]');
+      setTimeout(function () { inp.focus(); inp.select(); }, 40);
+    }
+    function createShare(scope, btn) {
+      var fd = new FormData();
+      fd.append('action', 'create_share');
+      fd.append('cycle_id', galCycle);
+      fd.append('scope', scope);
+      if (csrf2) fd.append('_csrf', csrf2);
+      if (scope === 'selection') { checkedIds().forEach(function (id) { fd.append('ids[]', id); }); }
+      var orig = btn ? btn.textContent : '';
+      if (btn) { btn.disabled = true; btn.textContent = 'Erstelle…'; }
+      fetch(endpoint, { method: 'POST', body: fd, credentials: 'same-origin' })
+        .then(function (r) { return r.text(); })
+        .then(function (t) {
+          var d; try { d = JSON.parse(t); } catch (e) { throw new Error('Serverantwort ungültig'); }
+          if (!d.ok) throw new Error(d.error || 'Fehler');
+          openShareModal(d.url, d.count, d.expires);
+        })
+        .catch(function (err) { alert('Link konnte nicht erstellt werden: ' + (err.message || err)); })
+        .then(function () { if (btn) { btn.disabled = false; btn.textContent = orig; refresh(); } });
+    }
+    bulkForm.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-gal-share]');
+      if (!b || b.disabled) return;
+      e.preventDefault();
+      createShare(b.getAttribute('data-gal-share'), b);
+    });
+
+    // Kopieren-Knopf im Share-Modal.
+    if (shareModal) {
+      var copyBtn = shareModal.querySelector('[data-share-copy]');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', function () {
+          var inp = shareModal.querySelector('[data-share-url]');
+          var done = function () { var c = shareModal.querySelector('[data-share-copied]'); if (c) c.hidden = false; };
+          inp.select();
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(inp.value).then(done, function () { try { document.execCommand('copy'); done(); } catch (e) {} });
+          } else { try { document.execCommand('copy'); done(); } catch (e) {} }
+        });
+      }
     }
   }
 

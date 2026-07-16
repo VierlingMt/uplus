@@ -415,6 +415,29 @@ final class Migrator
                 'name'    => 'Mediengalerie: Aufnahmedatum (EXIF/Video-Metadaten) für Sortierung',
                 'up'      => [self::class, 'mediaTakenAt'],
             ],
+            [
+                'version' => '2026_07_40_media_shares',
+                'name'    => 'Mediengalerie: temporäre, teilbare Download-Links (selbstlöschend)',
+                'up'      => "CREATE TABLE IF NOT EXISTS media_shares (
+                    id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    token       CHAR(48) NOT NULL,
+                    cycle_id    INT UNSIGNED NULL,
+                    item_ids    TEXT NOT NULL,
+                    label       VARCHAR(190) NULL,
+                    created_by  INT UNSIGNED NULL,
+                    one_time    TINYINT(1) NOT NULL DEFAULT 1,
+                    downloads   INT UNSIGNED NOT NULL DEFAULT 0,
+                    expires_at  DATETIME NOT NULL,
+                    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (id),
+                    UNIQUE KEY uq_shares_token (token),
+                    KEY idx_shares_expires (expires_at),
+                    CONSTRAINT fk_shares_cycle FOREIGN KEY (cycle_id)
+                        REFERENCES competition_cycles(id) ON DELETE CASCADE,
+                    CONSTRAINT fk_shares_user FOREIGN KEY (created_by)
+                        REFERENCES users(id) ON DELETE SET NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ],
         ];
     }
 

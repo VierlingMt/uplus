@@ -658,7 +658,7 @@ input[type="file"] { max-width: 100%; }
 /* Toolbar */
 .gal-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
 .gal-toolbar__sp { flex: 1 1 auto; }
-.gal-bulk { display: inline-flex; align-items: center; gap: 10px; }
+.gal-bulk { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .gal-bulk[hidden] { display: none; }
 
 /* Ansichtsumschalter (Gruppierung) */

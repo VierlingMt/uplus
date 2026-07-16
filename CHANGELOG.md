@@ -7,6 +7,24 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.71.0] - 2026-07-15
+### Hinzugefügt
+- **Mediengalerie – teilbare, temporäre Download-Links:** Über „🔗 Teilen-Link"
+  entsteht ein **öffentlicher Link** (ohne Anmeldung nutzbar), mit dem man Medien
+  weitergeben kann. Der Link läuft **nach 7 Tagen ab** und **löscht sich nach dem
+  ersten vollständigen Download** automatisch. Der Link wird in einem Dialog
+  angezeigt und lässt sich mit einem Klick kopieren. Abgelaufene Links werden bei
+  jedem Zugriff aufgeräumt. Neue Datei: `app/pages/share.php` (öffentliche Route
+  `share`); Schema: neue Tabelle `media_shares`.
+- **Mediengalerie – Download & Teilen der Auswahl:** In der Mehrfachauswahl gibt
+  es jetzt zusätzlich **„⬇ Herunterladen"** (ausgewählte Medien als ZIP) und
+  **„🔗 Teilen-Link"** (nur die Auswahl teilen). Zum Auswählen lässt sich nun jede
+  Kachel markieren (nicht nur eigene); Löschen bleibt auf eigene Beiträge bzw.
+  die Verwaltung beschränkt.
+- **Thumbnails weiterhin sofort beim Upload** erzeugt (klassischer Upload **und**
+  Chunk-Upload) – bestehende Bilder werden zusätzlich beim ersten Ansehen
+  nachgezogen.
+
 ## [0.70.0] - 2026-07-15
 ### Hinzugefügt
 - **Mediengalerie – Ansichtsumschalter (Gruppierung):** Über einen Umschalter
