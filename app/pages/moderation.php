@@ -157,13 +157,9 @@ ob_start(); ?>
 
   <div class="mc-controls">
     <button type="button" class="mc-nav" data-mc-prev aria-label="Vorherige Karte">‹</button>
-    <div class="mc-dots" data-mc-dots>
-      <?php foreach ($cards as $i => $card): ?>
-        <button type="button" class="mc-dot<?= $i === 0 ? ' is-active' : '' ?>" data-mc-go="<?= $i ?>" title="<?= e((string) ($card['title'] ?: ModerationCards::typeLabel((string) $card['card_type']))) ?>"><span></span></button>
-      <?php endforeach; ?>
-    </div>
+    <div class="mc-dots" data-mc-dots></div>
     <button type="button" class="mc-nav" data-mc-next aria-label="Nächste Karte">›</button>
-    <span class="mc-counter"><span data-mc-cur>1</span> / <?= $total ?></span>
+    <span class="mc-counter"><span data-mc-cur>1</span> / <span data-mc-total><?= $total ?></span></span>
     <button type="button" class="mc-nav mc-nav--full" data-mc-full title="Vollbild">⛶ Vollbild</button>
   </div>
 </div>
@@ -211,42 +207,79 @@ ob_start(); ?>
   .mc-deck:fullscreen .mc-dot.is-active span { background: #fff; }
 </style>
 
+<script src="<?= asset('js/moderation.js') ?>"></script>
 <script>
 (function () {
   var deck = document.getElementById('mcDeck');
   if (!deck) return;
-  var cards = Array.prototype.slice.call(deck.querySelectorAll('.mc-card'));
-  var dots  = Array.prototype.slice.call(deck.querySelectorAll('[data-mc-go]'));
-  var curEl = deck.querySelector('[data-mc-cur]');
-  var n = cards.length, i = 0;
 
-  function show(idx) {
-    i = Math.max(0, Math.min(n - 1, idx));
-    cards.forEach(function (s, k) { s.hidden = k !== i; });
-    dots.forEach(function (d, k) { d.classList.toggle('is-active', k === i); });
-    if (curEl) curEl.textContent = (i + 1);
+  function initDeck() {
+    // Erst das Auto-Layout (schrumpfen + ggf. auf Fortsetzungskarten umbrechen),
+    // dann die Navigation auf Basis der endgültigen Kartenanzahl aufbauen.
+    if (window.MCLayout) MCLayout.apply(deck);
+
+    var cards = Array.prototype.slice.call(deck.querySelectorAll('.mc-card'));
+    var n = cards.length, i = 0;
+    var curEl   = deck.querySelector('[data-mc-cur]');
+    var totalEl = deck.querySelector('[data-mc-total]');
+    if (totalEl) totalEl.textContent = n;
+
+    // Punkte (Dots) passend zur endgültigen Kartenzahl neu aufbauen.
+    var dotsBox = deck.querySelector('[data-mc-dots]');
+    var dots = [];
+    if (dotsBox) {
+      dotsBox.innerHTML = '';
+      cards.forEach(function (card, k) {
+        var h = card.querySelector('.mc-h');
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'mc-dot' + (k === 0 ? ' is-active' : '');
+        b.title = h ? h.textContent : ('Karte ' + (k + 1));
+        b.appendChild(document.createElement('span'));
+        b.addEventListener('click', function () { show(k); });
+        dotsBox.appendChild(b);
+        dots.push(b);
+      });
+    }
+
+    function show(idx) {
+      i = Math.max(0, Math.min(n - 1, idx));
+      cards.forEach(function (s, k) { s.hidden = k !== i; });
+      dots.forEach(function (d, k) { d.classList.toggle('is-active', k === i); });
+      if (curEl) curEl.textContent = (i + 1);
+    }
+
+    deck.querySelector('[data-mc-prev]').addEventListener('click', function () { show(i - 1); });
+    deck.querySelector('[data-mc-next]').addEventListener('click', function () { show(i + 1); });
+
+    var full = deck.querySelector('[data-mc-full]');
+    function toggleFull() {
+      if (document.fullscreenElement) { document.exitFullscreen(); }
+      else if (deck.requestFullscreen) { deck.requestFullscreen(); }
+    }
+    if (full) full.addEventListener('click', toggleFull);
+
+    document.addEventListener('keydown', function (e) {
+      if (document.querySelector('.modal-overlay:not([hidden])')) return;
+      var t = e.target.tagName;
+      if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
+      if (e.key === 'ArrowLeft') { show(i - 1); }
+      else if (e.key === 'ArrowRight' || e.key === ' ') { show(i + 1); e.preventDefault(); }
+      else if (e.key === 'Home') { show(0); }
+      else if (e.key === 'End') { show(n - 1); }
+      else if (e.key === 'f' || e.key === 'F') { toggleFull(); }
+    });
+
+    show(0);
   }
-  deck.querySelector('[data-mc-prev]').addEventListener('click', function () { show(i - 1); });
-  deck.querySelector('[data-mc-next]').addEventListener('click', function () { show(i + 1); });
-  dots.forEach(function (d) { d.addEventListener('click', function () { show(+d.getAttribute('data-mc-go')); }); });
 
-  var full = deck.querySelector('[data-mc-full]');
-  function toggleFull() {
-    if (document.fullscreenElement) { document.exitFullscreen(); }
-    else if (deck.requestFullscreen) { deck.requestFullscreen(); }
-  }
-  if (full) full.addEventListener('click', toggleFull);
-
-  document.addEventListener('keydown', function (e) {
-    if (document.querySelector('.modal-overlay:not([hidden])')) return;
-    var t = e.target.tagName;
-    if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
-    if (e.key === 'ArrowLeft') { show(i - 1); }
-    else if (e.key === 'ArrowRight' || e.key === ' ') { show(i + 1); e.preventDefault(); }
-    else if (e.key === 'Home') { show(0); }
-    else if (e.key === 'End') { show(n - 1); }
-    else if (e.key === 'f' || e.key === 'F') { toggleFull(); }
-  });
+  // Genau einmal ausführen – nach dem Laden der Schriften (sonst misst der
+  // Browser die Kartenhöhe falsch), mit Zeit-Sicherheitsnetz.
+  var done = false;
+  function run() { if (done) return; done = true; initDeck(); }
+  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(run); }
+  window.addEventListener('load', run);
+  setTimeout(run, 800);
 })();
 </script>
 <?php endif; ?>

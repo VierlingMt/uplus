@@ -37,12 +37,16 @@
   padding: 5% 5.6%;
   display: flex;
   flex-direction: column;
-  /* Schriftgröße = fester Anteil der Kartenbreite (cqw); alle Maße in em/%
-     leiten sich davon ab. Niedrige Untergrenze, KEINE Obergrenze. */
-  font-size: max(8px, 2.7cqw);
+  /* Schriftgröße = fester Anteil der Kartenbreite (cqw), multipliziert mit einem
+     per-Karte anpassbaren Faktor (--mc-scale, Standard 1). Alle Maße in em/%
+     leiten sich davon ab. Der Faktor wird per JS (moderation.js) so weit
+     verkleinert, dass der Inhalt ohne Scrollbalken in die Karte passt; reicht das
+     nicht, bricht der Rest auf eine zweite Karte um. Da Bildschirm- und A5-Karte
+     dasselbe Seitenverhältnis haben, gilt die Anpassung für Ansicht UND Druck. */
+  font-size: max(8px, calc(2.7cqw * var(--mc-scale, 1)));
 }
 @supports not (font-size: 1cqw) {
-  .mc-card__inner { font-size: max(8px, 2.5vw); }
+  .mc-card__inner { font-size: max(8px, calc(2.5vw * var(--mc-scale, 1))); }
 }
 
 /* Kopfzeile: Kicker links, Kartennummer rechts (groß, für die Moderation). */
@@ -90,8 +94,9 @@
   margin-bottom: .5em;
 }
 
-/* Inhaltsbereich zwischen Kopf und Quellen-Fußzeile; scrollt notfalls. */
-.mc-content { flex: 1 1 auto; min-height: 0; overflow: auto; }
+/* Inhaltsbereich zwischen Kopf und Quellen-Fußzeile. Kein Scrollbalken: die
+   Schrift wird per JS so angepasst, dass alles passt (siehe --mc-scale). */
+.mc-content { flex: 1 1 auto; min-height: 0; overflow: hidden; }
 
 .mc-body { font-size: .8em; line-height: 1.4; color: var(--mc-ink); }
 .mc-body p { margin: 0 0 .5em; }

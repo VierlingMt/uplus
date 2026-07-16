@@ -82,13 +82,27 @@ header('Content-Type: text/html; charset=utf-8');
     <a href="<?= e(url('moderation', ['cycle' => $cycleId])) ?>">← Zurück</a>
     <button type="button" class="primary" onclick="window.print()">🖨 Drucken / Als PDF speichern</button>
   </div>
-  <div class="mc-deck">
+  <div class="mc-deck" id="mcDeck">
     <?php foreach ($cards as $i => $card): ?>
       <div class="mc-card"><?= ModerationCards::renderCard($card, $ctx, $i, $total) ?></div>
     <?php endforeach; ?>
   </div>
+  <script src="<?= asset('js/moderation.js') ?>"></script>
   <script>
-    window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 400); });
+    // Erst die Karten anpassen (schrumpfen + ggf. auf Fortsetzungskarten
+    // umbrechen), dann den Druckdialog anbieten.
+    (function () {
+      var deck = document.getElementById('mcDeck');
+      function go() {
+        if (window.MCLayout) MCLayout.apply(deck);
+        setTimeout(function () { window.print(); }, 300);
+      }
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(function () { setTimeout(go, 100); });
+      } else {
+        window.addEventListener('load', go);
+      }
+    })();
   </script>
 </body>
 </html>

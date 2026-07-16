@@ -7,6 +7,17 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.75.3] - 2026-07-16
+### Behoben
+- **Moderationskärtchen – kein Scrollbalken mehr:** Inhaltsreiche Karten (z. B.
+  „Nominierte Teams" mit vielen Teams und Mitgliedern) zeigten einen Scrollbalken,
+  weil die Schrift fix zu groß war. Jetzt passt sich jede Karte automatisch an:
+  Die **Schrift verkleinert sich** so weit, dass alles ohne Scrollbalken auf die
+  Karte passt – und reicht das nicht, bricht der Rest automatisch auf eine
+  **zweite Karte** („· Forts.") um; die Nummerierung (z. B. Pitch-Reihenfolge)
+  läuft dort korrekt weiter. Die Anpassung gilt für Bildschirm, Vollbild und
+  Druck/PDF gleichermaßen.
+
 ## [0.75.2] - 2026-07-16
 ### Behoben
 - **Bestätigungsdialog „Aus Vorlage erstellen":** Beim Erstellen der
