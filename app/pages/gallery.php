@@ -227,6 +227,42 @@ $fill = fn(array $m) => e(json_encode([
     'title' => (string) ($m['title'] ?? ''),
 ], JSON_UNESCAPED_UNICODE));
 
+// --- Ansichtsumschalter: Gruppierung ---------------------------------------
+$groupModes = ['none' => 'Raster', 'uploader' => 'Nach Person', 'month' => 'Nach Monat'];
+$group = (string) input('group', 'none');
+if (!isset($groupModes[$group])) {
+    $group = 'none';
+}
+
+$deMonths = [1 => 'Januar', 2 => 'Februar', 3 => 'März', 4 => 'April', 5 => 'Mai', 6 => 'Juni',
+             7 => 'Juli', 8 => 'August', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Dezember'];
+$monthLabel = static function (string $ym) use ($deMonths): string {
+    if (!preg_match('/^(\d{4})-(\d{2})$/', $ym, $mm)) {
+        return 'Ohne Datum';
+    }
+    return ($deMonths[(int) $mm[2]] ?? $mm[2]) . ' ' . $mm[1];
+};
+
+// Medien in Gruppen einsortieren (Reihenfolge innerhalb der Gruppe bleibt
+// erhalten – nach Aufnahmedatum). Bei „Raster" gibt es eine namenlose Gruppe.
+$grouped = [];
+if ($group === 'uploader') {
+    foreach ($items as $m) {
+        $key = trim((string) ($m['uploader_name'] ?? '')) ?: 'Unbekannt';
+        $grouped[$key][] = $m;
+    }
+    uksort($grouped, static fn($a, $b) => strcasecmp((string) $a, (string) $b));
+} elseif ($group === 'month') {
+    foreach ($items as $m) {
+        $src = !empty($m['taken_at']) ? (string) $m['taken_at'] : (string) ($m['created_at'] ?? '');
+        $ts  = $src !== '' ? strtotime($src) : false;
+        $grouped[$ts ? date('Y-m', $ts) : '0000-00'][] = $m;
+    }
+    krsort($grouped); // neueste Monate zuerst
+} else {
+    $grouped[''] = $items;
+}
+
 ob_start(); ?>
 <div class="page-head">
   <h1>Mediengalerie</h1>
@@ -237,7 +273,7 @@ ob_start(); ?>
 
 <div class="gal-years"<?= tour_attrs('Jahr wählen', 'Wechsle hier zwischen den Wettbewerbsjahren. Jede:r sieht die Galerien aller Jahre.', 20) ?>>
   <?php foreach ($cycles as $c): $cid = (int) $c['id']; $n = $counts[$cid] ?? 0; ?>
-    <a href="<?= url('gallery', ['cycle' => $cid]) ?>"
+    <a href="<?= url('gallery', ['cycle' => $cid, 'group' => $group]) ?>"
        class="gal-year<?= $cid === $selId ? ' gal-year--active' : '' ?>">
       <?= e($c['year_label']) ?>
       <?php if (!empty($c['is_active'])): ?><span class="gal-year__dot" title="Aktuelles Jahr">●</span><?php endif; ?>
@@ -267,7 +303,14 @@ ob_start(); ?>
 
     <div class="gal-toolbar">
       <span class="muted"><?= count($items) ?> <?= count($items) === 1 ? 'Medium' : 'Medien' ?></span>
+      <div class="gal-switch"<?= tour_attrs('Ansicht umschalten', 'Zeige die Medien als Raster oder gruppiert – z. B. nach Person (Uploader) oder nach Monat.', 25) ?>>
+        <?php foreach ($groupModes as $gk => $glabel): ?>
+          <a href="<?= url('gallery', ['cycle' => $selId, 'group' => $gk]) ?>"
+             class="gal-switch__opt<?= $group === $gk ? ' gal-switch__opt--active' : '' ?>"><?= e($glabel) ?></a>
+        <?php endforeach; ?>
+      </div>
       <div class="gal-toolbar__sp"></div>
+      <a class="btn btn--ghost btn--sm" href="<?= url('media_zip', ['cycle' => $selId]) ?>" title="Alle Medien dieses Jahres als ZIP herunterladen">⬇ Galerie herunterladen</a>
       <button type="button" class="btn btn--ghost btn--sm no-spinner" data-gal-select-toggle>Mehrfachauswahl</button>
       <div class="gal-bulk" hidden data-gal-bulk>
         <span class="muted"><span data-gal-count>0</span> ausgewählt</span>
@@ -275,8 +318,16 @@ ob_start(); ?>
       </div>
     </div>
 
-    <div class="gal-grid" data-gal-grid<?= tour_attrs('Galerie', 'Klicke auf ein Bild oder Video, um es groß anzusehen. Eigene Beiträge kannst du bearbeiten oder löschen; die Projektleitung verwaltet alle.', 30) ?>>
-      <?php foreach ($items as $m): $mid = (int) $m['id']; $editable = Media::canEdit($m);
+    <div class="gal-gallery" data-gal-gallery<?= tour_attrs('Galerie', 'Klicke auf ein Bild oder Video, um es groß anzusehen. Eigene Beiträge kannst du bearbeiten oder löschen; die Projektleitung verwaltet alle.', 30) ?>>
+    <?php foreach ($grouped as $glabel => $gitems): ?>
+      <?php if ((string) $glabel !== ''): ?>
+        <h2 class="gal-group__head">
+          <?= e($group === 'month' ? $monthLabel((string) $glabel) : (string) $glabel) ?>
+          <span class="gal-group__n"><?= count($gitems) ?></span>
+        </h2>
+      <?php endif; ?>
+      <div class="gal-grid">
+      <?php foreach ($gitems as $m): $mid = (int) $m['id']; $editable = Media::canEdit($m);
         $isImg    = $m['kind'] === Media::KIND_IMAGE;
         $thumbUrl = url('media_file', ['id' => $mid, 'v' => 'thumb']);
         $viewUrl  = url('media_file', ['id' => $mid, 'v' => 'view']);
@@ -318,6 +369,8 @@ ob_start(); ?>
           </figcaption>
         </figure>
       <?php endforeach; ?>
+      </div>
+    <?php endforeach; ?>
     </div>
   </form>
 <?php endif; ?>
@@ -401,18 +454,19 @@ ob_start(); ?>
 
 <script>
 (function () {
-  var grid = document.querySelector('[data-gal-grid]');
+  // Wrapper um alle (ggf. gruppierten) Raster – die Lightbox läuft gruppen­übergreifend.
+  var gallery = document.querySelector('[data-gal-gallery]');
 
   // --- Lightbox -----------------------------------------------------------
   var lb = document.getElementById('galLightbox');
-  if (grid && lb) {
+  if (gallery && lb) {
     var stage = lb.querySelector('[data-gal-lb-stage]');
     var cap = lb.querySelector('[data-gal-lb-cap]');
     var dl = lb.querySelector('[data-gal-lb-dl]');
     var tiles = [], idx = -1;
 
     function collect() {
-      tiles = Array.prototype.slice.call(grid.querySelectorAll('[data-gal-tile]'));
+      tiles = Array.prototype.slice.call(gallery.querySelectorAll('[data-gal-tile]'));
     }
     function show(i) {
       collect();
@@ -450,7 +504,7 @@ ob_start(); ?>
       if (!document.querySelector('.modal-overlay:not([hidden])')) document.body.classList.remove('modal-open');
     }
 
-    grid.addEventListener('click', function (e) {
+    gallery.addEventListener('click', function (e) {
       var opener = e.target.closest('[data-gal-open]');
       if (!opener) return;
       var tile = opener.closest('[data-gal-tile]');
@@ -643,43 +697,54 @@ ob_start(); ?>
         rows.push(row);
       });
 
-      var chain = Promise.resolve();
-      files.forEach(function (file, idx) {
-        chain = chain.then(function () {
-          var row = rows[idx];
-          var bar = row.querySelector('i');
-          var pct = row.querySelector('.gal-prog__pct');
-          if (maxUpload > 0 && file.size > maxUpload) {
-            row.classList.add('gal-prog--err');
-            pct.textContent = '✗';
-            errors++;
-            var m = document.createElement('div');
-            m.className = 'gal-prog__msg';
-            m.textContent = file.name + ': zu groß (max. ' + fmt(maxUpload) + ').';
-            progress.appendChild(m);
-            return;
-          }
-          return uploadFile(file, function (p) {
-            var v = Math.round(p * 100);
-            bar.style.width = v + '%';
-            pct.textContent = v + '%';
-          }).then(function () {
-            row.classList.add('gal-prog--done');
-            bar.style.width = '100%';
-            pct.textContent = '✓';
-          }).catch(function (err) {
-            row.classList.add('gal-prog--err');
-            pct.textContent = '✗';
-            errors++;
-            var m = document.createElement('div');
-            m.className = 'gal-prog__msg';
-            m.textContent = file.name + ': ' + (err.message || 'Fehler');
-            progress.appendChild(m);
-          });
+      // Eine einzelne Datei verarbeiten (fängt Fehler selbst ab, wirft nie).
+      function processOne(file, idx) {
+        var row = rows[idx];
+        var bar = row.querySelector('i');
+        var pct = row.querySelector('.gal-prog__pct');
+        if (maxUpload > 0 && file.size > maxUpload) {
+          row.classList.add('gal-prog--err');
+          pct.textContent = '✗';
+          errors++;
+          var m = document.createElement('div');
+          m.className = 'gal-prog__msg';
+          m.textContent = file.name + ': zu groß (max. ' + fmt(maxUpload) + ').';
+          progress.appendChild(m);
+          return Promise.resolve();
+        }
+        return uploadFile(file, function (p) {
+          var v = Math.round(p * 100);
+          bar.style.width = v + '%';
+          pct.textContent = v + '%';
+        }).then(function () {
+          row.classList.add('gal-prog--done');
+          bar.style.width = '100%';
+          pct.textContent = '✓';
+        }).catch(function (err) {
+          row.classList.add('gal-prog--err');
+          pct.textContent = '✗';
+          errors++;
+          var m = document.createElement('div');
+          m.className = 'gal-prog__msg';
+          m.textContent = file.name + ': ' + (err.message || 'Fehler');
+          progress.appendChild(m);
         });
-      });
+      }
 
-      chain.then(function () {
+      // Mehrere Dateien parallel hochladen (Worker-Pool). Verschiedene Dateien
+      // sind serverseitig unabhängig (eigene upload_id) – v. a. viele kleine
+      // Bilder sind so deutlich schneller. Chunks EINER Datei bleiben geordnet.
+      var CONCURRENCY = Math.min(3, files.length);
+      var cursor = 0;
+      function worker() {
+        if (cursor >= files.length) { return Promise.resolve(); }
+        var i = cursor++;
+        return processOne(files[i], i).then(worker);
+      }
+      var pool = [];
+      for (var c = 0; c < CONCURRENCY; c++) { pool.push(worker()); }
+
+      Promise.all(pool).then(function () {
         if (errors === 0) {
           window.location = returnUrl;
           return;

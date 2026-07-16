@@ -661,6 +661,18 @@ input[type="file"] { max-width: 100%; }
 .gal-bulk { display: inline-flex; align-items: center; gap: 10px; }
 .gal-bulk[hidden] { display: none; }
 
+/* Ansichtsumschalter (Gruppierung) */
+.gal-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 20px; overflow: hidden; background: #fff; }
+.gal-switch__opt { padding: 6px 13px; font-size: 13px; font-family: "Chivo",sans-serif; font-weight: 700; color: var(--wj-blue); text-decoration: none; border-left: 1px solid var(--line); }
+.gal-switch__opt:first-child { border-left: 0; }
+.gal-switch__opt:hover { background: var(--wj-grey-l); }
+.gal-switch__opt--active { background: var(--wj-blue); color: #fff; }
+
+/* Gruppen-Überschrift */
+.gal-group__head { font-size: 17px; margin: 22px 0 12px; display: flex; align-items: center; gap: 10px; color: var(--wj-blue); }
+.gal-group__head:first-child { margin-top: 0; }
+.gal-group__n { background: var(--wj-grey-l); color: var(--muted); border-radius: 20px; padding: 1px 9px; font-size: 12px; font-family: "Chivo",sans-serif; }
+
 /* Galerie-Raster */
 .gal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
 .gal-tile {

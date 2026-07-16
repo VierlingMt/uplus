@@ -104,6 +104,7 @@ try {
         case 'gallery':
         case 'media_file':
         case 'media_chunk':
+        case 'media_zip':
         case 'sponsors':
         case 'event':
         case 'event_print':

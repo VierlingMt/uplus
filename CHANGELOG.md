@@ -7,6 +7,23 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.70.0] - 2026-07-15
+### Hinzugefügt
+- **Mediengalerie – Ansichtsumschalter (Gruppierung):** Über einen Umschalter
+  in der Werkzeugleiste lässt sich die Galerie als **Raster** anzeigen oder
+  **nach Person (Uploader)** bzw. **nach Monat** (Aufnahmedatum) gruppieren –
+  jede Gruppe mit eigener Überschrift und Anzahl. Die Auswahl bleibt beim
+  Jahreswechsel erhalten.
+- **Mediengalerie – ganze Galerie herunterladen:** Ein Knopf „Galerie
+  herunterladen" packt **alle Medien eines Jahres als ZIP** (Originalgröße). Die
+  Dateien bekommen sprechende Namen (`JJJJ-MM-TT_Person_Original`); bereits
+  komprimierte Medien werden ohne erneute Kompression gepackt (schnell,
+  speicherschonend). Neue Datei: `app/pages/media_zip.php`.
+- **Mediengalerie – paralleler Upload:** Mehrere Dateien werden jetzt
+  **gleichzeitig** hochgeladen (bis zu 3 auf einmal) statt streng nacheinander –
+  besonders bei vielen kleineren Bildern spürbar schneller. Die Stücke einer
+  einzelnen Datei bleiben weiterhin in Reihenfolge.
+
 ## [0.69.0] - 2026-07-15
 ### Hinzugefügt
 - **Mediengalerie – Vorschaubilder für schnelles Laden:** Zu jedem Bild werden
