@@ -251,6 +251,16 @@ final class Help
                          . "exportieren, z. B. für Info-Veranstaltungen.",
             ],
         ],
+        'moderation' => [
+            [
+                'title' => 'Moderationskärtchen',
+                'body'  => "Die **Moderationskärtchen** für den Pitch Day (DIN A5 quer) – am Rednerpult "
+                         . "digital durchblättern (auch im **Vollbild**) oder als **PDF** drucken. "
+                         . "**Freie Textkarten** legst du selbst an; **Bausteinkarten** (Ehrengäste, "
+                         . "Grußworte, Jury, Ablauf, Teams, Preise, Zahlen) füllen sich automatisch aus "
+                         . "dem Wettbewerbsjahr. „Aus Vorlage erstellen“ spielt den kompletten Ablauf ein.",
+            ],
+        ],
         'contact' => [
             [
                 'title' => 'Kontakt',

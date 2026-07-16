@@ -450,6 +450,25 @@ final class Migrator
                 'up'      => 'ALTER TABLE sponsors
                     ADD COLUMN IF NOT EXISTS notes MEDIUMTEXT NULL AFTER website',
             ],
+            [
+                'version' => '2026_07_43_moderation_cards',
+                'name'    => 'Moderationskärtchen (PitchDay-Moderation) je Wettbewerbsjahr, frei verwaltbar',
+                'up'      => "CREATE TABLE IF NOT EXISTS moderation_cards (
+                    id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    cycle_id   INT UNSIGNED NOT NULL,
+                    card_type  VARCHAR(30) NOT NULL DEFAULT 'text',
+                    title      VARCHAR(190) NULL,
+                    subtitle   VARCHAR(255) NULL,
+                    body       TEXT NULL,
+                    sort_order INT NOT NULL DEFAULT 0,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (id),
+                    KEY idx_modcards_cycle (cycle_id, sort_order),
+                    CONSTRAINT fk_modcards_cycle FOREIGN KEY (cycle_id)
+                        REFERENCES competition_cycles(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            ],
         ];
     }
 

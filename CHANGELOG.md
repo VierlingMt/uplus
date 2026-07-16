@@ -7,6 +7,24 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.75.0] - 2026-07-16
+### Hinzugefügt
+- **Moderationskärtchen für den PitchDay:** Ein neues Modul „Moderationskärtchen"
+  (Verwaltung) für die Moderation des Pitch Days – ähnlich der Präsentation, aber im
+  Format **DIN A5 quer** als Handout-/Spickkarten. Die Projektleitung blättert am
+  Rednerpult digital durch die Karten (inkl. **Vollbild**, Pfeiltasten ← →, <kbd>F</kbd>)
+  oder druckt sie über **„Als PDF (A5 quer)"** – eine Karte je Seite.
+  - **Freie Textkarten:** beliebig viele eigene Karten anlegen, Titel/Untertitel/Text
+    (schlankes Markdown) ändern, per ↑/↓ umsortieren und wieder löschen.
+  - **Bausteinkarten mit Live-Daten:** feste Bausteine ziehen ihren Inhalt automatisch
+    aus dem System und müssen nicht mehr abgetippt werden – **Ehrengäste**, **Grußworte
+    & Keynote**, **Jury**, **Ablauf/Zeitplan**, **nominierte Teams**, **Preise** sowie
+    **Zahlen & Fakten** (Schulen, Schüler:innen, Teams, Jury, Nominierte). Zu jeder
+    Bausteinkarte lässt sich zusätzlich eine eigene Moderations-Notiz setzen.
+  - **Vorlage:** „Aus Vorlage erstellen" spielt den kompletten, bewährten
+    Moderationsablauf (Begrüßung, Dank, Über das Projekt, Ablauf, Grußworte, Jury,
+    Teams, Preisverleihung, Ausklang …) je Wettbewerbsjahr ein – danach frei anpassbar.
+
 ## [0.74.0] - 2026-07-16
 ### Hinzugefügt
 - **Sponsoren – Notizfeld für Absprachen:** Im Sponsor-Formular gibt es jetzt ein

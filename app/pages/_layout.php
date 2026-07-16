@@ -28,6 +28,7 @@ $navGroups = [
     ['Verwaltung', [
         ['cycles',   'Wettbewerbsjahre', '🏆', ['admin', 'lead']],
         ['event',    'PitchDay-Orga', '🎤', ['admin', 'lead']],
+        ['moderation', 'Moderationskärtchen', '🗂', ['admin', 'lead']],
         ['schools',  'Schulen', '🏫', ['admin', 'lead', 'juror']],
         ['jurors',   'Jury & Nutzer', '⚖', ['admin', 'lead', 'juror']],
         ['sponsors', 'Sponsoren', '🤝', ['admin', 'lead']],

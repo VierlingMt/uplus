@@ -1,0 +1,168 @@
+/**
+ * Moderationskärtchen „Unternehmen Plus" – Kartendarstellung (DIN A5 quer).
+ * Gemeinsame Optik für Bildschirmansicht (moderation.php) und Druck/PDF
+ * (moderation_print.php), damit beide identisch aussehen. Navigations- und
+ * Druck-Chrome liegt jeweils inline in der Seite.
+ */
+
+.mc-deck {
+  --mc-blue: #003594;
+  --mc-ink: #1c2430;
+  --mc-muted: #5b6472;
+  --mc-line: #d8dee9;
+  --mc-teal: #0f8a7e;
+  --mc-wash: #f4f7fc;
+}
+
+/* ---------- Kartenrahmen (DIN A5 quer = 210 × 148 mm) ---------- */
+.mc-card {
+  position: relative;
+  background: #fff;
+  color: var(--mc-ink);
+  aspect-ratio: 210 / 148;
+  width: 100%;
+  border: 1px solid var(--mc-line);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 34px rgba(0, 30, 90, .12);
+  font-family: "Bitter", Georgia, serif;
+  /* Die Karte ist der Bezug für die Container-Query-Einheit cqw: der komplette
+     Inhalt skaliert proportional mit der Kartenbreite – klein in der Übersicht,
+     groß im Vollbild/Druck – und bleibt stets im A5-quer-Format. */
+  container-type: inline-size;
+}
+.mc-card__inner {
+  position: absolute;
+  inset: 0;
+  padding: 5% 5.6%;
+  display: flex;
+  flex-direction: column;
+  /* Schriftgröße = fester Anteil der Kartenbreite (cqw); alle Maße in em/%
+     leiten sich davon ab. Niedrige Untergrenze, KEINE Obergrenze. */
+  font-size: max(8px, 2.7cqw);
+}
+@supports not (font-size: 1cqw) {
+  .mc-card__inner { font-size: max(8px, 2.5vw); }
+}
+
+/* Kopfzeile: Kicker links, Kartennummer rechts (groß, für die Moderation). */
+.mc-card__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1em;
+  margin-bottom: .5em;
+}
+.mc-kicker {
+  font-family: "Chivo", system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: .5em;
+  font-weight: 700;
+  color: var(--mc-muted);
+}
+.mc-step {
+  font-family: "Chivo", system-ui, sans-serif;
+  font-weight: 900;
+  font-size: .6em;
+  color: var(--mc-blue);
+  background: var(--mc-wash);
+  border: 1px solid var(--mc-line);
+  border-radius: 999px;
+  padding: .25em .7em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.mc-h {
+  font-family: "Chivo", system-ui, sans-serif;
+  font-weight: 900;
+  color: var(--mc-blue);
+  font-size: 1.5em;
+  line-height: 1.08;
+  margin: 0 0 .1em;
+}
+.mc-sub {
+  font-family: "Chivo", system-ui, sans-serif;
+  color: var(--mc-teal);
+  font-weight: 700;
+  font-size: .68em;
+  margin-bottom: .5em;
+}
+
+/* Inhaltsbereich zwischen Kopf und Quellen-Fußzeile; scrollt notfalls. */
+.mc-content { flex: 1 1 auto; min-height: 0; overflow: auto; }
+
+.mc-body { font-size: .8em; line-height: 1.4; color: var(--mc-ink); }
+.mc-body p { margin: 0 0 .5em; }
+.mc-body ul { margin: 0 0 .5em; padding-left: 1.2em; }
+.mc-body li { margin-bottom: .28em; }
+.mc-body strong { color: var(--mc-blue); }
+.mc-body a { color: var(--mc-teal); }
+
+/* Hinweis, dass eine Bausteinkarte ihre Daten live aus dem System zieht. */
+.mc-source {
+  margin-top: .5em;
+  font-family: "Chivo", system-ui, sans-serif;
+  font-size: .46em;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--mc-muted);
+}
+.mc-empty { color: var(--mc-muted); font-size: .72em; font-style: italic; }
+
+/* ---------- Zahlen & Fakten ---------- */
+.mc-facts {
+  list-style: none; margin: .2em 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5em, 1fr)); gap: .6em;
+}
+.mc-facts li {
+  background: var(--mc-wash); border: 1px solid var(--mc-line); border-radius: .5em;
+  padding: .5em .6em; display: flex; flex-direction: column; gap: .1em;
+}
+.mc-facts__n {
+  font-family: "Chivo", system-ui, sans-serif; font-weight: 900; color: var(--mc-blue);
+  font-size: 1.5em; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.mc-facts__l { font-size: .62em; color: var(--mc-muted); line-height: 1.2; }
+
+/* ---------- Personen (Ehrengäste / Jury / Redner) ---------- */
+.mc-people { list-style: none; margin: 0; padding: 0; font-size: .78em; }
+.mc-people--num { list-style: decimal; padding-left: 1.4em; }
+.mc-people li { margin-bottom: .35em; line-height: 1.3; }
+.mc-people strong { color: var(--mc-ink); }
+.mc-role { color: var(--mc-muted); font-size: .9em; }
+.mc-role::before { content: " – "; }
+.mc-tag {
+  display: inline-block; background: var(--mc-blue); color: #fff; border-radius: .3em;
+  padding: 0 .4em; margin-right: .4em; font-family: "Chivo", system-ui, sans-serif;
+  font-size: .78em; font-weight: 700; vertical-align: middle;
+}
+.mc-vertritt { display: block; color: var(--mc-blue); font-weight: 600; font-size: .82em; }
+
+/* ---------- Ablauf / Zeitplan ---------- */
+.mc-agenda { width: 100%; border-collapse: collapse; font-size: .76em; }
+.mc-agenda td { padding: .28em 0; border-bottom: 1px solid var(--mc-wash); vertical-align: top; }
+.mc-agenda tr:last-child td { border-bottom: 0; }
+.mc-agenda__t {
+  white-space: nowrap; font-weight: 700; color: var(--mc-blue);
+  font-variant-numeric: tabular-nums; padding-right: .9em; width: 7em;
+}
+.mc-note { color: var(--mc-muted); font-weight: 400; }
+
+/* ---------- Nominierte Teams ---------- */
+.mc-teams { margin: 0; padding-left: 1.4em; font-size: .76em; }
+.mc-teams li { margin-bottom: .35em; line-height: 1.3; }
+.mc-plain { margin: 0; padding-left: 1.2em; font-size: .74em; list-style: none; }
+.mc-plain li { margin-bottom: .25em; }
+.mc-members { color: var(--mc-muted); font-size: .82em; }
+.mc-subgroup {
+  font-family: "Chivo", system-ui, sans-serif; font-weight: 700; color: var(--mc-ink);
+  font-size: .68em; margin: .5em 0 .2em;
+}
+
+/* ---------- Preise ---------- */
+.mc-prizes { margin: 0; padding-left: 1.2em; font-size: .78em; }
+.mc-prizes li { margin-bottom: .32em; line-height: 1.3; }
+.mc-amount { color: var(--mc-teal); font-weight: 700; margin-left: .3em; white-space: nowrap; }
+.mc-prizes .mc-note { display: block; font-size: .88em; }

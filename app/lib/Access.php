@@ -29,6 +29,7 @@ final class Access
         'gallery'       => 'Mediengalerie',
         'contact'       => 'Kontakt',
         'presentation'  => 'Präsentation',
+        'moderation'    => 'Moderationskärtchen',
         'teams'         => 'Teams & Schüler',
         'schools'       => 'Schulen',
         'jurors'        => 'Jury & Nutzer',
@@ -60,6 +61,8 @@ final class Access
         'contact'       => ['admin' => 'write', 'lead' => 'read',  'teacher' => 'read', 'juror' => 'read'],
         // Präsentation: alle dürfen ansehen; pflegen (Textfolien) nur die Verwaltung.
         'presentation'  => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'read', 'juror' => 'read'],
+        // Moderationskärtchen: Werkzeug der Moderation – nur die Verwaltung (Projektleitung).
+        'moderation'    => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'none', 'juror' => 'none'],
         'teams'         => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'write', 'juror' => 'read'],
         'schools'       => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'none', 'juror' => 'read'],
         'jurors'        => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'none', 'juror' => 'read'],

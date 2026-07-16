@@ -94,6 +94,8 @@ try {
 
         case 'presentation':
         case 'presentation_print':
+        case 'moderation':
+        case 'moderation_print':
             require APP_PATH . '/pages/' . $route . '.php';
             break;
 
