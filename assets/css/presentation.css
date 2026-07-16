@@ -25,6 +25,10 @@
   overflow: hidden;
   box-shadow: 0 10px 34px rgba(0, 30, 90, .12);
   font-family: "Bitter", Georgia, serif;
+  /* Die Folie ist der Bezug für die Container-Query-Einheit cqw: die komplette
+     Folie skaliert dadurch proportional mit ihrer Breite – so passt der Inhalt
+     in jeder Größe sauber ins 16:9-Format (auch auf schmalen Handy-Displays). */
+  container-type: inline-size;
 }
 .ps-slide__inner {
   position: absolute;
@@ -32,12 +36,14 @@
   padding: 5.2% 6%;
   display: flex;
   flex-direction: column;
-  /* Skaliert Schrift mit der Folienbreite (Container Query Unit), damit die
-     Folie in jeder Größe stimmig wirkt. Fallback für ältere Browser via vw. */
-  font-size: clamp(12px, 2.4cqw, 30px);
+  /* Schriftgröße = fester Anteil der Folienbreite (cqw). Da alle Maße in em/%
+     davon abgeleitet sind, skaliert der gesamte Folieninhalt proportional und
+     bleibt im 16:9-Rahmen. Niedrige Untergrenze, damit auch auf schmalen
+     Displays nichts abgeschnitten wird. Fallback (ohne cqw) via vw. */
+  font-size: clamp(7px, 2.4cqw, 30px);
 }
 @supports not (font-size: 1cqw) {
-  .ps-slide__inner { font-size: clamp(12px, 1.5vw, 26px); }
+  .ps-slide__inner { font-size: clamp(7px, 2.2vw, 26px); }
 }
 
 /* Seitenzahl unten rechts (klein) */

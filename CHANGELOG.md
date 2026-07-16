@@ -7,6 +7,15 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.73.1] - 2026-07-16
+### Behoben
+- **Präsentation – Folien auf schmalen Displays abgeschnitten:** Auf dem Handy
+  wurden Folien mit viel Inhalt (z. B. „Projektablauf" oder die Titelfolie mit
+  Sponsoren) unten abgeschnitten. Die Folie skaliert jetzt **proportional mit
+  ihrer Breite** (Container-Query-Einheit als Bezug, niedrigere Schrift-Untergrenze)
+  und passt dadurch in jeder Größe sauber ins 16:9-Format – nichts wird mehr
+  abgeschnitten.
+
 ## [0.73.0] - 2026-07-16
 ### Geändert
 - **Social-Media-Links jetzt zentral im Admin:** Die Links (Web, Instagram,
