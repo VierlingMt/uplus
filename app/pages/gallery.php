@@ -295,14 +295,6 @@ $monthLabel = static function (string $ym) use ($deMonths): string {
 
 // Medien in Gruppen einsortieren (Reihenfolge innerhalb der Gruppe bleibt
 // erhalten – nach Aufnahmedatum). Bei „Raster" gibt es eine namenlose Gruppe.
-// Videos ohne Vorschaubild zählen (für den „Vorschauen erzeugen"-Knopf).
-$videoNoPoster = 0;
-foreach ($items as $m) {
-    if ($m['kind'] === Media::KIND_VIDEO && !Media::hasPoster($m)) {
-        $videoNoPoster++;
-    }
-}
-
 $grouped = [];
 if ($group === 'uploader') {
     foreach ($items as $m) {
@@ -369,10 +361,6 @@ ob_start(); ?>
         <?php endforeach; ?>
       </div>
       <div class="gal-toolbar__sp"></div>
-      <?php if ($videoNoPoster > 0): ?>
-        <button type="button" class="btn btn--ghost btn--sm no-spinner" data-gal-backfill
-                title="Für <?= $videoNoPoster ?> Video(s) ohne Vorschau ein Vorschaubild erzeugen (im Browser)">🎬 Video-Vorschauen erzeugen (<?= $videoNoPoster ?>)</button>
-      <?php endif; ?>
       <a class="btn btn--ghost btn--sm" href="<?= url('media_zip', ['cycle' => $selId]) ?>" title="Alle Medien dieses Jahres als ZIP herunterladen">⬇ Galerie</a>
       <button type="button" class="btn btn--ghost btn--sm no-spinner" data-gal-share="cycle" title="Teilbaren Download-Link für die ganze Galerie erstellen">🔗 Teilen-Link</button>
       <button type="button" class="btn btn--ghost btn--sm no-spinner" data-gal-select-toggle>Mehrfachauswahl</button>
@@ -612,33 +600,48 @@ ob_start(); ?>
   }
   var posterSupported = !!(window.HTMLCanvasElement && window.Promise && window.FormData && document.createElement('canvas').getContext);
 
-  // „Video-Vorschauen erzeugen" – alle Bestandsvideos ohne Poster nachziehen.
-  var backfillBtn = document.querySelector('[data-gal-backfill]');
-  if (backfillBtn && posterSupported) {
-    backfillBtn.addEventListener('click', function () {
-      var tiles = Array.prototype.slice.call(
-        document.querySelectorAll('[data-gal-tile][data-kind="video"][data-haspos="0"]'));
-      if (!tiles.length) return;
-      backfillBtn.disabled = true;
-      var total = tiles.length, done = 0, ok = 0, i = 0;
-      function upd() { backfillBtn.textContent = 'Erzeuge Vorschauen… ' + done + '/' + total; }
-      upd();
-      function next() {
-        if (i >= tiles.length) {
-          backfillBtn.textContent = '✓ ' + ok + ' erzeugt';
-          setTimeout(function () { if (ok > 0) location.reload(); else backfillBtn.disabled = false; }, 700);
-          return;
-        }
-        var t = tiles[i++];
-        captureVideoPoster(t.getAttribute('data-src'), false)
-          .then(function (p) { return uploadPoster(t.getAttribute('data-id'), p); })
-          .then(function (good) { done++; if (good) { ok++; t.setAttribute('data-haspos', '1'); } upd(); next(); })
-          .catch(function () { done++; upd(); next(); });
+  // Video-Vorschaubilder für Bestandsvideos ohne Poster EINMAL automatisch im
+  // Hintergrund nachziehen (kein Knopf). Sobald ein Video ein Poster hat, taucht
+  // es hier nicht mehr auf – der Lauf erledigt sich also von selbst.
+  function swapTilePoster(tile) {
+    var media = tile.querySelector('[data-gal-media]');
+    if (!media) return;
+    var ph = media.querySelector('.gal-tile__ph');
+    if (!ph) return;
+    var img = document.createElement('img');
+    img.loading = 'lazy';
+    img.alt = '';
+    // Cache-Buster, da die Poster-URL vorher 404 lieferte.
+    img.src = tile.getAttribute('data-thumb') + '&_=' + Date.now();
+    media.insertBefore(img, media.firstChild);
+    ph.parentNode.removeChild(ph);
+  }
+  function autoBackfillPosters() {
+    if (!posterSupported) return;
+    var tiles = Array.prototype.slice.call(
+      document.querySelectorAll('[data-gal-tile][data-kind="video"][data-haspos="0"]'));
+    if (!tiles.length) return;
+    var i = 0, active = 0, CONC = 2;
+    function pump() {
+      while (active < CONC && i < tiles.length) {
+        var tile = tiles[i++];
+        active++;
+        (function (tile) {
+          captureVideoPoster(tile.getAttribute('data-src'), false)
+            .then(function (p) { return uploadPoster(tile.getAttribute('data-id'), p); })
+            .then(function (ok) { if (ok) { tile.setAttribute('data-haspos', '1'); swapTilePoster(tile); } })
+            .catch(function () {})
+            .then(function () { active--; pump(); });
+        })(tile);
       }
-      next();
-    });
-  } else if (backfillBtn) {
-    backfillBtn.style.display = 'none';
+    }
+    pump();
+  }
+  // Erst starten, wenn die Seite interaktiv ist, damit das Raster sofort da ist.
+  if (window.requestIdleCallback) {
+    requestIdleCallback(function () { autoBackfillPosters(); }, { timeout: 3000 });
+  } else {
+    setTimeout(autoBackfillPosters, 1500);
   }
 
   // --- Lightbox -----------------------------------------------------------

@@ -7,6 +7,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.76.1] - 2026-07-16
+### Geändert
+- **Video-Vorschaubilder werden automatisch nachgezogen (ohne Knopf):** Beim
+  Öffnen einer Galerie erzeugt die App im Hintergrund still die Poster für
+  Videos, die noch keins haben, und tauscht den Platzhalter live gegen das
+  Vorschaubild. Der Lauf erledigt sich von selbst (erledigte Videos tauchen nicht
+  mehr auf). Der manuelle „Vorschauen erzeugen"-Knopf entfällt.
+
 ## [0.76.0] - 2026-07-16
 ### Behoben / Geändert
 - **Mediengalerie lädt deutlich schneller (v. a. bei vielen Videos):** Im Raster
