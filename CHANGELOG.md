@@ -7,6 +7,12 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.75.5] - 2026-07-16
+### Behoben
+- **Dashboard „Partner & Sponsoren": nur echte Sponsoren.** Das fest
+  eingebaute WJ-Forchheim-Logo wird nicht mehr angezeigt – die Leiste zeigt
+  jetzt ausschließlich Sponsoren mit einer Leistung im aktiven Wettbewerbsjahr.
+
 ## [0.75.4] - 2026-07-16
 ### Hinzugefügt
 - **Moderationskärtchen – Seitenzahl unten rechts:** Jede Karte zeigt jetzt unten

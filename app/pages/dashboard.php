@@ -101,7 +101,6 @@
   <div class="card__body">
     <?php if (!empty($sponsors)): ?>
       <div class="partner-bar">
-        <img src="<?= asset('img/wj/wj-forchheim.png') ?>" alt="WJ Forchheim">
         <?php foreach ($sponsors as $sp): ?>
           <img src="<?= asset($sp['logo_path']) ?>" alt="<?= e($sp['name']) ?>" title="<?= e($sp['name']) ?>">
         <?php endforeach; ?>
