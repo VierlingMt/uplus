@@ -347,6 +347,52 @@ final class Media
         }
     }
 
+    /** Ist zu einem Medium bereits ein Vorschaubild (thumb) vorhanden? */
+    public static function hasPoster(array $item): bool
+    {
+        return is_file(self::variantPath($item, 'thumb'));
+    }
+
+    /**
+     * Vom Browser aufgenommenes Video-Standbild (Daten-URL) als Vorschau-/
+     * Ansichts-Variante speichern. So bekommen Videos ein statisches Thumbnail –
+     * die Galerie lädt dann nur ein kleines Bild statt das Video zu öffnen.
+     */
+    public static function saveVideoPoster(array $item, string $dataUrl): bool
+    {
+        if (!preg_match('#^data:image/(png|jpeg|webp);base64,#', $dataUrl)) {
+            return false;
+        }
+        $data = base64_decode(substr($dataUrl, strpos($dataUrl, ',') + 1), true);
+        if ($data === false || $data === '' || strlen($data) > 8 * 1024 * 1024) {
+            return false;
+        }
+        if (!self::ensureTmpDir()) {
+            return false;
+        }
+        $tmp = self::tmpDir() . '/poster_' . bin2hex(random_bytes(6)) . '.img';
+        if (@file_put_contents($tmp, $data) === false) {
+            return false;
+        }
+        $ok = false;
+        try {
+            $ok = true;
+            foreach (self::VARIANTS as $v => $max) {
+                $dir = self::variantDir($v);
+                if (!is_dir($dir)) {
+                    @mkdir($dir, 0775, true);
+                }
+                if (!self::generateImageVariant($tmp, self::variantPath($item, $v), $max)) {
+                    $ok = false;
+                }
+            }
+        } catch (\Throwable $e) {
+            $ok = false;
+        }
+        @unlink($tmp);
+        return $ok;
+    }
+
     /** Verkleinerte Variante mit GD erzeugen (EXIF-Ausrichtung berücksichtigt). */
     private static function generateImageVariant(string $src, string $dest, int $maxDim): bool
     {

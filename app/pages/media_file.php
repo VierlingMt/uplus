@@ -32,10 +32,20 @@ if (!$download && !$variant && $m['kind'] === Media::KIND_IMAGE) {
     // das Original gibt es über download=1.
     $variant = 'view';
 }
-if (!$download && $variant && $m['kind'] === Media::KIND_IMAGE) {
-    $deriv = Media::ensureDerivative($m, $variant);
-    if ($deriv !== null && is_file($deriv)) {
-        $path = $deriv;
+if (!$download && ($variant === 'thumb' || $variant === 'view')) {
+    // Bereits vorhandene Variante (Bild-Thumbnail ODER Video-Poster) direkt liefern.
+    $vp = Media::variantPath($m, $variant);
+    if (is_file($vp)) {
+        $path = $vp;
+    } elseif ($m['kind'] === Media::KIND_IMAGE) {
+        $deriv = Media::ensureDerivative($m, $variant);
+        if ($deriv !== null && is_file($deriv)) {
+            $path = $deriv;
+        }
+    } else {
+        // Video ohne Poster – es gibt keine Bildvorschau.
+        http_response_code(404);
+        exit('Keine Vorschau.');
     }
 }
 

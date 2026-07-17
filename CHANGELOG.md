@@ -7,6 +7,23 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.76.0] - 2026-07-16
+### Behoben / Geändert
+- **Mediengalerie lädt deutlich schneller (v. a. bei vielen Videos):** Im Raster
+  wird kein `<video>`-Element mehr geladen. Stattdessen zeigt jede Video-Kachel
+  ein **statisches Vorschaubild (Poster)** – oder, solange keins existiert, einen
+  leichten Platzhalter. Damit entfallen die vielen parallelen Video-Metadaten-
+  Abrufe, die das Öffnen der Galerie stark verlangsamt haben.
+### Hinzugefügt
+- **Video-Vorschaubilder (Poster):** Beim Hochladen eines Videos wird direkt im
+  Browser ein Standbild aus einem Frame erzeugt und als Vorschau gespeichert (kein
+  `ffmpeg` auf dem Server nötig). Beim Ansehen eines Videos in der Großansicht wird
+  ein fehlendes Poster still nachgezogen.
+- **„🎬 Video-Vorschauen erzeugen"-Knopf:** Zieht für **alle bestehenden Videos**
+  ohne Vorschau die Poster **einmalig** nach – mit Fortschrittsanzeige. Danach
+  lädt die Galerie auch mit vielen Videos schnell. `media_file` liefert Video-
+  Poster als `v=thumb`/`v=view`.
+
 ## [0.75.5] - 2026-07-16
 ### Behoben
 - **Dashboard „Partner & Sponsoren": nur echte Sponsoren.** Das fest

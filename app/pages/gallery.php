@@ -59,6 +59,23 @@ if (is_post()) {
         exit;
     }
 
+    // Vom Browser aufgenommenes Video-Standbild als Poster speichern (JSON).
+    if ($action === 'set_poster') {
+        header('Content-Type: application/json; charset=utf-8');
+        $item = Media::find((int) input('id'));
+        if (!$item || $item['kind'] !== Media::KIND_VIDEO) {
+            echo json_encode(['ok' => false, 'error' => 'Nicht gefunden.']);
+            exit;
+        }
+        // Ist schon ein Poster da, darf nur die/der Berechtigte es ersetzen.
+        if (Media::hasPoster($item) && !Media::canEdit($item)) {
+            echo json_encode(['ok' => false, 'error' => 'exists']);
+            exit;
+        }
+        echo json_encode(['ok' => Media::saveVideoPoster($item, (string) input('poster'))]);
+        exit;
+    }
+
     // Mehrere Dateien auf einmal hochladen.
     if ($action === 'upload') {
         $cycleId = (int) input('cycle_id');
@@ -278,6 +295,14 @@ $monthLabel = static function (string $ym) use ($deMonths): string {
 
 // Medien in Gruppen einsortieren (Reihenfolge innerhalb der Gruppe bleibt
 // erhalten – nach Aufnahmedatum). Bei „Raster" gibt es eine namenlose Gruppe.
+// Videos ohne Vorschaubild zählen (für den „Vorschauen erzeugen"-Knopf).
+$videoNoPoster = 0;
+foreach ($items as $m) {
+    if ($m['kind'] === Media::KIND_VIDEO && !Media::hasPoster($m)) {
+        $videoNoPoster++;
+    }
+}
+
 $grouped = [];
 if ($group === 'uploader') {
     foreach ($items as $m) {
@@ -344,6 +369,10 @@ ob_start(); ?>
         <?php endforeach; ?>
       </div>
       <div class="gal-toolbar__sp"></div>
+      <?php if ($videoNoPoster > 0): ?>
+        <button type="button" class="btn btn--ghost btn--sm no-spinner" data-gal-backfill
+                title="Für <?= $videoNoPoster ?> Video(s) ohne Vorschau ein Vorschaubild erzeugen (im Browser)">🎬 Video-Vorschauen erzeugen (<?= $videoNoPoster ?>)</button>
+      <?php endif; ?>
       <a class="btn btn--ghost btn--sm" href="<?= url('media_zip', ['cycle' => $selId]) ?>" title="Alle Medien dieses Jahres als ZIP herunterladen">⬇ Galerie</a>
       <button type="button" class="btn btn--ghost btn--sm no-spinner" data-gal-share="cycle" title="Teilbaren Download-Link für die ganze Galerie erstellen">🔗 Teilen-Link</button>
       <button type="button" class="btn btn--ghost btn--sm no-spinner" data-gal-select-toggle>Mehrfachauswahl</button>
@@ -371,12 +400,15 @@ ob_start(); ?>
         $playUrl  = url('media_file', ['id' => $mid]);
         $origUrl  = url('media_file', ['id' => $mid, 'download' => 1]);
         $lbSrc    = $isImg ? $viewUrl : $playUrl; // Lightbox: Bild = Ansicht, Video = Original-Stream
+        $hasPos   = $isImg ? true : Media::hasPoster($m);
         $dispDate = $mediaDate($m); ?>
         <figure class="gal-tile" data-gal-tile
                 data-id="<?= $mid ?>"
                 data-kind="<?= e($m['kind']) ?>"
                 data-src="<?= e($lbSrc) ?>"
+                data-thumb="<?= e($thumbUrl) ?>"
                 data-download="<?= e($origUrl) ?>"
+                data-haspos="<?= $hasPos ? '1' : '0' ?>"
                 data-title="<?= e((string) ($m['title'] ?? '')) ?>"
                 data-uploader="<?= e((string) ($m['uploader_name'] ?? '')) ?>"
                 data-date="<?= e($dispDate) ?>">
@@ -387,8 +419,12 @@ ob_start(); ?>
             <?php if ($isImg): ?>
               <img src="<?= e($thumbUrl) ?>" alt="<?= e((string) ($m['title'] ?? 'Bild')) ?>" loading="lazy">
             <?php else: ?>
-              <span class="gal-tile__video">
-                <video src="<?= e($playUrl) ?>#t=0.1" preload="metadata" muted playsinline></video>
+              <span class="gal-tile__video" data-gal-media>
+                <?php if ($hasPos): ?>
+                  <img src="<?= e($thumbUrl) ?>" alt="<?= e((string) ($m['title'] ?? 'Video')) ?>" loading="lazy">
+                <?php else: ?>
+                  <span class="gal-tile__ph" aria-hidden="true">🎬</span>
+                <?php endif; ?>
                 <span class="gal-tile__play" aria-hidden="true">▶</span>
               </span>
             <?php endif; ?>
@@ -417,7 +453,7 @@ ob_start(); ?>
       <h3 id="uploadModalTitle">Medien hochladen – <?= e($selCycle['year_label']) ?></h3>
       <button type="button" class="modal__close" data-modal-close aria-label="Schließen">&times;</button>
     </div>
-    <form method="post" action="<?= url('gallery', ['cycle' => $selId]) ?>" enctype="multipart/form-data" class="modal__body" data-gal-upload-form>
+    <form method="post" action="<?= url('gallery', ['cycle' => $selId]) ?>" enctype="multipart/form-data" class="modal__body" data-gal-upload-form data-gal-endpoint="<?= e(url('gallery')) ?>">
       <?= Csrf::field() ?>
       <input type="hidden" name="action" value="upload">
       <input type="hidden" name="cycle_id" value="<?= $selId ?>">
@@ -527,6 +563,84 @@ ob_start(); ?>
   // Wrapper um alle (ggf. gruppierten) Raster – die Lightbox läuft gruppen­übergreifend.
   var gallery = document.querySelector('[data-gal-gallery]');
 
+  // --- Video-Poster im Browser erzeugen (kein ffmpeg auf dem Server) -------
+  function galCtx() {
+    var f = document.querySelector('[data-gal-endpoint]');
+    if (!f) return null;
+    return { endpoint: f.getAttribute('data-gal-endpoint'), csrf: (f.querySelector('[name="_csrf"]') || {}).value || '' };
+  }
+  function posterFromVideoEl(v) {
+    try {
+      var w = v.videoWidth, h = v.videoHeight;
+      if (!w || !h) return null;
+      var max = 1280, s = Math.min(1, max / Math.max(w, h));
+      var c = document.createElement('canvas');
+      c.width = Math.round(w * s); c.height = Math.round(h * s);
+      c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+      return c.toDataURL('image/jpeg', 0.85);
+    } catch (e) { return null; }
+  }
+  // Standbild aus einer Datei (Upload) oder URL (Bestand) gewinnen.
+  function captureVideoPoster(src, isFile) {
+    return new Promise(function (resolve) {
+      var url = isFile ? URL.createObjectURL(src) : src;
+      var v = document.createElement('video');
+      v.muted = true; v.preload = 'auto'; v.playsInline = true;
+      var done = false;
+      function fin(val) { if (done) return; done = true; if (isFile) { try { URL.revokeObjectURL(url); } catch (e) {} } try { v.removeAttribute('src'); v.load(); } catch (e) {} resolve(val); }
+      var to = setTimeout(function () { fin(null); }, 12000);
+      v.addEventListener('loadeddata', function () {
+        var t = Math.min(1, (v.duration || 2) * 0.1); if (!isFinite(t) || t <= 0) t = 0.1;
+        try { v.currentTime = t; } catch (e) { clearTimeout(to); fin(posterFromVideoEl(v)); }
+      });
+      v.addEventListener('seeked', function () { clearTimeout(to); fin(posterFromVideoEl(v)); });
+      v.addEventListener('error', function () { clearTimeout(to); fin(null); });
+      v.src = url;
+    });
+  }
+  function uploadPoster(id, dataUrl) {
+    if (!dataUrl) return Promise.resolve(false);
+    var ctx = galCtx();
+    if (!ctx || !ctx.endpoint) return Promise.resolve(false);
+    var fd = new FormData();
+    fd.append('action', 'set_poster'); fd.append('id', id);
+    if (ctx.csrf) fd.append('_csrf', ctx.csrf);
+    fd.append('poster', dataUrl);
+    return fetch(ctx.endpoint, { method: 'POST', body: fd, credentials: 'same-origin' })
+      .then(function (r) { return r.json(); }).then(function (d) { return !!(d && d.ok); })
+      .catch(function () { return false; });
+  }
+  var posterSupported = !!(window.HTMLCanvasElement && window.Promise && window.FormData && document.createElement('canvas').getContext);
+
+  // „Video-Vorschauen erzeugen" – alle Bestandsvideos ohne Poster nachziehen.
+  var backfillBtn = document.querySelector('[data-gal-backfill]');
+  if (backfillBtn && posterSupported) {
+    backfillBtn.addEventListener('click', function () {
+      var tiles = Array.prototype.slice.call(
+        document.querySelectorAll('[data-gal-tile][data-kind="video"][data-haspos="0"]'));
+      if (!tiles.length) return;
+      backfillBtn.disabled = true;
+      var total = tiles.length, done = 0, ok = 0, i = 0;
+      function upd() { backfillBtn.textContent = 'Erzeuge Vorschauen… ' + done + '/' + total; }
+      upd();
+      function next() {
+        if (i >= tiles.length) {
+          backfillBtn.textContent = '✓ ' + ok + ' erzeugt';
+          setTimeout(function () { if (ok > 0) location.reload(); else backfillBtn.disabled = false; }, 700);
+          return;
+        }
+        var t = tiles[i++];
+        captureVideoPoster(t.getAttribute('data-src'), false)
+          .then(function (p) { return uploadPoster(t.getAttribute('data-id'), p); })
+          .then(function (good) { done++; if (good) { ok++; t.setAttribute('data-haspos', '1'); } upd(); next(); })
+          .catch(function () { done++; upd(); next(); });
+      }
+      next();
+    });
+  } else if (backfillBtn) {
+    backfillBtn.style.display = 'none';
+  }
+
   // --- Lightbox -----------------------------------------------------------
   var lb = document.getElementById('galLightbox');
   if (gallery && lb) {
@@ -555,6 +669,14 @@ ob_start(); ?>
       if (kind === 'video') {
         el = document.createElement('video');
         el.src = src; el.controls = true; el.autoplay = true; el.playsInline = true;
+        // Fehlt dem Video noch ein Vorschaubild? Beim Ansehen still nachziehen.
+        if (posterSupported && t.getAttribute('data-haspos') !== '1') {
+          el.addEventListener('loadeddata', function once() {
+            el.removeEventListener('loadeddata', once);
+            var p = posterFromVideoEl(el);
+            if (p) uploadPoster(t.getAttribute('data-id'), p).then(function (ok) { if (ok) t.setAttribute('data-haspos', '1'); });
+          });
+        }
       } else {
         el = document.createElement('img');
         el.src = src; el.alt = title || 'Bild';
@@ -871,6 +993,14 @@ ob_start(); ?>
           var v = Math.round(p * 100);
           bar.style.width = v + '%';
           pct.textContent = v + '%';
+        }).then(function (res) {
+          // Für Videos direkt ein Vorschaubild (Poster) aus einem Frame erzeugen.
+          if (posterSupported && res && res.id && file.type && file.type.indexOf('video/') === 0) {
+            pct.textContent = '🎬';
+            return captureVideoPoster(file, true)
+              .then(function (dataUrl) { return uploadPoster(res.id, dataUrl); })
+              .catch(function () {});
+          }
         }).then(function () {
           row.classList.add('gal-prog--done');
           bar.style.width = '100%';
