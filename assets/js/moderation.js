@@ -116,13 +116,15 @@
     return next;
   }
 
-  /** „X / Y" auf allen Karten des Decks neu durchnummerieren. */
+  /** Zähler oben („X / Y") und Seitenzahl unten („Seite X / Y") neu durchnummerieren. */
   function renumber(deck) {
     var cards = deck.querySelectorAll('.mc-card');
     var n = cards.length;
     Array.prototype.forEach.call(cards, function (card, i) {
       var step = card.querySelector('.mc-step');
       if (step) step.textContent = (i + 1) + ' / ' + n;
+      var pageno = card.querySelector('.mc-pageno');
+      if (pageno) pageno.textContent = 'Seite ' + (i + 1) + ' / ' + n;
     });
   }
 

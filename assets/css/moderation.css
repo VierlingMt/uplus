@@ -105,14 +105,32 @@
 .mc-body strong { color: var(--mc-blue); }
 .mc-body a { color: var(--mc-teal); }
 
+/* Fußzeile der Karte: links der Live-Hinweis (nur Bausteinkarten), rechts die
+   Seitenzahl. Bleibt unten, schrumpft nicht (der Inhalt darüber passt sich an). */
+.mc-foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1em;
+  margin-top: .5em;
+}
 /* Hinweis, dass eine Bausteinkarte ihre Daten live aus dem System zieht. */
 .mc-source {
-  margin-top: .5em;
   font-family: "Chivo", system-ui, sans-serif;
   font-size: .46em;
   letter-spacing: .06em;
   text-transform: uppercase;
   color: var(--mc-muted);
+}
+/* Seitenzahl unten rechts („Seite X / Y"). */
+.mc-pageno {
+  margin-left: auto;
+  font-family: "Chivo", system-ui, sans-serif;
+  font-size: .5em;
+  color: var(--mc-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .mc-empty { color: var(--mc-muted); font-size: .72em; font-style: italic; }
 

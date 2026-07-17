@@ -7,6 +7,12 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.75.4] - 2026-07-16
+### Hinzugefügt
+- **Moderationskärtchen – Seitenzahl unten rechts:** Jede Karte zeigt jetzt unten
+  rechts „Seite X / Y". Beim automatischen Umbruch auf Fortsetzungskarten wird die
+  Seitenzahl korrekt fortgeführt.
+
 ## [0.75.3] - 2026-07-16
 ### Behoben
 - **Moderationskärtchen – kein Scrollbalken mehr:** Inhaltsreiche Karten (z. B.

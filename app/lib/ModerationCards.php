@@ -396,9 +396,14 @@ final class ModerationCards
               <?php self::renderBlock($type, $ctx); ?>
             <?php endif; ?>
           </div>
-          <?php if (self::isBlock($type)): ?>
-            <div class="mc-source">↻ Live aus dem System · <?= e(self::typeLabel($type)) ?></div>
-          <?php endif; ?>
+          <div class="mc-foot">
+            <?php if (self::isBlock($type)): ?>
+              <span class="mc-source">↻ Live aus dem System · <?= e(self::typeLabel($type)) ?></span>
+            <?php else: ?>
+              <span></span>
+            <?php endif; ?>
+            <span class="mc-pageno">Seite <?= $index + 1 ?> / <?= $total ?></span>
+          </div>
         </div>
         <?php
         return (string) ob_get_clean();
