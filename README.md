@@ -15,6 +15,7 @@ KI-Vorbewertung und die Jury-Bewertung bis zum Pitch-Day.
 - [Deploy & Secrets](#deploy--secrets)
 - [Lokale Entwicklung](#lokale-entwicklung)
 - [Versionierung & Changelog](#versionierung--changelog)
+- [Lizenz & Urheberrecht](#lizenz--urheberrecht)
 
 ## Überblick
 
@@ -143,3 +144,19 @@ Changelog nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 Die aktuelle Version wird in der App unten in der Navigation angezeigt; ein Klick
 öffnet das Changelog.
+
+## Lizenz & Urheberrecht
+
+© 2025–2026 **Martin Vierling** (Privatperson), mv@vimatec.de – **Alle Rechte
+vorbehalten**. Diese Software ist **nicht** Open Source; sämtliche Urheber- und
+Nutzungsrechte liegen bei Martin Vierling. Nutzung, Vervielfältigung, Bearbeitung
+oder Weitergabe – ganz oder in Teilen – nur mit ausdrücklicher schriftlicher
+Genehmigung. Der vollständige Text steht in [LICENSE](LICENSE).
+
+**Idee & Konzept:** Idee und Konzept des Wettbewerbs gehen auf den Erstwettbewerb
+2023/24 von **Jehona Ahmeti** zurück. Die Nennung ist eine faire Würdigung der
+konzeptionellen Grundlage (Ideen als solche sind urheberrechtlich nicht geschützt)
+und begründet keine Rechte an dieser Software.
+
+Der Hinweis erscheint für Nutzer:innen dezent im Footer der Seitenleiste sowie auf
+der Anmeldeseite.

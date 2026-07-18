@@ -7,7 +7,15 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
-## [0.77.0] - 2026-07-18
+## [0.78.0] - 2026-07-18
+### Hinzugefügt
+- **Urheberrechts-/Lizenzhinweis:** Die App weist nun sichtbar auf die
+  Rechtelage hin – dezent im Footer der Seitenleiste und auf der Anmeldeseite:
+  „© 2025–… Martin Vierling · Alle Rechte vorbehalten" samt Namensnennung, dass
+  Idee und Konzept auf dem **Erstwettbewerb 2023/24 von Jehona Ahmeti** beruhen.
+  Das Jahr wird automatisch fortgeschrieben (zentraler Helper `copyright_notice()`).
+- Neue Datei **`LICENSE`** (proprietär, „Alle Rechte vorbehalten") mit vollständigem
+  Rechte-Text; Abschnitt **„Lizenz & Urheberrecht"** in der README ergänzt.
 ### Hinzugefügt
 - **Kick-Off als eigenes Modul:** Neuer Bereich „Kick-Off" je Wettbewerbsjahr, in
   dem die **Terminschiene** (alle Meilensteine des Projektablaufs) abgestimmt und

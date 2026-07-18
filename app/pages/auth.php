@@ -235,6 +235,10 @@ if (is_post()) {
           richte ihn nach der Anmeldung im Profil ein.
         </p>
       <?php endif; ?>
+      <p class="sub" style="margin-top:22px;font-size:11px;line-height:1.6;color:var(--muted,#8194b5)">
+        <?= e(copyright_notice(false)) ?>.<br>
+        Idee und Konzept basieren auf dem Erstwettbewerb 2023/24 von Jehona Ahmeti.
+      </p>
     </div>
   </div>
 </div>

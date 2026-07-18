@@ -12,6 +12,31 @@ function e(?string $s): string
 }
 
 /**
+ * Urheberrechts-Hinweis der App (einheitliche Quelle, siehe LICENSE). Wird im
+ * Footer der Sidebar und auf der Login-Seite ausgegeben. Das Jahr wird
+ * automatisch bis zum laufenden Jahr fortgeschrieben.
+ *
+ * Rechteinhaber ist Martin Vierling als Privatperson (Urheber i. S. d. UrhG ist
+ * stets eine natürliche Person). Idee und Konzept gehen auf den Erstwettbewerb
+ * 2023/24 von Jehona Ahmeti zurück – die Nennung ist eine faire Namensnennung
+ * (Ideen selbst sind urheberrechtlich nicht geschützt).
+ *
+ * @param bool $withConcept true = zusätzlich die Konzept-/Ideen-Namensnennung anhängen
+ * @return string Reintext (beim Ausgeben mit e() escapen)
+ */
+function copyright_notice(bool $withConcept = false): string
+{
+    $since = 2025;
+    $now   = (int) date('Y');
+    $years = $now > $since ? $since . '–' . $now : (string) $since;
+    $line  = '© ' . $years . ' Martin Vierling · Alle Rechte vorbehalten';
+    if ($withConcept) {
+        $line .= ' · Idee & Konzept nach dem Erstwettbewerb 2023/24 von Jehona Ahmeti';
+    }
+    return $line;
+}
+
+/**
  * Telefonnummer ins internationale Format „+49…“ ohne Leerzeichen bringen
  * (E.164). Toleriert Schreibweisen wie „0170 900 9124“, „+49 170 …“, „0049…“.
  * Liefert null, wenn keine plausible Nummer erkennbar ist.
