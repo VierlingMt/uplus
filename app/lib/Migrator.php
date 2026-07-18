@@ -469,7 +469,67 @@ final class Migrator
                         REFERENCES competition_cycles(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             ],
+            [
+                'version' => '2026_07_44_project_meetings',
+                'name'    => 'Projekttermine (Kick-Off & Project-Closing) je Wettbewerbsjahr: Protokoll, fixierter Terminplan, Retro-Notizen, KI-Cluster',
+                'up'      => [self::class, 'projectMeetings'],
+            ],
         ];
+    }
+
+    /**
+     * Kick-Off & Project-Closing als verwaltbare Projekttermine je Wettbewerbsjahr.
+     *
+     * - `project_meetings`: je Zyklus max. ein Kick-Off und ein Project-Closing
+     *   (UNIQUE cycle_id+type). Trägt Eckdaten, Protokoll, den Zeitpunkt der
+     *   Terminplan-Fixierung (Kick-Off) sowie das KI-Cluster der Retro (Closing).
+     * - `retro_notes`: freie Rückmeldungen JEDER beteiligten Person zum
+     *   Project-Closing in drei Kategorien (gut / schlecht / verbessern). An den
+     *   Zyklus gehängt, damit auch schon vor dem Termin gesammelt werden kann.
+     */
+    public static function projectMeetings(PDO $pdo): void
+    {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS project_meetings (
+                id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                cycle_id          INT UNSIGNED NOT NULL,
+                type              ENUM('kickoff','closing') NOT NULL,
+                title             VARCHAR(190) NULL,
+                meeting_date      DATE NULL,
+                meeting_time      TIME NULL,
+                location          VARCHAR(190) NULL,
+                protocol          MEDIUMTEXT NULL,
+                schedule_fixed_at DATETIME NULL,
+                ai_summary        LONGTEXT NULL,
+                ai_model          VARCHAR(80) NULL,
+                ai_generated_at   DATETIME NULL,
+                created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_pm_cycle_type (cycle_id, type),
+                CONSTRAINT fk_pm_cycle FOREIGN KEY (cycle_id)
+                    REFERENCES competition_cycles(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS retro_notes (
+                id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                cycle_id   INT UNSIGNED NOT NULL,
+                user_id    INT UNSIGNED NULL,
+                category   ENUM('good','bad','improve') NOT NULL,
+                body       TEXT NOT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_retro_cycle (cycle_id, category),
+                KEY idx_retro_user (user_id),
+                CONSTRAINT fk_retro_cycle FOREIGN KEY (cycle_id)
+                    REFERENCES competition_cycles(id) ON DELETE CASCADE,
+                CONSTRAINT fk_retro_user FOREIGN KEY (user_id)
+                    REFERENCES users(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
     }
 
     /**

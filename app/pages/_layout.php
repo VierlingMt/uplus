@@ -17,6 +17,10 @@ $navGroups = [
         ['presentation', 'Präsentation', '🖥', ['admin', 'lead', 'teacher', 'juror']],
         ['contact',   'Kontakt', '✉', ['admin', 'lead', 'teacher', 'juror']],
     ]],
+    ['Projekttermine', [
+        ['kickoff', 'Kick-Off', '🚀', ['admin', 'lead', 'teacher', 'juror']],
+        ['closing', 'Project-Closing', '🎯', ['admin', 'lead', 'teacher', 'juror']],
+    ]],
     ['Lehrkraft', [
         ['teams', 'Teams & Schüler', '👥', ['admin', 'lead', 'teacher', 'juror']],
     ]],

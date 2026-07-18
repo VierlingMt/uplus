@@ -7,6 +7,24 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.77.0] - 2026-07-18
+### Hinzugefügt
+- **Kick-Off als eigenes Modul:** Neuer Bereich „Kick-Off" je Wettbewerbsjahr, in
+  dem die **Terminschiene** (alle Meilensteine des Projektablaufs) abgestimmt und
+  per **„Terminplan fixieren"** verbindlich festgehalten wird. Die Termine sind
+  dieselben, die als Zeitleiste „Projektablauf" auf dem Dashboard erscheinen –
+  hier im Kick-Off-Kontext gebündelt, samt Eckdaten und Protokoll. Pflege durch die
+  Verwaltung; alle Beteiligten sehen den abgestimmten Plan.
+- **Project-Closing als eigenes Modul (Abschluss-Retrospektive):** Jede beteiligte
+  Person hält in drei Kategorien fest, **was gut lief, was schlecht lief und was
+  sich verbessern lässt** (nur für die eigene Person und die Projektleitung
+  sichtbar). Beim Abschlusstermin lässt die Verwaltung die gesammelten
+  Rückmeldungen **per KI zu Themen clustern und zusammenfassen** – inklusive
+  konkreter Verbesserungen fürs nächste Jahr – als Grundlage fürs gemeinsame
+  Gespräch. Mit Eckdaten und Protokoll.
+- Beide Module sind über die **Zugriffsmatrix** steuerbar und in die kontextbasierte
+  Hilfe aufgenommen.
+
 ## [0.76.1] - 2026-07-16
 ### Geändert
 - **Video-Vorschaubilder werden automatisch nachgezogen (ohne Knopf):** Beim

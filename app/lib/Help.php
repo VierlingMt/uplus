@@ -119,6 +119,29 @@ final class Help
                          . "und die **Partner & Sponsoren**.",
             ],
         ],
+        'kickoff' => [
+            [
+                'title' => 'Kick-Off',
+                'body'  => "Der **Auftakt** des Wettbewerbsjahres. Kernaufgabe ist, die **Terminschiene** "
+                         . "(alle Meilensteine des Projektablaufs) abzustimmen und mit **„Terminplan fixieren“** "
+                         . "verbindlich festzuhalten. Die Termine erscheinen als Zeitleiste „Projektablauf“ auf "
+                         . "dem Dashboard aller Beteiligten.\n\n"
+                         . "Zusätzlich lassen sich die **Eckdaten** des Kick-Off-Meetings (Datum, Ort) und ein "
+                         . "**Protokoll** festhalten. Pflege und Fixierung übernimmt die Verwaltung; alle anderen "
+                         . "sehen den abgestimmten Terminplan.",
+            ],
+        ],
+        'closing' => [
+            [
+                'title' => 'Project-Closing',
+                'body'  => "Die **Abschluss-Retrospektive**: Jede beteiligte Person hält in drei Kategorien "
+                         . "fest, **was gut lief, was schlecht lief und was wir verbessern** können. Deine "
+                         . "Einträge sind nur für dich und die Projektleitung sichtbar.\n\n"
+                         . "Beim Abschlusstermin lässt die Verwaltung die gesammelten Rückmeldungen **per KI "
+                         . "zu Themen clustern und zusammenfassen** – inklusive konkreter Verbesserungen fürs "
+                         . "nächste Jahr. Ein Protokoll hält die Ergebnisse fest.",
+            ],
+        ],
         'plans' => [
             [
                 'title' => 'Businesspläne',

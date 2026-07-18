@@ -24,6 +24,8 @@ final class Access
     /** Governte Module (Reihenfolge = Anzeige im Editor). key => Anzeigename. */
     public const MODULES = [
         'dashboard'     => 'Dashboard',
+        'kickoff'       => 'Kick-Off',
+        'closing'       => 'Project-Closing',
         'plans'         => 'Businesspläne',
         'materials'     => 'Material & Vorlagen',
         'gallery'       => 'Mediengalerie',
@@ -53,6 +55,13 @@ final class Access
      */
     private const DEFAULTS = [
         'dashboard'     => ['admin' => 'write', 'lead' => 'read',  'teacher' => 'read', 'juror' => 'read'],
+        // Kick-Off: die Verwaltung stimmt die Terminschiene ab und fixiert sie;
+        // Beteiligte sehen den (fixierten) Terminplan und das Protokoll nur lesend.
+        'kickoff'       => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'read', 'juror' => 'read'],
+        // Project-Closing: JEDE beteiligte Person darf eigene Retro-Notizen
+        // erfassen (= write); KI-Cluster, Protokoll und Termin bleiben der
+        // Verwaltung vorbehalten (im Controller über Auth::isManager() geprüft).
+        'closing'       => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'write', 'juror' => 'write'],
         'plans'         => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'write', 'juror' => 'read'],
         'materials'     => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'read', 'juror' => 'read'],
         // Mediengalerie: alle dürfen ansehen UND hochladen; die feinere Regel

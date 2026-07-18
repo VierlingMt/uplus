@@ -119,6 +119,8 @@ try {
         case 'audit':
         case 'access':
         case 'plans':
+        case 'kickoff':
+        case 'closing':
         case 'bp_download':
         case 'ranking':
         case 'pitch':

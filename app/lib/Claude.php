@@ -312,6 +312,170 @@ TXT;
         ];
     }
 
+    /**
+     * Retrospektive-Notizen (Project-Closing) thematisch clustern und
+     * zusammenfassen. Die Notizen der Beteiligten (Kategorien gut/schlecht/
+     * verbessern) werden gebündelt an Claude gegeben; per erzwungenem Tool-Call
+     * kommen gruppierte Themen, konkrete Verbesserungen und ein Gesamtfazit
+     * zurück – ideal, um im Abschlusstermin gemeinsam darüber zu sprechen.
+     *
+     * @param array $notes Zeilen aus retro_notes (mit Feldern category, body)
+     * @return array{ok:bool, model?:string, data?:array, raw?:?string, error?:?string}
+     */
+    public static function clusterRetro(array $notes): array
+    {
+        $key = Settings::get('anthropic_api_key', cfg('anthropic_api_key'));
+        if (!$key) {
+            return ['ok' => false, 'error' => 'Kein Anthropic-API-Key hinterlegt (Admin → KI-Integration).'];
+        }
+        if (!$notes) {
+            return ['ok' => false, 'error' => 'Keine Notizen vorhanden.'];
+        }
+
+        $model = Settings::get('anthropic_model', cfg('anthropic_model', 'claude-sonnet-5'));
+
+        // Notizen nach Kategorie sammeln und nummeriert auflisten.
+        $labels = ['good' => 'Was lief gut', 'bad' => 'Was lief schlecht', 'improve' => 'Was können wir verbessern'];
+        $buckets = ['good' => [], 'bad' => [], 'improve' => []];
+        foreach ($notes as $n) {
+            $cat = (string) ($n['category'] ?? '');
+            $body = trim((string) ($n['body'] ?? ''));
+            if ($body === '' || !isset($buckets[$cat])) {
+                continue;
+            }
+            $buckets[$cat][] = $body;
+        }
+
+        $notesText = '';
+        foreach ($labels as $cat => $label) {
+            $notesText .= "\n## {$label} (Kategorie-Schlüssel: {$cat})\n";
+            if (!$buckets[$cat]) {
+                $notesText .= "(keine Einträge)\n";
+                continue;
+            }
+            foreach ($buckets[$cat] as $i => $body) {
+                $notesText .= '- ' . str_replace(["\r\n", "\n"], ' ', $body) . "\n";
+            }
+        }
+
+        $prompt = <<<TXT
+Du moderierst die Abschluss-Retrospektive des Schüler-Businessplanwettbewerbs
+"Unternehmen Plus" der Wirtschaftsjunioren Forchheim. Beteiligte (Projektleitung,
+Jury, Lehrkräfte) haben anonyme Rückmeldungen in drei Kategorien hinterlassen:
+"Was lief gut", "Was lief schlecht" und "Was können wir verbessern".
+
+Fasse diese Rückmeldungen für die gemeinsame Besprechung auf:
+- Bilde THEMEN, indem du inhaltlich ähnliche Notizen zusammenführst (z. B. mehrere
+  Aussagen zur Terminplanung zu einem Thema „Terminplanung"). Ordne jedes Thema
+  genau EINER Kategorie (good/bad/improve) zu.
+- Gib je Thema einen kurzen Titel, eine 1-3 Sätze lange Zusammenfassung in eigenen
+  Worten und "mentions" = wie viele Notizen ungefähr dazu beigetragen haben.
+- Leite daraus konkrete, umsetzbare Verbesserungen für das nächste Wettbewerbsjahr
+  ab ("action_items"), nach Priorität sortiert.
+- Schreibe ein knappes Gesamtfazit ("overall", 2-4 Sätze).
+
+Bleibe sachlich und wohlwollend, erfinde nichts hinzu. Schreibe auf Deutsch.
+Nutze ausschließlich das Tool "submit_clusters".
+
+Rückmeldungen:
+{$notesText}
+TXT;
+
+        $tool = [
+            'name'         => 'submit_clusters',
+            'description'  => 'Geclusterte Zusammenfassung der Retrospektive abgeben.',
+            'input_schema' => [
+                'type'       => 'object',
+                'properties' => [
+                    'themes' => [
+                        'type'  => 'array',
+                        'description' => 'Zusammengefasste Themen aus den Notizen.',
+                        'items' => [
+                            'type'       => 'object',
+                            'properties' => [
+                                'category' => ['type' => 'string', 'enum' => ['good', 'bad', 'improve']],
+                                'title'    => ['type' => 'string', 'description' => 'Kurzer Themen-Titel.'],
+                                'summary'  => ['type' => 'string', 'description' => 'Zusammenfassung in 1-3 Sätzen.'],
+                                'mentions' => ['type' => 'integer', 'minimum' => 1, 'description' => 'Anzahl beitragender Notizen.'],
+                            ],
+                            'required'   => ['category', 'title', 'summary'],
+                        ],
+                    ],
+                    'action_items' => [
+                        'type'  => 'array',
+                        'description' => 'Konkrete Verbesserungen fürs nächste Jahr (nach Priorität).',
+                        'items' => ['type' => 'string'],
+                    ],
+                    'overall' => ['type' => 'string', 'description' => 'Gesamtfazit (2-4 Sätze).'],
+                ],
+                'required'   => ['themes', 'overall'],
+            ],
+        ];
+
+        $payload = [
+            'model'       => $model,
+            'max_tokens'  => 3000,
+            'tools'       => [$tool],
+            'tool_choice' => ['type' => 'tool', 'name' => 'submit_clusters'],
+            'messages'    => [[
+                'role'    => 'user',
+                'content' => [['type' => 'text', 'text' => $prompt]],
+            ]],
+        ];
+
+        [$code, $body, $err] = self::post($key, $payload);
+        if ($err) {
+            return ['ok' => false, 'error' => 'Verbindungsfehler: ' . $err];
+        }
+        if ($code !== 200) {
+            return ['ok' => false, 'error' => 'API-Fehler (HTTP ' . $code . '): ' . substr($body, 0, 400)];
+        }
+
+        $data = json_decode($body, true);
+        if (($data['stop_reason'] ?? '') === 'max_tokens') {
+            return ['ok' => false, 'error' => 'KI-Antwort wurde abgeschnitten (Token-Limit) – bitte erneut versuchen.'];
+        }
+        $in = null;
+        foreach ($data['content'] ?? [] as $b) {
+            if (($b['type'] ?? '') === 'tool_use') { $in = $b['input'] ?? null; break; }
+        }
+        if (!is_array($in) || !isset($in['themes'])) {
+            return ['ok' => false, 'error' => 'Unerwartete API-Antwort.'];
+        }
+
+        // Ergebnis defensiv normalisieren.
+        $themes = [];
+        foreach ((array) $in['themes'] as $t) {
+            $cat = (string) ($t['category'] ?? '');
+            if (!isset($labels[$cat]) || trim((string) ($t['title'] ?? '')) === '') {
+                continue;
+            }
+            $themes[] = [
+                'category' => $cat,
+                'title'    => (string) $t['title'],
+                'summary'  => (string) ($t['summary'] ?? ''),
+                'mentions' => isset($t['mentions']) ? max(1, (int) $t['mentions']) : null,
+            ];
+        }
+        $actions = [];
+        foreach ((array) ($in['action_items'] ?? []) as $a) {
+            $a = trim((string) $a);
+            if ($a !== '') { $actions[] = $a; }
+        }
+
+        return [
+            'ok'    => true,
+            'model' => $model,
+            'data'  => [
+                'themes'       => $themes,
+                'action_items' => $actions,
+                'overall'      => (string) ($in['overall'] ?? ''),
+            ],
+            'raw'   => $body,
+            'error' => null,
+        ];
+    }
+
     /** JSON-Schema-Eigenschaften je Businessplan-Kriterium. */
     private static function criteriaSchema(): array
     {
