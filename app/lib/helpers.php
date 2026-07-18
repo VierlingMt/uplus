@@ -16,12 +16,15 @@ function e(?string $s): string
  * Footer der Sidebar und auf der Login-Seite ausgegeben. Das Jahr wird
  * automatisch bis zum laufenden Jahr fortgeschrieben.
  *
- * Rechteinhaber ist Martin Vierling als Privatperson (Urheber i. S. d. UrhG ist
- * stets eine natürliche Person). Idee und Konzept gehen auf den Erstwettbewerb
- * 2023/24 von Jehona Ahmeti zurück – die Nennung ist eine faire Namensnennung
- * (Ideen selbst sind urheberrechtlich nicht geschützt).
+ * Die App und ihre Funktionen sind von Martin Vierling persönlich erstellt;
+ * Urheber- und Nutzungsrechte an der Software liegen bei ihm (Urheber i. S. d.
+ * UrhG ist stets eine natürliche Person). Der zugrunde liegende Wettbewerb wurde
+ * von Jehona Ahmeti und Martin Vierling im Vorstand der Wirtschaftsjunioren
+ * Forchheim durchgeführt und weiterentwickelt (Erstwettbewerb 2023/24) – die
+ * Nennung ist eine faire Würdigung des Konzepts und begründet keine Rechte an
+ * der Software.
  *
- * @param bool $withConcept true = zusätzlich die Konzept-/Ideen-Namensnennung anhängen
+ * @param bool $withConcept true = zusätzlich die Wettbewerbs-Würdigung anhängen
  * @return string Reintext (beim Ausgeben mit e() escapen)
  */
 function copyright_notice(bool $withConcept = false): string
@@ -31,7 +34,7 @@ function copyright_notice(bool $withConcept = false): string
     $years = $now > $since ? $since . '–' . $now : (string) $since;
     $line  = '© ' . $years . ' Martin Vierling · Alle Rechte vorbehalten';
     if ($withConcept) {
-        $line .= ' · Idee & Konzept nach dem Erstwettbewerb 2023/24 von Jehona Ahmeti';
+        $line .= ' · Wettbewerbskonzept: Jehona Ahmeti & Martin Vierling (Vorstand WJ Forchheim, seit 2023/24)';
     }
     return $line;
 }

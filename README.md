@@ -147,16 +147,18 @@ Die aktuelle Version wird in der App unten in der Navigation angezeigt; ein Klic
 
 ## Lizenz & Urheberrecht
 
-© 2025–2026 **Martin Vierling** (Privatperson), mv@vimatec.de – **Alle Rechte
+Die App und alle neuen Funktionen wurden von **Martin Vierling** (Privatperson),
+mv@vimatec.de, persönlich entwickelt. © 2025–2026 Martin Vierling – **Alle Rechte
 vorbehalten**. Diese Software ist **nicht** Open Source; sämtliche Urheber- und
 Nutzungsrechte liegen bei Martin Vierling. Nutzung, Vervielfältigung, Bearbeitung
 oder Weitergabe – ganz oder in Teilen – nur mit ausdrücklicher schriftlicher
 Genehmigung. Der vollständige Text steht in [LICENSE](LICENSE).
 
-**Idee & Konzept:** Idee und Konzept des Wettbewerbs gehen auf den Erstwettbewerb
-2023/24 von **Jehona Ahmeti** zurück. Die Nennung ist eine faire Würdigung der
-konzeptionellen Grundlage (Ideen als solche sind urheberrechtlich nicht geschützt)
-und begründet keine Rechte an dieser Software.
+**Wettbewerb, Idee & Konzept:** Der Wettbewerb wurde von **Jehona Ahmeti** und
+**Martin Vierling** im Vorstand der Wirtschaftsjunioren Forchheim durchgeführt und
+weiterentwickelt (Erstwettbewerb 2023/24). Diese Nennung würdigt das gemeinsam
+getragene Wettbewerbskonzept und begründet keine Rechte an dieser Software (die
+App selbst stammt allein von Martin Vierling).
 
 Der Hinweis erscheint für Nutzer:innen dezent im Footer der Seitenleiste sowie auf
 der Anmeldeseite.
