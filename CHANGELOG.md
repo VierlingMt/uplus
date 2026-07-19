@@ -7,6 +7,17 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.81.1] - 2026-07-19
+### Behoben
+- **Ungestylte Formularfelder:** `input[type=url]`, `type=tel`, `type=search`,
+  `type=date`, `type=time` und `type=file` erhalten nun app-weit dasselbe Styling
+  wie die übrigen Felder (betraf u. a. „Link zum veröffentlichten Beitrag" und den
+  PDF-Upload im Kommunikations-Modul).
+- **Veröffentlichen ließ sich nicht absenden:** Das Link-Feld war `type=url`; eine
+  vom Browser als ungültig gewertete Eingabe blockierte still das Speichern. Es ist
+  nun ein normales Textfeld (mit `inputmode=url`); die Gültigkeit prüft weiterhin
+  der Server.
+
 ## [0.81.0] - 2026-07-19
 ### Hinzugefügt
 - **Pressemitteilung als Word (.docx):** Pressemitteilungen werden nun als

@@ -502,7 +502,7 @@ ob_start(); ?>
             <div class="grid cols-2" style="align-items:end">
               <div class="field" style="margin:0">
                 <label>Link zum veröffentlichten Beitrag<?= $isPress ? ' (optional)' : '' ?></label>
-                <input type="url" name="published_url" value="<?= e((string) ($it['published_url'] ?? '')) ?>" placeholder="https://www.instagram.com/p/…">
+                <input type="text" inputmode="url" name="published_url" value="<?= e((string) ($it['published_url'] ?? '')) ?>" placeholder="https://www.instagram.com/p/…">
               </div>
               <?php if ($isPress): ?>
                 <div class="field" style="margin:0">
