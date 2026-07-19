@@ -299,9 +299,19 @@ TXT;
             $lines[] = 'Beteiligte Schulen: ' . $schools;
         }
 
+        // Schul-Bezeichnung inkl. Instagram-Handle (falls gepflegt) für Team-Zeilen.
+        $schoolTag = static function (array $row): string {
+            $name = trim((string) ($row['short_name'] ?: $row['school_name']));
+            $h    = instagram_handle_normalize($row['instagram'] ?? null);
+            if ($name === '') {
+                return $h !== null ? '@' . $h : '';
+            }
+            return $name . ($h !== null ? ' @' . $h : '');
+        };
+
         // Podium (Endplatzierung), sonst Finalteams.
         $podium = Database::all(
-            "SELECT t.name, t.idea_name, t.final_rank, s.short_name, s.name AS school_name
+            "SELECT t.name, t.idea_name, t.final_rank, s.short_name, s.instagram, s.name AS school_name
                FROM teams t JOIN schools s ON s.id = t.school_id
               WHERE t.final_rank IN (1,2,3)
               ORDER BY t.final_rank",
@@ -311,7 +321,7 @@ TXT;
             $lines[] = '';
             $lines[] = 'Platzierungen:';
             foreach ($podium as $p) {
-                $school = trim((string) ($p['short_name'] ?: $p['school_name']));
+                $school = $schoolTag($p);
                 $idea   = trim((string) $p['idea_name']);
                 $lines[] = sprintf(
                     '- %d. Platz: Team „%s"%s%s',
@@ -323,7 +333,7 @@ TXT;
             }
         } else {
             $fin = Database::all(
-                "SELECT t.name, t.idea_name, s.short_name, s.name AS school_name
+                "SELECT t.name, t.idea_name, s.short_name, s.instagram, s.name AS school_name
                    FROM teams t JOIN schools s ON s.id = t.school_id
                   WHERE t.status = 'nominated'
                   ORDER BY t.pitch_order, t.name",
@@ -333,7 +343,7 @@ TXT;
                 $lines[] = '';
                 $lines[] = 'Finalteams:';
                 foreach ($fin as $t) {
-                    $school = trim((string) ($t['short_name'] ?: $t['school_name']));
+                    $school = $schoolTag($t);
                     $idea   = trim((string) $t['idea_name']);
                     $lines[] = sprintf(
                         '- Team „%s"%s%s',

@@ -487,6 +487,12 @@ final class Migrator
                     ALTER TABLE sponsors
                     ADD COLUMN IF NOT EXISTS instagram VARCHAR(80) NULL AFTER website",
             ],
+            [
+                'version' => '2026_07_47_school_instagram',
+                'name'    => 'Instagram-Handle auch für Schulen (Verknüpfung per @ in Beiträgen)',
+                'up'      => 'ALTER TABLE schools
+                    ADD COLUMN IF NOT EXISTS instagram VARCHAR(80) NULL AFTER short_name',
+            ],
         ];
     }
 

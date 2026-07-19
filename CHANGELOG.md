@@ -7,6 +7,13 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.80.1] - 2026-07-19
+### Hinzugefügt
+- **Instagram-Handle auch für Schulen:** Neues Feld „Instagram-Handle" in der
+  Schulverwaltung (mit klickbarer Anzeige in der Übersicht). Das Handle fließt ins
+  Auto-Briefing der Kommunikations-Beiträge ein, sodass die KI die Schulen der
+  Finalteams/Platzierungen korrekt per **@** taggen kann.
+
 ## [0.80.0] - 2026-07-19
 ### Hinzugefügt
 - **Instagram-Handle bei Nutzern und Sponsoren:** Neues Feld „Instagram-Handle"

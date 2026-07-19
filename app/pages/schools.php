@@ -22,18 +22,19 @@ if (is_post()) {
         $short = trim((string) input('short_name'));
         $city  = trim((string) input('city'));
         $note  = trim((string) input('note'));
+        $insta = instagram_handle_normalize((string) input('instagram'));
         $logo = save_image('logo', 'sch', 'logos');
         if ($name === '') {
             flash('error', 'Name ist erforderlich.');
         } elseif ($id > 0) {
-            Database::run('UPDATE schools SET name=?, short_name=?, city=?, note=? WHERE id=?',
-                [$name, $short ?: null, $city ?: null, $note ?: null, $id]);
+            Database::run('UPDATE schools SET name=?, short_name=?, instagram=?, city=?, note=? WHERE id=?',
+                [$name, $short ?: null, $insta, $city ?: null, $note ?: null, $id]);
             if ($logo) { Database::run('UPDATE schools SET logo_path=? WHERE id=?', [$logo, $id]); }
             Audit::log('school.update', 'Schule bearbeitet: ' . $name, 'school', $id);
             flash('success', 'Schule aktualisiert.');
         } else {
-            $id = Database::insert('INSERT INTO schools (name, short_name, city, note, logo_path) VALUES (?,?,?,?,?)',
-                [$name, $short ?: null, $city ?: null, $note ?: null, $logo]);
+            $id = Database::insert('INSERT INTO schools (name, short_name, instagram, city, note, logo_path) VALUES (?,?,?,?,?,?)',
+                [$name, $short ?: null, $insta, $city ?: null, $note ?: null, $logo]);
             Audit::log('school.create', 'Schule angelegt: ' . $name, 'school', $id);
             flash('success', 'Schule angelegt.');
         }
@@ -53,7 +54,7 @@ $schools = Database::all(
 
 $fill = fn(array $s) => e(json_encode([
     'id' => (int) $s['id'], 'name' => $s['name'], 'short_name' => $s['short_name'],
-    'city' => $s['city'], 'note' => $s['note'],
+    'instagram' => $s['instagram'] ?? '', 'city' => $s['city'], 'note' => $s['note'],
 ], JSON_UNESCAPED_UNICODE));
 $imgs = fn(array $s) => $s['logo_path'] ? e(json_encode(['logo' => asset($s['logo_path'])], JSON_UNESCAPED_UNICODE)) : '';
 
@@ -71,7 +72,7 @@ ob_start(); ?>
       <?php foreach ($schools as $s): ?>
         <tr>
           <td class="cell-media" style="width:52px"><?php if ($s['logo_path']): ?><img src="<?= asset($s['logo_path']) ?>" alt="" style="width:40px;height:40px;object-fit:contain"><?php endif; ?></td>
-          <td data-label="Schule"><strong><?= e($s['name']) ?></strong><?php if ($s['short_name']): ?> <span class="pill muted"><?= e($s['short_name']) ?></span><?php endif; ?></td>
+          <td data-label="Schule"><strong><?= e($s['name']) ?></strong><?php if ($s['short_name']): ?> <span class="pill muted"><?= e($s['short_name']) ?></span><?php endif; ?><?php if (!empty($s['instagram'])): ?> <a class="pill blue" href="<?= e((string) instagram_url($s['instagram'])) ?>" target="_blank" rel="noopener" style="text-decoration:none">@<?= e($s['instagram']) ?></a><?php endif; ?></td>
           <td data-label="Ort"><?= e($s['city'] ?? '—') ?></td>
           <td data-label="Teams"><?= (int) $s['teams'] ?></td>
           <td class="row-actions" style="white-space:nowrap;text-align:right">
@@ -104,6 +105,10 @@ ob_start(); ?>
       <input type="hidden" name="id" value="0">
       <div class="field"><label>Name *</label><input type="text" name="name" required></div>
       <div class="field"><label>Kürzel</label><input type="text" name="short_name" placeholder="z. B. EGF"></div>
+      <div class="field"><label>Instagram-Handle</label>
+        <input type="text" name="instagram" placeholder="z. B. @gfs.ebs">
+        <div class="help">Für die Verknüpfung (@) in Social-Media-Beiträgen. „@" oder eine Profil-URL werden automatisch bereinigt.</div>
+      </div>
       <div class="field"><label>Ort</label><input type="text" name="city"></div>
       <div class="field"><label>Notiz</label><textarea name="note" rows="2"></textarea></div>
       <?= image_field('logo', null, [
