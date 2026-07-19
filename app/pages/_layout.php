@@ -117,7 +117,7 @@ $helpData = class_exists('Help') ? [
         <a href="<?= url('changelog') ?>" style="color:#9fb2d6;text-decoration:none" title="Changelog anzeigen">Version <?= e(APP_VERSION) ?> ↗</a>
       </div>
       <div style="margin-top:10px;font-size:11px;line-height:1.5;color:#8194b5" title="App entwickelt von Martin Vierling. Konzept des Wettbewerbs: Wirtschaftsjunioren Forchheim.">
-        <?= e(copyright_notice(false)) ?>
+        <?= copyright_html() ?>
       </div>
     </div>
   </aside>

@@ -11,7 +11,7 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 ### Hinzugefügt
 - **Urheberrechts-/Lizenzhinweis:** Die App weist nun sichtbar auf die
   Rechtelage hin – dezent im Footer der Seitenleiste und auf der Anmeldeseite:
-  „© 2025–… Martin Vierling · Alle Rechte vorbehalten" (App und neue Funktionen
+  „© 2026 Martin Vierling · Alle Rechte vorbehalten" (App und neue Funktionen
   von Martin Vierling entwickelt). Das **Konzept des Wettbewerbs stammt von den
   Wirtschaftsjunioren Forchheim**. Das Jahr wird automatisch fortgeschrieben
   (zentraler Helper `copyright_notice()`).

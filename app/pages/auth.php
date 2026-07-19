@@ -236,7 +236,7 @@ if (is_post()) {
         </p>
       <?php endif; ?>
       <p class="sub" style="margin-top:22px;font-size:11px;line-height:1.6;color:var(--muted,#8194b5)">
-        <?= e(copyright_notice(false)) ?>.<br>
+        <?= copyright_html() ?>.<br>
         Die App wurde von Martin Vierling entwickelt. Das Konzept des Wettbewerbs stammt
         von den Wirtschaftsjunioren Forchheim.
       </p>

@@ -13,8 +13,8 @@ function e(?string $s): string
 
 /**
  * Urheberrechts-Hinweis der App (einheitliche Quelle, siehe LICENSE). Wird im
- * Footer der Sidebar und auf der Login-Seite ausgegeben. Das Jahr wird
- * automatisch bis zum laufenden Jahr fortgeschrieben.
+ * Footer der Sidebar und auf der Login-Seite ausgegeben. Es wird stets das
+ * laufende Jahr angezeigt.
  *
  * Die App und ihre Funktionen sind von Martin Vierling persönlich erstellt;
  * Urheber- und Nutzungsrechte an der Software liegen bei ihm (Urheber i. S. d.
@@ -27,14 +27,25 @@ function e(?string $s): string
  */
 function copyright_notice(bool $withConcept = false): string
 {
-    $since = 2025;
-    $now   = (int) date('Y');
-    $years = $now > $since ? $since . '–' . $now : (string) $since;
-    $line  = '© ' . $years . ' Martin Vierling · Alle Rechte vorbehalten';
+    $line = '© ' . date('Y') . ' Martin Vierling · Alle Rechte vorbehalten';
     if ($withConcept) {
         $line .= ' · Wettbewerbskonzept: Wirtschaftsjunioren Forchheim';
     }
     return $line;
+}
+
+/**
+ * Urheberrechts-Hinweis als HTML wie copyright_notice(), jedoch mit dem Namen
+ * „Martin Vierling" als Mailto-Link an mv@vimatec.de (Betreff
+ * „Businessplanwettbewerb Unternehmen Plus"). Für Footer/Login.
+ *
+ * @return string fertiges HTML (nicht noch einmal escapen)
+ */
+function copyright_html(): string
+{
+    $href = 'mailto:mv@vimatec.de?subject=' . rawurlencode('Businessplanwettbewerb Unternehmen Plus');
+    $name = '<a href="' . e($href) . '" style="color:inherit">Martin Vierling</a>';
+    return '© ' . date('Y') . ' ' . $name . ' · Alle Rechte vorbehalten';
 }
 
 /**

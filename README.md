@@ -148,7 +148,7 @@ Die aktuelle Version wird in der App unten in der Navigation angezeigt; ein Klic
 ## Lizenz & Urheberrecht
 
 Die App und alle neuen Funktionen wurden von **Martin Vierling** (Privatperson),
-mv@vimatec.de, persönlich entwickelt. © 2025–2026 Martin Vierling – **Alle Rechte
+mv@vimatec.de, persönlich entwickelt. © 2026 Martin Vierling – **Alle Rechte
 vorbehalten**. Diese Software ist **nicht** Open Source; sämtliche Urheber- und
 Nutzungsrechte liegen bei Martin Vierling. Nutzung, Vervielfältigung, Bearbeitung
 oder Weitergabe – ganz oder in Teilen – nur mit ausdrücklicher schriftlicher
