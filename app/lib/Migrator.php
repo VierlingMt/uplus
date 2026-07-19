@@ -474,7 +474,74 @@ final class Migrator
                 'name'    => 'Projekttermine (Kick-Off & Project-Closing) je Wettbewerbsjahr: Protokoll, fixierter Terminplan, Retro-Notizen, KI-Cluster',
                 'up'      => [self::class, 'projectMeetings'],
             ],
+            [
+                'version' => '2026_07_45_communication',
+                'name'    => 'Kommunikation: KI-generierte Social-Media-Beiträge & Pressemitteilungen je Wettbewerbsjahr (mit Revisionen/Feedback)',
+                'up'      => [self::class, 'communication'],
+            ],
         ];
+    }
+
+    /**
+     * Kommunikations-Modul: KI-gestützte Öffentlichkeitsarbeit je Wettbewerbsjahr.
+     *
+     * - `communication_items`: ein „Beitrag" je Anlass (Social Media Jury-Feedback /
+     *   Pitch Day, Pressemitteilung Pitch Day). Trägt Briefing (Fakten), aktuellen
+     *   Text, optionales Bild aus der Mediengalerie sowie – nach der
+     *   Veröffentlichung – den Instagram-Link bzw. die PDF der abgedruckten
+     *   Pressemitteilung.
+     * - `communication_revisions`: jede KI-Generierung als Fassung mit dem
+     *   auslösenden Feedback (Nachvollziehbarkeit der iterativen Verbesserung).
+     */
+    public static function communication(PDO $pdo): void
+    {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS communication_items (
+                id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                cycle_id        INT UNSIGNED NOT NULL,
+                type            ENUM('social_jury','social_pitchday','press_release') NOT NULL,
+                title           VARCHAR(190) NULL,
+                status          ENUM('draft','published') NOT NULL DEFAULT 'draft',
+                briefing        MEDIUMTEXT NULL,
+                body            MEDIUMTEXT NULL,
+                image_media_id  INT UNSIGNED NULL,
+                published_url   VARCHAR(500) NULL,
+                pdf_path        VARCHAR(255) NULL,
+                pdf_name        VARCHAR(255) NULL,
+                ai_model        VARCHAR(80) NULL,
+                ai_generated_at DATETIME NULL,
+                published_at    DATETIME NULL,
+                created_by      INT UNSIGNED NULL,
+                created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_comm_cycle (cycle_id, status),
+                CONSTRAINT fk_comm_cycle FOREIGN KEY (cycle_id)
+                    REFERENCES competition_cycles(id) ON DELETE CASCADE,
+                CONSTRAINT fk_comm_image FOREIGN KEY (image_media_id)
+                    REFERENCES media_items(id) ON DELETE SET NULL,
+                CONSTRAINT fk_comm_user FOREIGN KEY (created_by)
+                    REFERENCES users(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS communication_revisions (
+                id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                item_id    INT UNSIGNED NOT NULL,
+                body       MEDIUMTEXT NOT NULL,
+                feedback   MEDIUMTEXT NULL,
+                ai_model   VARCHAR(80) NULL,
+                created_by INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_commrev_item (item_id),
+                CONSTRAINT fk_commrev_item FOREIGN KEY (item_id)
+                    REFERENCES communication_items(id) ON DELETE CASCADE,
+                CONSTRAINT fk_commrev_user FOREIGN KEY (created_by)
+                    REFERENCES users(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
     }
 
     /**

@@ -14,6 +14,7 @@ $navGroups = [
         ['plans',     'Businesspläne', '📄', ['admin', 'lead', 'teacher', 'juror']],
         ['materials', 'Material & Vorlagen', '📎', ['admin', 'lead', 'teacher', 'juror']],
         ['gallery', 'Mediengalerie', '📸', ['admin', 'lead', 'teacher', 'juror']],
+        ['communication', 'Kommunikation', '📣', ['admin', 'lead', 'teacher', 'juror']],
         ['presentation', 'Präsentation', '🖥', ['admin', 'lead', 'teacher', 'juror']],
         ['contact',   'Kontakt', '✉', ['admin', 'lead', 'teacher', 'juror']],
     ]],

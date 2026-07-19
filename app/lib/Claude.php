@@ -476,6 +476,169 @@ TXT;
         ];
     }
 
+    /**
+     * Öffentlichkeitsarbeit generieren: Instagram-Beitrag oder Pressemitteilung.
+     *
+     * Liefert per erzwungenem Tool-Call einen fertigen, veröffentlichungsreifen
+     * Text. Wird ein bestehender Text plus Feedback übergeben, verbessert die KI
+     * die vorhandene Fassung gezielt (iterative Verbesserung).
+     *
+     * @param string      $typeLabel  Anzeigename des Anlasses (z. B. „Social Media – Pitch Day")
+     * @param string      $kind       'social' (Instagram) oder 'press' (Pressemitteilung)
+     * @param string      $blueprint  Stil-/Format-Vorlage (nur Tonalität/Aufbau, keine Fakten)
+     * @param string      $briefing   Fakten/Stichpunkte der Projektleitung
+     * @param string|null $previous   bestehender Text (für die Verbesserung) oder null
+     * @param string|null $feedback   Verbesserungswunsch oder null (= Neu-Generierung)
+     * @param string      $extra      zusätzliche, dauerhafte Stil-Hinweise (optional)
+     * @return array{ok:bool, model:string, text:?string, raw:?string, error:?string}
+     */
+    public static function generateCommunication(
+        string $typeLabel,
+        string $kind,
+        string $blueprint,
+        string $briefing,
+        ?string $previous = null,
+        ?string $feedback = null,
+        string $extra = ''
+    ): array {
+        $key = Settings::get('anthropic_api_key', cfg('anthropic_api_key'));
+        if (!$key) {
+            return ['ok' => false, 'model' => '', 'text' => null, 'raw' => null,
+                    'error' => 'Kein Anthropic-API-Key hinterlegt (Admin → Einstellungen → KI-Integration).'];
+        }
+
+        $model = Settings::get('anthropic_model', cfg('anthropic_model', 'claude-sonnet-5'));
+
+        if ($kind === 'press') {
+            $roleText = <<<TXT
+Du bist erfahrene:r Pressesprecher:in der Wirtschaftsjunioren Forchheim und
+verfasst eine Pressemitteilung zum Schüler-Businessplanwettbewerb „UnternehmenPLUS".
+Anlass: {$typeLabel}.
+
+Schreibe eine vollständige, veröffentlichungsreife Pressemitteilung auf Deutsch im
+klassischen PM-Stil:
+- aussagekräftige Überschrift und eine kurze Unterzeile,
+- sachlicher, journalistischer Fließtext in der 3. Person,
+- mindestens ein wörtliches Zitat, sofern in den Fakten vorhanden,
+- am Ende ein Dank an Jury, Lehrkräfte und Sponsoren, ein Abschnitt
+  „Kontakt für weitere Informationen" und die Boilerplate „Über die Wirtschaftsjunioren".
+TXT;
+        } else {
+            $roleText = <<<TXT
+Du bist Social-Media-Redakteur:in der Wirtschaftsjunioren Forchheim und schreibst
+einen Instagram-Beitrag zum Schüler-Businessplanwettbewerb „UnternehmenPLUS".
+Anlass: {$typeLabel}.
+
+Schreibe einen fertigen, veröffentlichungsreifen Instagram-Text auf Deutsch:
+- lebendig und wertschätzend, mit passenden Emojis (nicht überladen),
+- kurze, gut lesbare Zeilen/Absätze,
+- erwähnte Schulen, Sponsoren, Gäste und Orte, wo sinnvoll, als @handle taggen
+  (nur wenn das Handle in den Fakten steht – sonst den Klarnamen nutzen),
+- am Ende passende Hashtags (u. a. #wj #wjforchheim #wirtschaftsjunioren
+  #wjbayern #wjoberfranken #unternehmenplus),
+- Länge etwa 120–250 Wörter.
+TXT;
+        }
+
+        $extraBlock = $extra !== ''
+            ? "\nDauerhafte Stil-Hinweise der Projektleitung:\n{$extra}\n"
+            : '';
+
+        // Verbessern (Feedback) oder neu generieren.
+        if ($previous !== null && $feedback !== null) {
+            $taskBlock = <<<TXT
+
+Es gibt bereits eine Fassung. Verbessere sie GEZIELT anhand des folgenden Feedbacks
+und behalte alles Gute bei. Gib den vollständigen, überarbeiteten Text zurück
+(keine Änderungsliste).
+
+Aktuelle Fassung:
+---
+{$previous}
+---
+
+Feedback / Verbesserungswunsch:
+---
+{$feedback}
+---
+TXT;
+        } else {
+            $taskBlock = '';
+        }
+
+        $prompt = <<<TXT
+{$roleText}
+{$extraBlock}
+Als reine Stil-/Format-Vorlage dient dieser frühere Beitrag. Übernimm daraus NUR
+Tonalität und Aufbau – NIEMALS die konkreten Fakten (Zahlen, Namen, Platzierungen):
+---
+{$blueprint}
+---
+
+Verwende ausschließlich die folgenden Fakten. Erfinde nichts hinzu; fehlt eine
+Angabe, lass sie weg statt zu spekulieren:
+---
+{$briefing}
+---
+{$taskBlock}
+Nutze ausschließlich das Tool "submit_communication".
+TXT;
+
+        $tool = [
+            'name'         => 'submit_communication',
+            'description'  => 'Den fertigen Kommunikationstext abgeben.',
+            'input_schema' => [
+                'type'       => 'object',
+                'properties' => [
+                    'text' => ['type' => 'string',
+                               'description' => 'Der vollständige, veröffentlichungsreife Text (inkl. Emojis/Hashtags bzw. Überschrift/Boilerplate).'],
+                ],
+                'required'   => ['text'],
+            ],
+        ];
+
+        $payload = [
+            'model'       => $model,
+            'max_tokens'  => 4096,
+            'tools'       => [$tool],
+            'tool_choice' => ['type' => 'tool', 'name' => 'submit_communication'],
+            'messages'    => [[
+                'role'    => 'user',
+                'content' => [['type' => 'text', 'text' => $prompt]],
+            ]],
+        ];
+
+        [$code, $body, $err] = self::post($key, $payload);
+        if ($err) {
+            return ['ok' => false, 'model' => $model, 'text' => null, 'raw' => null,
+                    'error' => 'Verbindungsfehler: ' . $err];
+        }
+        if ($code !== 200) {
+            return ['ok' => false, 'model' => $model, 'text' => null, 'raw' => $body,
+                    'error' => 'API-Fehler (HTTP ' . $code . '): ' . substr($body, 0, 400)];
+        }
+
+        $data = json_decode($body, true);
+        if (($data['stop_reason'] ?? '') === 'max_tokens') {
+            return ['ok' => false, 'model' => $model, 'text' => null, 'raw' => $body,
+                    'error' => 'KI-Antwort wurde abgeschnitten (Token-Limit) – bitte erneut generieren.'];
+        }
+        $in = null;
+        foreach ($data['content'] ?? [] as $b) {
+            if (($b['type'] ?? '') === 'tool_use' && ($b['name'] ?? '') === 'submit_communication') {
+                $in = $b['input'] ?? null;
+                break;
+            }
+        }
+        $text = is_array($in) ? trim((string) ($in['text'] ?? '')) : '';
+        if ($text === '') {
+            return ['ok' => false, 'model' => $model, 'text' => null, 'raw' => $body,
+                    'error' => 'Unerwartete API-Antwort (kein Text).'];
+        }
+
+        return ['ok' => true, 'model' => $model, 'text' => $text, 'raw' => $body, 'error' => null];
+    }
+
     /** JSON-Schema-Eigenschaften je Businessplan-Kriterium. */
     private static function criteriaSchema(): array
     {

@@ -7,6 +7,30 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.79.0] - 2026-07-19
+### Hinzugefügt
+- **Neues Modul „Kommunikation" (KI-gestützte Öffentlichkeitsarbeit):** Die
+  Projektleitung erstellt Beiträge zu drei Anlässen – **Social Media (Instagram)
+  zum Jury-Feedback**, **Social Media zum Pitch Day** und die **Pressemitteilung
+  zum Pitch Day**. Aus einem **Briefing** (Fakten/Stichpunkte) generiert die KI
+  einen fertigen, veröffentlichungsreifen Text, der sich **per Feedback iterativ
+  verbessern** lässt; jede Fassung wird als Revision festgehalten. Ein **Bild**
+  wird aus der Mediengalerie ausgewählt.
+- **Veröffentlichen für alle sichtbar:** Nach der Veröffentlichung hinterlegt die
+  Projektleitung den **Link zum Instagram-Post** bzw. die **PDF der abgedruckten
+  Pressemitteilung**. Alle übrigen Beteiligten (Lehrkräfte, Jury) sehen die
+  veröffentlichten Beiträge in einer **Nur-Lese-Ansicht** – mit Bild, Text und
+  Link/PDF.
+- **Auto-Briefing:** Beim Anlegen wird das Briefing mit den bekannten Fakten
+  (Kennzahlen, Finalteams/Platzierungen, Sponsoren, Instagram-Handle) vorbefüllt.
+- **Stil-Hinweise:** Dauerhafte Tonalitäts-Vorgaben fließen in jede Generierung
+  ein. Instagram-Blaupause und Pressemitteilungs-Vorlage dienen der KI als
+  Stil-/Format-Referenz (ohne Fakten zu übernehmen).
+- Das Modul ist über die **Zugriffsmatrix** steuerbar (Schreiben = Verwaltung,
+  Lesen = alle) und nutzt die bestehende **KI-Integration (Anthropic Claude)**.
+  Hinweis: Der KI-Dienst erzeugt Text, keine Bilder – „Text mit Bild" entsteht
+  über die Mediengalerie bzw. die Pressemitteilungs-PDF.
+
 ## [0.78.0] - 2026-07-18
 ### Hinzugefügt
 - **Urheberrechts-/Lizenzhinweis:** Die App weist nun sichtbar auf die

@@ -29,6 +29,7 @@ final class Access
         'plans'         => 'Businesspläne',
         'materials'     => 'Material & Vorlagen',
         'gallery'       => 'Mediengalerie',
+        'communication' => 'Kommunikation',
         'contact'       => 'Kontakt',
         'presentation'  => 'Präsentation',
         'moderation'    => 'Moderationskärtchen',
@@ -67,6 +68,9 @@ final class Access
         // Mediengalerie: alle dürfen ansehen UND hochladen; die feinere Regel
         // („nur eigene bearbeiten, Verwaltung alle") setzt der Controller durch.
         'gallery'       => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'write', 'juror' => 'write'],
+        // Kommunikation: Erstellen/Generieren/Veröffentlichen nur die Verwaltung
+        // (Projektleitung); alle anderen sehen die veröffentlichten Beiträge (read).
+        'communication' => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'read', 'juror' => 'read'],
         'contact'       => ['admin' => 'write', 'lead' => 'read',  'teacher' => 'read', 'juror' => 'read'],
         // Präsentation: alle dürfen ansehen; pflegen (Textfolien) nur die Verwaltung.
         'presentation'  => ['admin' => 'write', 'lead' => 'write', 'teacher' => 'read', 'juror' => 'read'],

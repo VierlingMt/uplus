@@ -111,6 +111,8 @@ try {
         case 'media_file':
         case 'media_chunk':
         case 'media_zip':
+        case 'communication':
+        case 'communication_pdf':
         case 'sponsors':
         case 'event':
         case 'event_print':
