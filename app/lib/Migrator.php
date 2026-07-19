@@ -479,6 +479,14 @@ final class Migrator
                 'name'    => 'Kommunikation: KI-generierte Social-Media-Beiträge & Pressemitteilungen je Wettbewerbsjahr (mit Revisionen/Feedback)',
                 'up'      => [self::class, 'communication'],
             ],
+            [
+                'version' => '2026_07_46_instagram_handle',
+                'name'    => 'Instagram-Handle für Nutzer und Sponsoren (Verknüpfung per @ in Beiträgen)',
+                'up'      => "ALTER TABLE users
+                    ADD COLUMN IF NOT EXISTS instagram VARCHAR(80) NULL AFTER position;
+                    ALTER TABLE sponsors
+                    ADD COLUMN IF NOT EXISTS instagram VARCHAR(80) NULL AFTER website",
+            ],
         ];
     }
 

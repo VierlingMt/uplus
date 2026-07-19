@@ -345,26 +345,51 @@ TXT;
             }
         }
 
-        // Sponsoren des Zyklus.
+        // Sponsoren des Zyklus (mit Instagram-Handle, falls gepflegt).
         $sponsors = Database::all(
-            'SELECT DISTINCT s.name
+            'SELECT DISTINCT s.name, s.instagram
                FROM sponsor_contributions c JOIN sponsors s ON s.id = c.sponsor_id
               WHERE c.cycle_id = ?
               ORDER BY s.name',
             [$cycleId]
         );
         if ($sponsors) {
-            $names = array_map(static fn($r) => (string) $r['name'], $sponsors);
+            $names = array_map(static function ($r) {
+                $h = instagram_handle_normalize($r['instagram'] ?? null);
+                return (string) $r['name'] . ($h !== null ? ' (@' . $h . ')' : '');
+            }, $sponsors);
             $lines[] = '';
             $lines[] = 'Sponsoren: ' . implode(', ', $names);
             $lines[] = 'Bildungssponsor: Sparkasse Forchheim';
         }
 
-        // Instagram-Handle (falls gepflegt).
+        // Instagram-Handles der Beteiligten (Jury/Projektleitung) – zum Taggen.
+        $people = Database::all(
+            "SELECT u.name, u.instagram
+               FROM cycle_members cm JOIN users u ON u.id = cm.user_id
+              WHERE cm.cycle_id = ? AND u.instagram IS NOT NULL AND u.instagram <> ''
+              ORDER BY u.name",
+            [$cycleId]
+        );
+        if ($people) {
+            $tags = [];
+            foreach ($people as $p) {
+                $h = instagram_handle_normalize($p['instagram'] ?? null);
+                if ($h !== null) {
+                    $tags[] = (string) $p['name'] . ' (@' . $h . ')';
+                }
+            }
+            if ($tags) {
+                $lines[] = '';
+                $lines[] = 'Instagram-Handles der Beteiligten: ' . implode(', ', $tags);
+            }
+        }
+
+        // Eigener Instagram-Kanal (falls gepflegt).
         $insta = Social::links()['instagram']['url'] ?? '';
         if ($insta !== '') {
             $lines[] = '';
-            $lines[] = 'Instagram: ' . $insta;
+            $lines[] = 'Eigener Instagram-Kanal: ' . $insta;
         }
 
         // Anlass-spezifische Hinweise.

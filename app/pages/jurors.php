@@ -44,6 +44,7 @@ if (is_post()) {
     $spec  = trim((string) input('specialty'));
     $org   = trim((string) input('org'));
     $pos   = trim((string) input('position'));
+    $insta = instagram_handle_normalize((string) input('instagram'));
     $phoneRaw = trim((string) input('phone'));
     // Immer im internationalen Format ohne Leerzeichen speichern (z. B. +491709009124).
     $phone = $phoneRaw === '' ? '' : (phone_normalize($phoneRaw) ?? $phoneRaw);
@@ -87,15 +88,15 @@ if (is_post()) {
     $primary = Roles::primary($selRoles);
     $photo = save_image('photo', 'usr', 'avatars');
     if ($id > 0) {
-        Database::run('UPDATE users SET name=?, email=?, specialty=?, org=?, position=?, phone=?, school_id=?, is_active=? WHERE id=?',
-            [$name, $email, $spec ?: null, $org ?: null, $pos ?: null, $phone ?: null, $school, $active, $id]);
+        Database::run('UPDATE users SET name=?, email=?, specialty=?, org=?, position=?, instagram=?, phone=?, school_id=?, is_active=? WHERE id=?',
+            [$name, $email, $spec ?: null, $org ?: null, $pos ?: null, $insta, $phone ?: null, $school, $active, $id]);
         if ($photo) { Database::run('UPDATE users SET photo_path=? WHERE id=?', [$photo, $id]); }
         Roles::setForUser($id, $selRoles); // pflegt user_roles + users.role (Hauptrolle)
         Audit::log('user.update', 'Nutzer bearbeitet: ' . $name . ' <' . $email . '> (' . implode(', ', $selRoles) . ')', 'user', $id);
         flash('success', 'Nutzer aktualisiert.');
     } else {
-        $id = Database::insert('INSERT INTO users (role,name,email,specialty,org,position,phone,school_id,is_active,photo_path) VALUES (?,?,?,?,?,?,?,?,?,?)',
-            [$primary, $name, $email, $spec ?: null, $org ?: null, $pos ?: null, $phone ?: null, $school, $active, $photo]);
+        $id = Database::insert('INSERT INTO users (role,name,email,specialty,org,position,instagram,phone,school_id,is_active,photo_path) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+            [$primary, $name, $email, $spec ?: null, $org ?: null, $pos ?: null, $insta, $phone ?: null, $school, $active, $photo]);
         Roles::setForUser($id, $selRoles);
         Audit::log('user.create', 'Nutzer angelegt: ' . $name . ' <' . $email . '> (' . implode(', ', $selRoles) . ')', 'user', $id);
         flash('success', 'Nutzer angelegt. Anmeldung erfolgt passwortlos per Login-Link an die E-Mail.');
@@ -201,7 +202,7 @@ $fill = function (array $u) use ($userCycleIds, $rolesOf): string {
     return e(json_encode([
         'id' => (int) $u['id'], 'roles' => $rolesOf($u), 'name' => $u['name'], 'email' => $u['email'],
         'school_id' => (int) ($u['school_id'] ?? 0) ?: '', 'specialty' => $u['specialty'],
-        'org' => $u['org'] ?? '', 'position' => $u['position'] ?? '', 'phone' => $u['phone'],
+        'org' => $u['org'] ?? '', 'position' => $u['position'] ?? '', 'instagram' => $u['instagram'] ?? '', 'phone' => $u['phone'],
         'is_active' => (int) $u['is_active'], 'cycles' => $userCycleIds[(int) $u['id']] ?? [],
     ], JSON_UNESCAPED_UNICODE));
 };
@@ -316,6 +317,10 @@ ob_start(); ?>
       <div class="grid cols-2">
         <div class="field"><label>Organisation</label><input type="text" name="org" placeholder="z. B. Firma / Schule"></div>
         <div class="field"><label>Position</label><input type="text" name="position" placeholder="z. B. Geschäftsführer:in"></div>
+      </div>
+      <div class="field"><label>Instagram-Handle</label>
+        <input type="text" name="instagram" placeholder="z. B. @wjforchheim">
+        <div class="help">Für die Verknüpfung (@) in Social-Media-Beiträgen. „@" oder eine Profil-URL werden automatisch bereinigt.</div>
       </div>
       <div class="field"><label>Handynummer</label><input type="text" name="phone" placeholder="z. B. 0170 9009124 – für SMS-/Handy-Login"><div class="help">Wird international gespeichert (+49…) und erlaubt Login per Handynummer.</div></div>
       <div class="field" id="cyclesField"><label>Wettbewerbsjahre (Teilnahme)</label>

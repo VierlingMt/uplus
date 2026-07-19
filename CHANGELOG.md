@@ -7,6 +7,20 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.80.0] - 2026-07-19
+### Hinzugefügt
+- **Instagram-Handle bei Nutzern und Sponsoren:** Neues Feld „Instagram-Handle"
+  in der **Nutzerverwaltung** (Jury & Nutzer), im **eigenen Profil** (Selbstpflege)
+  und bei den **Sponsoren**. Damit lassen sich Mitglieder und Sponsoren eindeutig
+  mit ihrem Insta-Account verknüpfen. Eingaben werden automatisch bereinigt (ein
+  führendes „@" oder eine mitkopierte Profil-URL werden entfernt; gespeichert wird
+  die reine Kennung).
+- **Verknüpfung in den Kommunikations-Beiträgen:** Das Auto-Briefing des Moduls
+  „Kommunikation" übernimmt die Handles von **Sponsoren** und **Beteiligten**
+  (Jury/Projektleitung), damit die KI sie im Social-Media-Text korrekt per **@**
+  taggen kann.
+- Zentrale Helfer `instagram_handle_normalize()` und `instagram_url()`.
+
 ## [0.79.0] - 2026-07-19
 ### Hinzugefügt
 - **Neues Modul „Kommunikation" (KI-gestützte Öffentlichkeitsarbeit):** Die

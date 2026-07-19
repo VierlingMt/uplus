@@ -24,9 +24,10 @@ if (is_post() && !$readonly) {
     if ($action === 'save_contact') {
         $org = trim((string) input('org')) ?: null;
         $pos = trim((string) input('position')) ?: null;
-        Database::run('UPDATE users SET org=?, position=? WHERE id=?', [$org, $pos, $uid]);
-        Audit::log('profile.contact', 'Organisation/Position aktualisiert', 'user', $uid);
-        flash('success', 'Organisation & Position gespeichert.');
+        $insta = instagram_handle_normalize((string) input('instagram'));
+        Database::run('UPDATE users SET org=?, position=?, instagram=? WHERE id=?', [$org, $pos, $insta, $uid]);
+        Audit::log('profile.contact', 'Organisation/Position/Instagram aktualisiert', 'user', $uid);
+        flash('success', 'Angaben gespeichert.');
         redirect(url('profile'));
     }
 
@@ -159,6 +160,7 @@ ob_start(); ?>
         <p class="muted" style="font-size:13px;margin:0 0 10px">Wird für die PitchDay-Gästeliste übernommen (z. B. auf dem Reserviert-Schild).</p>
         <div class="field"><label>Organisation</label><input type="text" name="org" value="<?= e($u['org'] ?? '') ?>" placeholder="z. B. Firma / Schule"></div>
         <div class="field"><label>Position</label><input type="text" name="position" value="<?= e($u['position'] ?? '') ?>" placeholder="z. B. Geschäftsführer:in"></div>
+        <div class="field"><label>Instagram-Handle</label><input type="text" name="instagram" value="<?= e($u['instagram'] ?? '') ?>" placeholder="z. B. @deinname"><div class="help">Wird für die Verknüpfung (@) in Social-Media-Beiträgen genutzt.</div></div>
         <button class="btn btn--primary">Speichern</button>
       </form>
     <?php endif; ?>

@@ -22,18 +22,19 @@ if (is_post()) {
         $fields = [
             $name, trim((string) input('address')) ?: null, trim((string) input('contact_name')) ?: null,
             trim((string) input('email')) ?: null, trim((string) input('website')) ?: null,
+            instagram_handle_normalize((string) input('instagram')),
             trim((string) input('notes')) ?: null,
         ];
         $logo = save_image('logo', 'sp', 'logos');
         if ($id > 0) {
-            Database::run('UPDATE sponsors SET name=?, address=?, contact_name=?, email=?, website=?, notes=? WHERE id=?',
+            Database::run('UPDATE sponsors SET name=?, address=?, contact_name=?, email=?, website=?, instagram=?, notes=? WHERE id=?',
                 array_merge($fields, [$id]));
             if ($logo) { Database::run('UPDATE sponsors SET logo_path=? WHERE id=?', [$logo, $id]); }
             Audit::log('sponsor.update', 'Sponsor bearbeitet: ' . $name, 'sponsor', $id);
             flash('success', 'Sponsor gespeichert.');
             redirect(url('sponsors', ['edit' => $id]));
         } else {
-            $nid = Database::insert('INSERT INTO sponsors (name, address, contact_name, email, website, notes, logo_path) VALUES (?,?,?,?,?,?,?)',
+            $nid = Database::insert('INSERT INTO sponsors (name, address, contact_name, email, website, instagram, notes, logo_path) VALUES (?,?,?,?,?,?,?,?)',
                 array_merge($fields, [$logo]));
             Audit::log('sponsor.create', 'Sponsor angelegt: ' . $name, 'sponsor', $nid);
             flash('success', 'Sponsor angelegt.');
@@ -101,7 +102,7 @@ $money = fn($a) => number_format((float) $a, 2, ',', '.') . ' €';
 $fill = fn(array $s) => e(json_encode([
     'id' => (int) $s['id'], 'name' => $s['name'], 'address' => $s['address'],
     'contact_name' => $s['contact_name'], 'email' => $s['email'], 'website' => $s['website'],
-    'notes' => $s['notes'] ?? '',
+    'instagram' => $s['instagram'] ?? '', 'notes' => $s['notes'] ?? '',
 ], JSON_UNESCAPED_UNICODE));
 $imgs = fn(array $s) => $s['logo_path'] ? e(json_encode(['logo' => asset($s['logo_path'])], JSON_UNESCAPED_UNICODE)) : '';
 $noteAuthor = trim((string) (Auth::user()['name'] ?? ''));
@@ -127,6 +128,7 @@ ob_start(); ?>
         <div class="grid cols-2">
           <?php if ($edit['email']): ?><div class="field" style="margin:0"><label>E-Mail</label><div><a href="mailto:<?= e($edit['email']) ?>"><?= e($edit['email']) ?></a></div></div><?php endif; ?>
           <?php if ($edit['website']): ?><div class="field" style="margin:0"><label>Website</label><div><?= e($edit['website']) ?></div></div><?php endif; ?>
+          <?php if (!empty($edit['instagram'])): ?><div class="field" style="margin:0"><label>Instagram</label><div><a href="<?= e((string) instagram_url($edit['instagram'])) ?>" target="_blank" rel="noopener">@<?= e($edit['instagram']) ?></a></div></div><?php endif; ?>
         </div>
         <?php if (trim((string) ($edit['notes'] ?? '')) !== ''): ?>
           <div class="field" style="margin:12px 0 0"><label>Notizen / Absprachen</label><div class="muted" style="white-space:pre-wrap"><?= e($edit['notes']) ?></div></div>
@@ -232,6 +234,10 @@ ob_start(); ?>
       <div class="grid cols-2">
         <div class="field"><label>E-Mail</label><input type="email" name="email"></div>
         <div class="field"><label>Website</label><input type="text" name="website"></div>
+      </div>
+      <div class="field"><label>Instagram-Handle</label>
+        <input type="text" name="instagram" placeholder="z. B. @sparkasse_forchheim">
+        <div class="help">Für die Verknüpfung (@) in Social-Media-Beiträgen. „@" oder eine Profil-URL werden automatisch bereinigt.</div>
       </div>
       <div class="field">
         <label>Notizen / Absprachen</label>

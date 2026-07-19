@@ -63,6 +63,35 @@ function phone_normalize(?string $raw): ?string
     return $digits !== null ? '+' . $digits : null;
 }
 
+/**
+ * Instagram-Handle normalisieren: führendes „@", Leerzeichen und eine evtl.
+ * mitkopierte Profil-URL (instagram.com/…) entfernen. Gespeichert wird stets die
+ * reine Kennung ohne „@" (z. B. „wjforchheim"); die Anzeige ergänzt das „@".
+ * Liefert null, wenn nichts Verwertbares übrig bleibt.
+ */
+function instagram_handle_normalize(?string $raw): ?string
+{
+    $h = trim((string) $raw);
+    if ($h === '') {
+        return null;
+    }
+    // Profil-URL → nur den Pfadteil (Benutzernamen) übernehmen.
+    if (preg_match('#(?:https?://)?(?:www\.)?instagram\.com/([^/?#\s]+)#i', $h, $m)) {
+        $h = $m[1];
+    }
+    $h = ltrim($h, '@');
+    // Instagram erlaubt Buchstaben, Ziffern, Punkt und Unterstrich.
+    $h = preg_replace('/[^A-Za-z0-9._]/', '', $h);
+    return ($h === '' || $h === null) ? null : mb_substr($h, 0, 80);
+}
+
+/** Instagram-Profil-URL aus einem gespeicherten Handle (oder null). */
+function instagram_url(?string $handle): ?string
+{
+    $h = instagram_handle_normalize($handle);
+    return $h !== null ? 'https://instagram.com/' . $h : null;
+}
+
 /** Interne URL zu einer Route bauen: url('teams', ['id'=>5]) -> index.php?r=teams&id=5 */
 function url(string $route = 'dashboard', array $params = []): string
 {
