@@ -5,13 +5,12 @@
  * Die Projektleitung (Verwaltung) legt Beiträge zu drei Anlässen an – Social
  * Media zum Jury-Feedback, Social Media zum Pitch Day und die Pressemitteilung
  * zum Pitch Day –, lässt Texte per KI generieren, verbessert sie iterativ per
- * Feedback, hängt ein Bild aus der Mediengalerie an und veröffentlicht das
- * Ergebnis (Link zum Instagram-Post bzw. PDF der abgedruckten Pressemitteilung).
+ * Feedback, hängt Bilder aus der Mediengalerie an (mit Bildunterschrift & Fotograf)
+ * und veröffentlicht das Ergebnis. Pressemitteilungen werden als Word-Dokument
+ * (Fließtext + Bildanhang) erzeugt.
  *
- * Alle übrigen Beteiligten sehen die VERÖFFENTLICHTEN Beiträge (Nur-Lese).
- *
- * Rechte: Lesen = alle mit Zugriff (Zugriffsmatrix); Schreiben (Erstellen,
- * Generieren, Veröffentlichen) nur die Verwaltung (Auth::isManager()).
+ * Sichtbarkeit: Der gesamte Arbeitsbereich ist NUR für Projektleitung & Admin.
+ * Erst VERÖFFENTLICHTE Beiträge sehen alle übrigen Beteiligten (Nur-Lese).
  */
 
 declare(strict_types=1);
@@ -39,7 +38,6 @@ if (is_post()) {
     }
     $action = (string) input('action');
 
-    // Beitrag der aktuellen Auswahl laden (für alle beitragsbezogenen Aktionen).
     $itemId = (int) input('item_id', 0);
     $item   = $itemId > 0 ? Communication::find($itemId) : null;
     if ($itemId > 0 && (!$item || (int) $item['cycle_id'] !== $cycleId)) {
@@ -47,7 +45,6 @@ if (is_post()) {
         $back();
     }
 
-    // --- Globale Stil-Hinweise (für alle Generierungen) ---
     if ($action === 'save_guidance') {
         Settings::set('communication_guidance', trim((string) input('guidance')) ?: null);
         Audit::log('communication.guidance', 'Stil-Hinweise für die Kommunikation gespeichert', 'cycle', $cycleId);
@@ -55,7 +52,6 @@ if (is_post()) {
         $back();
     }
 
-    // --- Neuen Beitrag anlegen ---
     if ($action === 'create') {
         $type = (string) input('type');
         if (!Communication::isValidType($type)) {
@@ -64,13 +60,11 @@ if (is_post()) {
         }
         $title = trim((string) input('title'));
         if ($title === '') {
-            $title = Communication::typeLabel($type)
-                . ($cycle ? ' ' . (string) $cycle['year_label'] : '');
+            $title = Communication::typeLabel($type) . ($cycle ? ' ' . (string) $cycle['year_label'] : '');
         }
         $briefing = Communication::autoBriefing($cycleId, $type);
         $newId = Database::insert(
-            'INSERT INTO communication_items (cycle_id, type, title, briefing, created_by)
-             VALUES (?,?,?,?,?)',
+            'INSERT INTO communication_items (cycle_id, type, title, briefing, created_by) VALUES (?,?,?,?,?)',
             [$cycleId, $type, mb_substr($title, 0, 190), $briefing, Auth::id()]
         );
         Audit::log('communication.create', 'Kommunikationsbeitrag angelegt: ' . Communication::typeLabel($type), 'communication', $newId);
@@ -78,7 +72,6 @@ if (is_post()) {
         redirect(url('communication', ['cycle' => $cycleId, 'open' => $newId]));
     }
 
-    // Ab hier ist ein gültiger Beitrag nötig.
     if (!$item) {
         flash('error', 'Kein Beitrag ausgewählt.');
         $back();
@@ -96,8 +89,6 @@ if (is_post()) {
 
     if ($action === 'generate') {
         @set_time_limit(180);
-        // Feedback (optional): mit Text vorhanden = gezielt verbessern, sonst neu
-        // generieren. generate() nutzt den aktuellen Text des Beitrags als Grundlage.
         $feedback = trim((string) input('feedback')) ?: null;
         $res = Communication::generate($itemId, $feedback);
         if ($res['ok']) {
@@ -117,13 +108,30 @@ if (is_post()) {
         redirect(url('communication', $openParam));
     }
 
-    if ($action === 'set_image') {
-        $mediaId = (int) input('image_media_id', 0);
-        $valid = $mediaId > 0
-            ? Database::one("SELECT id FROM media_items WHERE id = ? AND cycle_id = ? AND kind = 'image'", [$mediaId, $cycleId])
-            : null;
-        Database::run('UPDATE communication_items SET image_media_id = ? WHERE id = ?', [$valid ? $mediaId : null, $itemId]);
-        flash('success', $valid ? 'Bild verknüpft.' : 'Bild entfernt.');
+    // --- Bilder: mehrere aus der Galerie anhängen ---
+    if ($action === 'attach_images') {
+        $ids = (array) input('media_ids', []);
+        // Nur Bilder des Zyklus zulassen.
+        $valid = [];
+        foreach (array_map('intval', $ids) as $mid) {
+            if ($mid > 0 && Database::value("SELECT id FROM media_items WHERE id = ? AND cycle_id = ? AND kind = 'image'", [$mid, $cycleId])) {
+                $valid[] = $mid;
+            }
+        }
+        $n = Communication::attachImages($itemId, $valid);
+        flash($n > 0 ? 'success' : 'info', $n > 0 ? ($n . ' Bild(er) hinzugefügt.') : 'Keine neuen Bilder ausgewählt.');
+        redirect(url('communication', $openParam));
+    }
+
+    if ($action === 'save_image_meta') {
+        Communication::updateImageMeta((int) input('image_id', 0), $itemId, (string) input('caption'), (string) input('photographer'));
+        flash('success', 'Bildangaben gespeichert.');
+        redirect(url('communication', $openParam));
+    }
+
+    if ($action === 'remove_image') {
+        Communication::removeImage((int) input('image_id', 0), $itemId);
+        flash('success', 'Bild entfernt.');
         redirect(url('communication', $openParam));
     }
 
@@ -132,13 +140,14 @@ if (is_post()) {
             flash('error', 'Es gibt noch keinen Text zum Veröffentlichen.');
             redirect(url('communication', $openParam));
         }
+        $isPress = Communication::kindOf((string) $item['type']) === 'press';
         $url = trim((string) input('published_url'));
         if ($url !== '' && !preg_match('#^https?://#i', $url)) {
             flash('error', 'Bitte einen gültigen Link (mit http:// oder https://) angeben.');
             redirect(url('communication', $openParam));
         }
 
-        // PDF der abgedruckten Pressemitteilung (optional bei Presse-Beiträgen).
+        // Optionale PDF der abgedruckten Pressemitteilung.
         $pdfPath = $item['pdf_path'];
         $pdfName = $item['pdf_name'];
         if (!empty($_FILES['pdf']['name']) && is_uploaded_file($_FILES['pdf']['tmp_name'] ?? '')) {
@@ -157,7 +166,6 @@ if (is_post()) {
                 flash('error', 'Speicherordner für PDFs fehlt.');
                 redirect(url('communication', $openParam));
             }
-            // Alte PDF ersetzen.
             if ($pdfPath) {
                 @unlink(Communication::pdfDir() . '/' . basename((string) $pdfPath));
             }
@@ -170,11 +178,10 @@ if (is_post()) {
             $pdfName = mb_substr((string) $f['name'], 0, 255);
         }
 
-        // Mindestens ein „Fundort" der Veröffentlichung.
-        if ($url === '' && !$pdfPath) {
-            flash('error', Communication::kindOf((string) $item['type']) === 'press'
-                ? 'Bitte den Link zum Beitrag angeben oder die PDF der Pressemitteilung hochladen.'
-                : 'Bitte den Link zum veröffentlichten Post (z. B. Instagram) angeben.');
+        // Social: Link zum Post ist Pflicht (dort „lebt" der Beitrag). Presse:
+        // das Word-Dokument ist immer verfügbar, Link/PDF sind optional.
+        if (!$isPress && $url === '') {
+            flash('error', 'Bitte den Link zum veröffentlichten Post (z. B. Instagram) angeben.');
             redirect(url('communication', $openParam));
         }
 
@@ -218,6 +225,48 @@ $gallery  = ($isManager && $cycleId) ? Communication::galleryImages($cycleId) : 
 $imgThumb = fn(int $id) => url('media_file', ['id' => $id, 'v' => 'thumb']);
 $imgView  = fn(int $id) => url('media_file', ['id' => $id, 'v' => 'view']);
 
+/**
+ * Öffentliche Ansicht eines Beitrags (so sehen ihn ALLE). Wird sowohl für die
+ * Nur-Lese-Ansicht als auch als Vorschau im Editor genutzt.
+ */
+$publicView = function (array $it, array $imgs) use ($imgThumb, $imgView): string {
+    $type    = (string) $it['type'];
+    $isPress = Communication::kindOf($type) === 'press';
+    ob_start(); ?>
+    <?php if ($imgs): ?>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <?php foreach ($imgs as $ci): $mid = (int) ($ci['media_id'] ?? 0); ?>
+          <figure style="margin:0;max-width:220px">
+            <?php if ($mid && !empty($ci['stored_name'])): ?>
+              <a href="<?= e($imgView($mid)) ?>" target="_blank" rel="noopener"><img src="<?= e($imgThumb($mid)) ?>" alt="" style="max-width:220px;border-radius:10px;border:1px solid var(--line,#e4e7ee)"></a>
+            <?php else: ?>
+              <div class="muted" style="font-size:12px">(Bild nicht mehr verfügbar)</div>
+            <?php endif; ?>
+            <?php if (!empty($ci['caption']) || !empty($ci['photographer'])): ?>
+              <figcaption class="muted" style="font-size:12px;margin-top:4px;max-width:220px">
+                <?= e((string) ($ci['caption'] ?? '')) ?>
+                <?php if (!empty($ci['photographer'])): ?><br><em>Foto: <?= e((string) $ci['photographer']) ?></em><?php endif; ?>
+              </figcaption>
+            <?php endif; ?>
+          </figure>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+    <div style="white-space:pre-wrap"><?= e((string) ($it['body'] ?? '')) ?></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <?php if (!empty($it['published_url'])): ?>
+        <a class="btn btn--primary btn--sm" href="<?= e((string) $it['published_url']) ?>" target="_blank" rel="noopener">↗ Zum Beitrag</a>
+      <?php endif; ?>
+      <?php if ($isPress): ?>
+        <a class="btn btn--teal btn--sm" href="<?= url('communication_docx', ['id' => (int) $it['id']]) ?>">⬇ Word (mit Bildanhang)</a>
+      <?php endif; ?>
+      <?php if (!empty($it['pdf_path'])): ?>
+        <a class="btn btn--ghost btn--sm" href="<?= url('communication_pdf', ['id' => (int) $it['id']]) ?>" target="_blank" rel="noopener">📄 Abgedruckte PM (PDF)</a>
+      <?php endif; ?>
+    </div>
+    <?php return (string) ob_get_clean();
+};
+
 $cycleSwitcher = function () use ($cycles, $cycleId) {
     if (count($cycles) < 2) {
         return '';
@@ -247,21 +296,18 @@ ob_start(); ?>
   </div></div>
 <?php else: ?>
 
-  <p class="muted" style="max-width:80ch;margin:-4px 0 16px">
-    <?php if ($isManager): ?>
-      Erstelle Beiträge für <strong>Social Media (Instagram)</strong> und die <strong>Pressemitteilung</strong>.
-      Die KI generiert aus deinem Briefing einen fertigen Text, den du per <strong>Feedback iterativ verbessern</strong>
-      kannst. Ein Bild wählst du aus der <a href="<?= url('gallery') ?>">Mediengalerie</a>. Nach der Veröffentlichung
-      hinterlegst du den <strong>Link zum Post</strong> bzw. die <strong>PDF der abgedruckten Pressemitteilung</strong> –
-      erst dann sehen alle Beteiligten den Beitrag.
-    <?php else: ?>
-      Hier findest du die <strong>veröffentlichten</strong> Beiträge rund um den Wettbewerb – mit Link zum
-      Instagram-Post bzw. der PDF der Pressemitteilung.
-    <?php endif; ?>
-  </p>
-
   <?php if ($isManager): ?>
-    <!-- Aktionsleiste: neuer Beitrag + Stil-Hinweise -->
+    <!-- Sichtbarkeits-Hinweis (Werkstatt) -->
+    <div class="card mb" style="border-left:4px solid #f4c430">
+      <div class="card__body" style="padding:12px 16px">
+        <strong>🔒 Arbeitsbereich – nur Projektleitung &amp; Admin.</strong>
+        <span class="muted"> Hier entstehen die Beiträge. <strong>Erst mit „Veröffentlichen"</strong> werden sie für
+        <strong>alle</strong> Beteiligten (Lehrkräfte, Jury) sichtbar. Jeder Beitrag zeigt unten die Vorschau
+        <em>„So sehen es alle"</em>.</span>
+      </div>
+    </div>
+
+    <!-- Aktionsleiste -->
     <div class="card mb">
       <div class="card__body" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
         <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -275,6 +321,11 @@ ob_start(); ?>
         <button type="button" class="btn btn--ghost btn--sm" data-modal-open="guidanceModal">⚙ Stil-Hinweise</button>
       </div>
     </div>
+  <?php else: ?>
+    <p class="muted" style="max-width:80ch;margin:-4px 0 16px">
+      Hier findest du die <strong>veröffentlichten</strong> Beiträge rund um den Wettbewerb – mit Bild(ern),
+      Link zum Instagram-Post bzw. der Pressemitteilung als Word/PDF.
+    </p>
   <?php endif; ?>
 
   <?php if (!$items): ?>
@@ -286,182 +337,203 @@ ob_start(); ?>
   <?php endif; ?>
 
   <?php foreach ($items as $it):
-    $type   = (string) $it['type'];
+    $type    = (string) $it['type'];
     [$stLabel, $stColor] = Communication::statusLabel((string) $it['status']);
     $isPress = Communication::kindOf($type) === 'press';
     $hasBody = trim((string) ($it['body'] ?? '')) !== '';
-    $imgId   = (int) ($it['image_media_id'] ?? 0);
     $bodyId  = 'body_' . (int) $it['id'];
     $open    = $openId === (int) $it['id'];
+    $imgs    = Communication::images((int) $it['id']);
     ?>
 
-    <?php if ($isManager): /* ============ Verwaltungs-Ansicht (voller Editor) ============ */ ?>
-      <div class="card mb" id="item-<?= (int) $it['id'] ?>">
-        <div class="card__head" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <span><?= Communication::typeIcon($type) ?> <strong><?= e((string) $it['title']) ?></strong></span>
-          <span class="pill <?= $stColor ?>"><?= e($stLabel) ?></span>
-          <span class="muted" style="font-size:12px"><?= e(Communication::typeLabel($type)) ?></span>
-          <form method="post" action="<?= url('communication') ?>" style="margin-left:auto" data-confirm="Diesen Beitrag mit allen Fassungen wirklich löschen?">
-            <?= Csrf::field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="<?= (int) $it['id'] ?>">
-            <button class="btn btn--danger btn--sm">Löschen</button>
-          </form>
-        </div>
-        <div class="card__body">
-          <div class="grid cols-2" style="align-items:start">
-
-            <!-- Linke Spalte: Briefing + Generierung -->
-            <div>
-              <form method="post" action="<?= url('communication') ?>">
-                <?= Csrf::field() ?><input type="hidden" name="action" value="save_briefing"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="<?= (int) $it['id'] ?>">
-                <div class="field"><label>Titel (intern)</label>
-                  <input type="text" name="title" value="<?= e((string) $it['title']) ?>" maxlength="190">
-                </div>
-                <div class="field"><label>Briefing – Fakten & Stichpunkte für die KI</label>
-                  <textarea name="briefing" rows="10" placeholder="Zahlen, Platzierungen, Namen, Zitate, Sponsoren, @handles …"><?= e((string) ($it['briefing'] ?? '')) ?></textarea>
-                </div>
-                <div style="text-align:right"><button class="btn btn--ghost btn--sm">Briefing speichern</button></div>
-              </form>
-
-              <div style="border-top:1px solid var(--line,#e4e7ee);margin-top:12px;padding-top:12px">
-                <?php if ($hasBody): ?>
-                  <form method="post" action="<?= url('communication') ?>">
-                    <?= Csrf::field() ?><input type="hidden" name="action" value="generate"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="<?= (int) $it['id'] ?>">
-                    <div class="field"><label>Feedback – was soll verbessert werden?</label>
-                      <textarea name="feedback" rows="3" required placeholder="z. B. kürzer, mehr Fokus auf das Siegerteam, lockerer Ton"></textarea>
-                    </div>
-                    <div style="text-align:right"><button class="btn btn--teal btn--sm">✨ Mit Feedback verbessern</button></div>
-                  </form>
-                  <form method="post" action="<?= url('communication') ?>" data-confirm="Text komplett neu generieren? Die aktuelle Fassung wird als Revision behalten." style="text-align:right;margin-top:6px">
-                    <?= Csrf::field() ?><input type="hidden" name="action" value="generate"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="<?= (int) $it['id'] ?>">
-                    <button class="btn btn--ghost btn--sm">🔄 Neu generieren</button>
-                  </form>
-                <?php else: ?>
-                  <form method="post" action="<?= url('communication') ?>">
-                    <?= Csrf::field() ?><input type="hidden" name="action" value="generate"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="<?= (int) $it['id'] ?>">
-                    <div style="text-align:right"><button class="btn btn--teal btn--sm">✨ Text generieren</button></div>
-                  </form>
-                <?php endif; ?>
-                <?php if (!empty($it['ai_generated_at'])): ?>
-                  <p class="muted" style="font-size:12px;margin:8px 0 0">Zuletzt generiert am <?= e(date('d.m.Y, H:i', strtotime((string) $it['ai_generated_at']))) ?> Uhr<?= $it['ai_model'] ? ' · ' . e((string) $it['ai_model']) : '' ?>.</p>
-                <?php endif; ?>
-              </div>
-            </div>
-
-            <!-- Rechte Spalte: Text + Bild -->
-            <div>
-              <form method="post" action="<?= url('communication') ?>">
-                <?= Csrf::field() ?><input type="hidden" name="action" value="save_body"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="<?= (int) $it['id'] ?>">
-                <div class="field"><label>Text <span class="muted" style="font-weight:400">(bearbeitbar)</span></label>
-                  <textarea id="<?= $bodyId ?>" name="body" rows="14" placeholder="Noch kein Text – links generieren."><?= e((string) ($it['body'] ?? '')) ?></textarea>
-                </div>
-                <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
-                  <button type="button" class="btn btn--ghost btn--sm" onclick="var t=document.getElementById('<?= $bodyId ?>');t.select();if(navigator.clipboard){navigator.clipboard.writeText(t.value);this.textContent='Kopiert ✓';var b=this;setTimeout(function(){b.textContent='Text kopieren'},1500);}">Text kopieren</button>
-                  <button class="btn btn--ghost btn--sm">Text speichern</button>
-                </div>
-              </form>
-
-              <!-- Bild aus der Mediengalerie -->
-              <div class="field" style="margin-top:10px">
-                <label>Bild aus der Mediengalerie</label>
-                <?php if ($imgId): ?>
-                  <div style="margin-bottom:8px"><img src="<?= e($imgThumb($imgId)) ?>" alt="" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--line,#e4e7ee)"></div>
-                <?php endif; ?>
-                <form method="post" action="<?= url('communication') ?>">
-                  <?= Csrf::field() ?><input type="hidden" name="action" value="set_image"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="<?= (int) $it['id'] ?>">
-                  <div style="display:flex;gap:8px;flex-wrap:wrap">
-                    <select name="image_media_id" onchange="this.form.submit()" style="flex:1;min-width:180px">
-                      <option value="0">— kein Bild —</option>
-                      <?php foreach ($gallery as $g):
-                        $lbl = trim((string) ($g['title'] ?: $g['original_name'] ?: ('Bild #' . $g['id']))); ?>
-                        <option value="<?= (int) $g['id'] ?>" <?= (int) $g['id'] === $imgId ? 'selected' : '' ?>><?= e(mb_substr($lbl, 0, 70)) ?></option>
-                      <?php endforeach; ?>
-                    </select>
-                    <noscript><button class="btn btn--ghost btn--sm">Übernehmen</button></noscript>
-                  </div>
-                  <?php if (!$gallery): ?>
-                    <p class="muted" style="font-size:12px;margin:6px 0 0">Noch keine Bilder – lade welche in der <a href="<?= url('gallery') ?>">Mediengalerie</a> hoch.</p>
-                  <?php endif; ?>
-                </form>
-              </div>
-            </div>
-          </div>
-
-          <!-- Veröffentlichen -->
-          <div style="border-top:1px solid var(--line,#e4e7ee);margin-top:14px;padding-top:14px">
-            <?php $curPdf = !empty($it['pdf_path']); ?>
-            <form method="post" action="<?= url('communication') ?>" enctype="multipart/form-data">
-              <?= Csrf::field() ?><input type="hidden" name="action" value="publish"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="<?= (int) $it['id'] ?>">
-              <div class="grid cols-2" style="align-items:end">
-                <div class="field" style="margin:0">
-                  <label>Link zum veröffentlichten Beitrag<?= $isPress ? ' (optional)' : '' ?></label>
-                  <input type="url" name="published_url" value="<?= e((string) ($it['published_url'] ?? '')) ?>" placeholder="https://www.instagram.com/p/…">
-                </div>
-                <?php if ($isPress): ?>
-                  <div class="field" style="margin:0">
-                    <label>PDF der abgedruckten Pressemitteilung<?= $curPdf ? ' (vorhanden – neu hochladen zum Ersetzen)' : '' ?></label>
-                    <input type="file" name="pdf" accept="application/pdf">
-                    <?php if ($curPdf): ?><p class="muted" style="font-size:12px;margin:4px 0 0"><a href="<?= url('communication_pdf', ['id' => (int) $it['id']]) ?>" target="_blank" rel="noopener">📄 <?= e((string) $it['pdf_name']) ?></a></p><?php endif; ?>
-                  </div>
-                <?php endif; ?>
-              </div>
-              <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px">
-                <?php if ((string) $it['status'] === 'published'): ?>
-                  <button class="btn btn--ghost btn--sm">Angaben aktualisieren</button>
-                  <button class="btn btn--ghost btn--sm" formaction="<?= url('communication') ?>" name="action" value="unpublish" formnovalidate>Veröffentlichung zurückziehen</button>
-                <?php else: ?>
-                  <button class="btn btn--primary btn--sm" <?= $hasBody ? '' : 'disabled' ?>>✅ Veröffentlichen</button>
-                <?php endif; ?>
-              </div>
-            </form>
-          </div>
-
-          <!-- Frühere Fassungen -->
-          <?php $revs = Communication::revisions((int) $it['id']); if ($revs): ?>
-            <details style="margin-top:12px"<?= $open ? ' open' : '' ?>>
-              <summary class="muted" style="cursor:pointer;font-size:13px">Frühere Fassungen (<?= count($revs) ?>)</summary>
-              <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
-                <?php foreach ($revs as $r): ?>
-                  <div style="border:1px solid var(--line,#e4e7ee);border-radius:8px;padding:8px 10px;background:#fff">
-                    <div class="muted" style="font-size:12px;margin-bottom:4px">
-                      <?= e(date('d.m.Y, H:i', strtotime((string) $r['created_at']))) ?> Uhr
-                      <?= $r['author'] ? '· ' . e((string) $r['author']) : '' ?>
-                      <?= !empty($r['feedback']) ? '· Feedback: „' . e(mb_substr((string) $r['feedback'], 0, 120)) . '"' : '· Neu generiert' ?>
-                    </div>
-                    <div style="white-space:pre-wrap;font-size:13px;max-height:160px;overflow:auto"><?= e((string) $r['body']) ?></div>
-                  </div>
-                <?php endforeach; ?>
-              </div>
-            </details>
-          <?php endif; ?>
-        </div>
-      </div>
-
-    <?php else: /* ============ Nur-Lese-Ansicht (veröffentlichte Beiträge) ============ */ ?>
+    <?php if (!$isManager): /* ===== Nur-Lese-Ansicht ===== */ ?>
       <div class="card mb">
         <div class="card__head" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <span><?= Communication::typeIcon($type) ?> <strong><?= e((string) $it['title']) ?></strong></span>
           <span class="muted" style="font-size:12px;margin-left:auto"><?= $it['published_at'] ? e(date('d.m.Y', strtotime((string) $it['published_at']))) : '' ?></span>
         </div>
-        <div class="card__body">
-          <div class="<?= $imgId ? 'grid cols-2' : '' ?>" style="align-items:start">
-            <?php if ($imgId): ?>
-              <div><a href="<?= e($imgView($imgId)) ?>" target="_blank" rel="noopener"><img src="<?= e($imgThumb($imgId)) ?>" alt="" style="max-width:100%;border-radius:10px;border:1px solid var(--line,#e4e7ee)"></a></div>
-            <?php endif; ?>
-            <div>
-              <div style="white-space:pre-wrap"><?= e((string) $it['body']) ?></div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-                <?php if (!empty($it['published_url'])): ?>
-                  <a class="btn btn--primary btn--sm" href="<?= e((string) $it['published_url']) ?>" target="_blank" rel="noopener">↗ Zum Beitrag</a>
-                <?php endif; ?>
-                <?php if (!empty($it['pdf_path'])): ?>
-                  <a class="btn btn--ghost btn--sm" href="<?= url('communication_pdf', ['id' => (int) $it['id']]) ?>" target="_blank" rel="noopener">📄 Pressemitteilung (PDF)</a>
-                <?php endif; ?>
+        <div class="card__body"><?= $publicView($it, $imgs) ?></div>
+      </div>
+      <?php continue; ?>
+    <?php endif; ?>
+
+    <!-- ===== Verwaltungs-Ansicht (voller Editor) ===== -->
+    <div class="card mb" id="item-<?= (int) $it['id'] ?>">
+      <div class="card__head" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span><?= Communication::typeIcon($type) ?> <strong><?= e((string) $it['title']) ?></strong></span>
+        <span class="pill <?= $stColor ?>"><?= e($stLabel) ?></span>
+        <?php if ((string) $it['status'] === 'published'): ?>
+          <span class="muted" style="font-size:12px">👁 für alle sichtbar</span>
+        <?php else: ?>
+          <span class="muted" style="font-size:12px">🔒 nur Projektleitung &amp; Admin</span>
+        <?php endif; ?>
+        <form method="post" action="<?= url('communication') ?>" style="margin-left:auto" data-confirm="Diesen Beitrag mit allen Fassungen wirklich löschen?">
+          <?= Csrf::field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="<?= (int) $it['id'] ?>">
+          <button class="btn btn--danger btn--sm">Löschen</button>
+        </form>
+      </div>
+      <div class="card__body">
+        <div class="grid cols-2" style="align-items:start">
+
+          <!-- Linke Spalte: Briefing + Generierung -->
+          <div>
+            <form method="post" action="<?= url('communication') ?>">
+              <?= Csrf::field() ?><input type="hidden" name="action" value="save_briefing"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="<?= (int) $it['id'] ?>">
+              <div class="field"><label>Titel (intern)</label>
+                <input type="text" name="title" value="<?= e((string) $it['title']) ?>" maxlength="190">
+              </div>
+              <div class="field"><label>Briefing – Fakten &amp; Stichpunkte für die KI</label>
+                <textarea name="briefing" rows="9" placeholder="Zahlen, Platzierungen, Namen, Zitate, Sponsoren, @handles …"><?= e((string) ($it['briefing'] ?? '')) ?></textarea>
+              </div>
+              <div style="text-align:right"><button class="btn btn--ghost btn--sm">Briefing speichern</button></div>
+            </form>
+
+            <div style="border-top:1px solid var(--line,#e4e7ee);margin-top:12px;padding-top:12px">
+              <?php if ($hasBody): ?>
+                <form method="post" action="<?= url('communication') ?>">
+                  <?= Csrf::field() ?><input type="hidden" name="action" value="generate"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="<?= (int) $it['id'] ?>">
+                  <div class="field"><label>Feedback – was soll verbessert werden?</label>
+                    <textarea name="feedback" rows="3" required placeholder="z. B. kürzer, mehr Fokus auf das Siegerteam, lockerer Ton"></textarea>
+                  </div>
+                  <div style="text-align:right"><button class="btn btn--teal btn--sm">✨ Mit Feedback verbessern</button></div>
+                </form>
+                <form method="post" action="<?= url('communication') ?>" data-confirm="Text komplett neu generieren? Die aktuelle Fassung wird als Revision behalten." style="text-align:right;margin-top:6px">
+                  <?= Csrf::field() ?><input type="hidden" name="action" value="generate"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="<?= (int) $it['id'] ?>">
+                  <button class="btn btn--ghost btn--sm">🔄 Neu generieren</button>
+                </form>
+              <?php else: ?>
+                <form method="post" action="<?= url('communication') ?>">
+                  <?= Csrf::field() ?><input type="hidden" name="action" value="generate"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="<?= (int) $it['id'] ?>">
+                  <div style="text-align:right"><button class="btn btn--teal btn--sm">✨ Text generieren</button></div>
+                </form>
+              <?php endif; ?>
+              <?php if (!empty($it['ai_generated_at'])): ?>
+                <p class="muted" style="font-size:12px;margin:8px 0 0">Zuletzt generiert am <?= e(date('d.m.Y, H:i', strtotime((string) $it['ai_generated_at']))) ?> Uhr<?= $it['ai_model'] ? ' · ' . e((string) $it['ai_model']) : '' ?>.</p>
+              <?php endif; ?>
+            </div>
+          </div>
+
+          <!-- Rechte Spalte: Text + Bilder -->
+          <div>
+            <form method="post" action="<?= url('communication') ?>">
+              <?= Csrf::field() ?><input type="hidden" name="action" value="save_body"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="<?= (int) $it['id'] ?>">
+              <div class="field"><label>Text <span class="muted" style="font-weight:400">(bearbeitbar)</span></label>
+                <textarea id="<?= $bodyId ?>" name="body" rows="12" placeholder="Noch kein Text – links generieren."><?= e((string) ($it['body'] ?? '')) ?></textarea>
+              </div>
+              <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+                <button type="button" class="btn btn--ghost btn--sm" onclick="var t=document.getElementById('<?= $bodyId ?>');t.select();if(navigator.clipboard){navigator.clipboard.writeText(t.value);this.textContent='Kopiert ✓';var b=this;setTimeout(function(){b.textContent='Text kopieren'},1500);}">Text kopieren</button>
+                <button class="btn btn--ghost btn--sm">Text speichern</button>
+              </div>
+            </form>
+
+            <!-- Bilder aus der Mediengalerie -->
+            <div class="field" style="margin-top:10px">
+              <label style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <span>Bilder<?= $isPress ? ' (Anhang der Pressemitteilung)' : '' ?></span>
+                <button type="button" class="btn btn--ghost btn--sm" data-modal-open="galleryModal"
+                  data-fill='<?= e(json_encode(['item_id' => (int) $it['id']], JSON_UNESCAPED_UNICODE)) ?>'>🖼 Bilder auswählen</button>
+              </label>
+              <?php if (!$imgs): ?>
+                <p class="muted" style="font-size:13px;margin:6px 0 0">Noch keine Bilder gewählt. Personen bitte je Bild benennen (z. B. „v.l.n.r. …") und den Fotografen angeben.</p>
+              <?php endif; ?>
+              <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+                <?php foreach ($imgs as $ci): $mid = (int) ($ci['media_id'] ?? 0); ?>
+                  <div style="display:flex;gap:10px;border:1px solid var(--line,#e4e7ee);border-radius:8px;padding:8px;background:#fff">
+                    <div style="flex:0 0 auto">
+                      <?php if ($mid && !empty($ci['stored_name'])): ?>
+                        <a href="<?= e($imgView($mid)) ?>" target="_blank" rel="noopener"><img src="<?= e($imgThumb($mid)) ?>" alt="" style="width:90px;height:90px;object-fit:cover;border-radius:6px"></a>
+                      <?php else: ?>
+                        <span class="muted" style="font-size:12px">(Bild fehlt)</span>
+                      <?php endif; ?>
+                    </div>
+                    <form method="post" action="<?= url('communication') ?>" style="flex:1;min-width:0">
+                      <?= Csrf::field() ?><input type="hidden" name="action" value="save_image_meta"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="<?= (int) $it['id'] ?>"><input type="hidden" name="image_id" value="<?= (int) $ci['id'] ?>">
+                      <div class="field" style="margin:0 0 6px"><label style="font-size:12px">Bildunterschrift (Personen, z. B. v.l.n.r.)</label>
+                        <input type="text" name="caption" value="<?= e((string) ($ci['caption'] ?? '')) ?>" maxlength="500" placeholder="v.l.n.r. …">
+                      </div>
+                      <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
+                        <div class="field" style="margin:0;flex:1;min-width:140px"><label style="font-size:12px">Fotograf / Urheber</label>
+                          <input type="text" name="photographer" value="<?= e((string) ($ci['photographer'] ?? '')) ?>" maxlength="190" placeholder="z. B. Markus Feihl">
+                        </div>
+                        <button class="btn btn--ghost btn--sm">Speichern</button>
+                      </div>
+                    </form>
+                    <form method="post" action="<?= url('communication') ?>" data-confirm="Bild aus diesem Beitrag entfernen?" style="flex:0 0 auto">
+                      <?= Csrf::field() ?><input type="hidden" name="action" value="remove_image"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="<?= (int) $it['id'] ?>"><input type="hidden" name="image_id" value="<?= (int) $ci['id'] ?>">
+                      <button class="btn btn--danger btn--sm" title="Entfernen">×</button>
+                    </form>
+                  </div>
+                <?php endforeach; ?>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- Frühere Fassungen -->
+        <?php $revs = Communication::revisions((int) $it['id']); if ($revs): ?>
+          <details style="margin-top:12px"<?= $open ? ' open' : '' ?>>
+            <summary class="muted" style="cursor:pointer;font-size:13px">Frühere Fassungen (<?= count($revs) ?>)</summary>
+            <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
+              <?php foreach ($revs as $r): ?>
+                <div style="border:1px solid var(--line,#e4e7ee);border-radius:8px;padding:8px 10px;background:#fff">
+                  <div class="muted" style="font-size:12px;margin-bottom:4px">
+                    <?= e(date('d.m.Y, H:i', strtotime((string) $r['created_at']))) ?> Uhr
+                    <?= $r['author'] ? '· ' . e((string) $r['author']) : '' ?>
+                    <?= !empty($r['feedback']) ? '· Feedback: „' . e(mb_substr((string) $r['feedback'], 0, 120)) . '"' : '· Neu generiert' ?>
+                  </div>
+                  <div style="white-space:pre-wrap;font-size:13px;max-height:160px;overflow:auto"><?= e((string) $r['body']) ?></div>
+                </div>
+              <?php endforeach; ?>
+            </div>
+          </details>
+        <?php endif; ?>
+
+        <!-- Veröffentlichen -->
+        <div style="border-top:1px solid var(--line,#e4e7ee);margin-top:14px;padding-top:14px">
+          <?php $curPdf = !empty($it['pdf_path']); ?>
+          <?php if ($isPress): ?>
+            <div style="margin-bottom:10px">
+              <a class="btn btn--teal btn--sm" href="<?= url('communication_docx', ['id' => (int) $it['id']]) ?>">⬇ Word herunterladen (Fließtext + Bildanhang)</a>
+              <span class="muted" style="font-size:12px"> – die Pressemitteilung als .docx zum Versenden.</span>
+            </div>
+          <?php endif; ?>
+          <form method="post" action="<?= url('communication') ?>" enctype="multipart/form-data">
+            <?= Csrf::field() ?><input type="hidden" name="action" value="publish"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="<?= (int) $it['id'] ?>">
+            <div class="grid cols-2" style="align-items:end">
+              <div class="field" style="margin:0">
+                <label>Link zum veröffentlichten Beitrag<?= $isPress ? ' (optional)' : '' ?></label>
+                <input type="url" name="published_url" value="<?= e((string) ($it['published_url'] ?? '')) ?>" placeholder="https://www.instagram.com/p/…">
+              </div>
+              <?php if ($isPress): ?>
+                <div class="field" style="margin:0">
+                  <label>PDF der abgedruckten Pressemitteilung<?= $curPdf ? ' (vorhanden – neu hochladen zum Ersetzen)' : ' (optional)' ?></label>
+                  <input type="file" name="pdf" accept="application/pdf">
+                  <?php if ($curPdf): ?><p class="muted" style="font-size:12px;margin:4px 0 0"><a href="<?= url('communication_pdf', ['id' => (int) $it['id']]) ?>" target="_blank" rel="noopener">📄 <?= e((string) $it['pdf_name']) ?></a></p><?php endif; ?>
+                </div>
+              <?php endif; ?>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px">
+              <?php if ((string) $it['status'] === 'published'): ?>
+                <button class="btn btn--ghost btn--sm">Angaben aktualisieren</button>
+                <button class="btn btn--ghost btn--sm" name="action" value="unpublish" formnovalidate>Veröffentlichung zurückziehen</button>
+              <?php else: ?>
+                <button class="btn btn--primary btn--sm" <?= $hasBody ? '' : 'disabled' ?>>✅ Veröffentlichen</button>
+              <?php endif; ?>
+            </div>
+          </form>
+        </div>
+
+        <!-- Vorschau: So sehen es alle -->
+        <div style="border-top:1px dashed var(--line,#e4e7ee);margin-top:14px;padding-top:12px">
+          <div style="margin-bottom:8px"><span class="pill <?= (string) $it['status'] === 'published' ? 'teal' : 'muted' ?>">👁 So sehen es alle<?= (string) $it['status'] === 'published' ? '' : ' (noch nicht veröffentlicht)' ?></span></div>
+          <?php if ($hasBody): ?>
+            <div style="background:#f7f9fc;border:1px solid var(--line,#e4e7ee);border-radius:10px;padding:12px"><?= $publicView($it, $imgs) ?></div>
+          <?php else: ?>
+            <p class="muted" style="font-size:13px">Sobald ein Text generiert ist, erscheint hier die Vorschau.</p>
+          <?php endif; ?>
+        </div>
       </div>
-    <?php endif; ?>
+    </div>
   <?php endforeach; ?>
 
   <?php if ($isManager): ?>
@@ -475,7 +547,7 @@ ob_start(); ?>
             <?php foreach (Communication::TYPES as $tk => $t): ?><option value="<?= e($tk) ?>"><?= e($t[0]) ?></option><?php endforeach; ?>
           </select></div>
           <div class="field"><label>Titel (intern, optional)</label><input type="text" name="title" maxlength="190" placeholder="wird sonst automatisch gesetzt"></div>
-          <p class="muted" style="font-size:13px">Das Briefing wird mit den bekannten Fakten (Kennzahlen, Finalteams, Sponsoren …) vorbefüllt – du kannst es danach anpassen.</p>
+          <p class="muted" style="font-size:13px">Das Briefing wird mit den bekannten Fakten (Kennzahlen, Finalteams, Sponsoren, @handles …) vorbefüllt – du kannst es danach anpassen.</p>
           <div class="modal__foot"><button type="button" class="btn btn--ghost" data-modal-close>Abbrechen</button><button class="btn btn--primary">Anlegen</button></div>
         </form>
       </div>
@@ -486,7 +558,7 @@ ob_start(); ?>
         <div class="modal__head"><h3 id="guidanceModalTitle">Stil-Hinweise für die KI</h3><button type="button" class="modal__close" data-modal-close>&times;</button></div>
         <form method="post" action="<?= url('communication') ?>" class="modal__body" data-modal-form>
           <?= Csrf::field() ?><input type="hidden" name="action" value="save_guidance"><input type="hidden" name="cycle" value="<?= $cycleId ?>">
-          <div class="field"><label>Dauerhafte Hinweise (Tonalität, Do's & Don'ts)</label>
+          <div class="field"><label>Dauerhafte Hinweise (Tonalität, Do's &amp; Don'ts)</label>
             <textarea name="guidance" rows="5" placeholder="z. B. immer gendern, Stadthalle Ebermannstadt erwähnen, kein Ausrufezeichen im Titel"><?= e($guidance) ?></textarea>
           </div>
           <p class="muted" style="font-size:13px">Diese Hinweise fließen in jede Generierung ein (für alle Beiträge).</p>
@@ -494,6 +566,42 @@ ob_start(); ?>
         </form>
       </div>
     </div>
+
+    <!-- Bild-Auswahl aus der Mediengalerie (Mehrfachauswahl) -->
+    <div class="modal-overlay" id="galleryModal" data-modal-static hidden>
+      <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="galleryModalTitle" style="max-width:860px">
+        <div class="modal__head"><h3 id="galleryModalTitle">Bilder auswählen</h3><button type="button" class="modal__close" data-modal-close>&times;</button></div>
+        <form method="post" action="<?= url('communication') ?>" class="modal__body" data-modal-form>
+          <?= Csrf::field() ?><input type="hidden" name="action" value="attach_images"><input type="hidden" name="cycle" value="<?= $cycleId ?>"><input type="hidden" name="item_id" value="0">
+          <?php if (!$gallery): ?>
+            <p class="muted">Noch keine Bilder in der <a href="<?= url('gallery') ?>">Mediengalerie</a> dieses Jahres. Lade dort zuerst Fotos hoch.</p>
+          <?php else: ?>
+            <p class="muted" style="font-size:13px;margin:0 0 10px">Mehrfachauswahl möglich – zum Vergrößern auf ein Bild klicken. Bereits angehängte Bilder werden übersprungen.</p>
+            <div class="imgpick">
+              <?php foreach ($gallery as $g):
+                $lbl = trim((string) ($g['title'] ?: $g['original_name'] ?: ('Bild #' . $g['id']))); ?>
+                <label class="imgpick__item">
+                  <input type="checkbox" name="media_ids[]" value="<?= (int) $g['id'] ?>">
+                  <img src="<?= e($imgThumb((int) $g['id'])) ?>" alt="<?= e($lbl) ?>" loading="lazy">
+                  <span class="imgpick__cap"><?= e(mb_substr($lbl, 0, 40)) ?></span>
+                </label>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+          <div class="modal__foot"><button type="button" class="btn btn--ghost" data-modal-close>Abbrechen</button><button class="btn btn--primary"<?= $gallery ? '' : ' disabled' ?>>Auswahl übernehmen</button></div>
+        </form>
+      </div>
+    </div>
+
+    <style>
+      .imgpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;max-height:60vh;overflow:auto;padding:2px}
+      .imgpick__item{position:relative;display:block;cursor:pointer;border:2px solid var(--line,#e4e7ee);border-radius:10px;overflow:hidden;background:#fff}
+      .imgpick__item img{display:block;width:100%;height:130px;object-fit:cover}
+      .imgpick__item input{position:absolute;top:8px;left:8px;width:20px;height:20px;z-index:2;cursor:pointer}
+      .imgpick__cap{display:block;font-size:12px;padding:5px 8px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .imgpick__item:has(input:checked){border-color:#003594;box-shadow:0 0 0 2px rgba(0,53,148,.25)}
+      .imgpick__item:has(input:checked)::after{content:"✓";position:absolute;top:6px;right:8px;background:#003594;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:14px;z-index:2}
+    </style>
   <?php endif; ?>
 
 <?php endif; ?>

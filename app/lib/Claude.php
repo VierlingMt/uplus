@@ -522,6 +522,11 @@ klassischen PM-Stil:
 - mindestens ein wörtliches Zitat, sofern in den Fakten vorhanden,
 - am Ende ein Dank an Jury, Lehrkräfte und Sponsoren, ein Abschnitt
   „Kontakt für weitere Informationen" und die Boilerplate „Über die Wirtschaftsjunioren".
+
+WICHTIG: Schreibe AUSSCHLIESSLICH in Fließtext (vollständige Sätze und Absätze).
+Verwende KEINE Aufzählungen, Stichpunkte, Spiegelstriche, Bullet-Points oder
+nummerierten Listen – auch nicht für Platzierungen, Sponsoren oder Dank. Zahlen,
+Platzierungen und Namen aus den Fakten werden in ganzen Sätzen ausformuliert.
 TXT;
         } else {
             $roleText = <<<TXT

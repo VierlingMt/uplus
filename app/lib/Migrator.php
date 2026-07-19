@@ -493,7 +493,53 @@ final class Migrator
                 'up'      => 'ALTER TABLE schools
                     ADD COLUMN IF NOT EXISTS instagram VARCHAR(80) NULL AFTER short_name',
             ],
+            [
+                'version' => '2026_07_48_communication_images',
+                'name'    => 'Kommunikation: mehrere Bilder je Beitrag mit Bildunterschrift & Fotograf',
+                'up'      => [self::class, 'communicationImages'],
+            ],
         ];
+    }
+
+    /**
+     * Mehrere Bilder je Kommunikationsbeitrag – mit Bildunterschrift (Personen,
+     * z. B. „v.l.n.r. …") und Fotograf/Urheber. Löst das bisherige Einzelbild
+     * (communication_items.image_media_id) ab; vorhandene Einzelbilder werden
+     * einmalig übernommen.
+     */
+    public static function communicationImages(PDO $pdo): void
+    {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS communication_images (
+                id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                item_id      INT UNSIGNED NOT NULL,
+                media_id     INT UNSIGNED NULL,
+                caption      VARCHAR(500) NULL,
+                photographer VARCHAR(190) NULL,
+                sort_order   INT NOT NULL DEFAULT 0,
+                created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_commimg_item (item_id, sort_order),
+                CONSTRAINT fk_commimg_item FOREIGN KEY (item_id)
+                    REFERENCES communication_items(id) ON DELETE CASCADE,
+                CONSTRAINT fk_commimg_media FOREIGN KEY (media_id)
+                    REFERENCES media_items(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+        // Bereits gesetzte Einzelbilder übernehmen (idempotent: nur wenn noch keine
+        // Zuordnung existiert).
+        $rows = $pdo->query(
+            'SELECT id, image_media_id FROM communication_items WHERE image_media_id IS NOT NULL'
+        )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $ins = $pdo->prepare(
+            'INSERT INTO communication_images (item_id, media_id, sort_order)
+             SELECT ?, ?, 0 FROM DUAL
+              WHERE NOT EXISTS (SELECT 1 FROM communication_images WHERE item_id = ?)'
+        );
+        foreach ($rows as $r) {
+            $ins->execute([(int) $r['id'], (int) $r['image_media_id'], (int) $r['id']]);
+        }
     }
 
     /**

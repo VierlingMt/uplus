@@ -113,6 +113,7 @@ try {
         case 'media_zip':
         case 'communication':
         case 'communication_pdf':
+        case 'communication_docx':
         case 'sponsors':
         case 'event':
         case 'event_print':

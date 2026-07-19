@@ -7,6 +7,24 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.81.0] - 2026-07-19
+### Hinzugefügt
+- **Pressemitteilung als Word (.docx):** Pressemitteilungen werden nun als
+  Word-Dokument erzeugt – **Fließtext plus Bildanhang**. Jedes angehängte Bild
+  erscheint mit **Bildunterschrift** (Personen, z. B. „v.l.n.r. …") und
+  **Fotograf/Urheber**. Erzeugung serverseitig ohne externe Bibliotheken.
+- **Bildauswahl als Galerie-Modal:** Bilder werden jetzt in einem Raster groß
+  angezeigt und lassen sich **mehrfach auswählen** (statt Dropdown). Je Bild
+  können Bildunterschrift und Fotograf hinterlegt werden.
+### Geändert
+- **Klarere Sichtbarkeit:** Der Kommunikations-Arbeitsbereich ist deutlich als
+  „nur Projektleitung & Admin" gekennzeichnet; jeder Beitrag zeigt eine Vorschau
+  **„So sehen es alle"** und den Status (Entwurf/veröffentlicht).
+- **Pressemitteilungen im Fließtext:** Die KI schreibt Pressemitteilungen
+  ausschließlich als Fließtext – **keine Aufzählungen/Stichpunkte** mehr.
+- Presse-Beiträge lassen sich mit dem Word-Dokument als Ergebnis veröffentlichen;
+  Link und abgedruckte PDF sind dort optional.
+
 ## [0.80.1] - 2026-07-19
 ### Hinzugefügt
 - **Instagram-Handle auch für Schulen:** Neues Feld „Instagram-Handle" in der

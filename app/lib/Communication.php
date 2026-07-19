@@ -178,6 +178,103 @@ TXT;
         );
     }
 
+    // --- Bilder eines Beitrags (mit Bildunterschrift & Fotograf) ---------
+
+    /** Angehängte Bilder eines Beitrags in Anzeigereihenfolge. */
+    public static function images(int $itemId): array
+    {
+        return Database::all(
+            'SELECT ci.*, m.stored_name, m.kind, m.title AS media_title, m.original_name
+               FROM communication_images ci
+               LEFT JOIN media_items m ON m.id = ci.media_id
+              WHERE ci.item_id = ?
+              ORDER BY ci.sort_order, ci.id',
+            [$itemId]
+        );
+    }
+
+    /**
+     * Ausgewählte Galerie-Bilder an einen Beitrag hängen (bereits verknüpfte
+     * werden übersprungen). Gibt die Zahl der neu hinzugefügten Bilder zurück.
+     */
+    public static function attachImages(int $itemId, array $mediaIds): int
+    {
+        $mediaIds = array_values(array_unique(array_filter(array_map('intval', $mediaIds), static fn($i) => $i > 0)));
+        if (!$mediaIds) {
+            return 0;
+        }
+        $existing = array_map(
+            static fn($r) => (int) $r['media_id'],
+            Database::all('SELECT media_id FROM communication_images WHERE item_id = ?', [$itemId])
+        );
+        $ord = (int) Database::value('SELECT COALESCE(MAX(sort_order), -1) + 1 FROM communication_images WHERE item_id = ?', [$itemId]);
+        $n = 0;
+        foreach ($mediaIds as $mid) {
+            if (in_array($mid, $existing, true)) {
+                continue;
+            }
+            Database::run('INSERT INTO communication_images (item_id, media_id, sort_order) VALUES (?,?,?)', [$itemId, $mid, $ord++]);
+            $n++;
+        }
+        return $n;
+    }
+
+    public static function updateImageMeta(int $imageId, int $itemId, string $caption, string $photographer): void
+    {
+        Database::run(
+            'UPDATE communication_images SET caption = ?, photographer = ? WHERE id = ? AND item_id = ?',
+            [mb_substr(trim($caption), 0, 500) ?: null, mb_substr(trim($photographer), 0, 190) ?: null, $imageId, $itemId]
+        );
+    }
+
+    public static function removeImage(int $imageId, int $itemId): void
+    {
+        Database::run('DELETE FROM communication_images WHERE id = ? AND item_id = ?', [$imageId, $itemId]);
+    }
+
+    /** Anzahl angehängter Bilder je Beitrag. @return array<int,int> */
+    public static function imageCounts(array $itemIds): array
+    {
+        $itemIds = array_values(array_filter(array_map('intval', $itemIds), static fn($i) => $i > 0));
+        if (!$itemIds) {
+            return [];
+        }
+        $in = implode(',', array_fill(0, count($itemIds), '?'));
+        $out = [];
+        foreach (Database::all("SELECT item_id, COUNT(*) AS n FROM communication_images WHERE item_id IN ($in) GROUP BY item_id", $itemIds) as $r) {
+            $out[(int) $r['item_id']] = (int) $r['n'];
+        }
+        return $out;
+    }
+
+    // --- Word-Dokument (Pressemitteilung inkl. Bildanhang) ---------------
+
+    /** Dateiname für das Word-Dokument eines Beitrags. */
+    public static function docxFilename(array $item): string
+    {
+        $base = trim((string) ($item['title'] ?? 'Pressemitteilung'));
+        $base = preg_replace('/[^\p{L}\p{N}_-]+/u', '_', $base) ?: 'Pressemitteilung';
+        return trim($base, '_') . '.docx';
+    }
+
+    /**
+     * Word-Dokument (Fließtext + Bildanhang mit Bildunterschrift/Fotograf) eines
+     * Beitrags erzeugen. Gibt true bei Erfolg zurück.
+     */
+    public static function buildDocxTo(array $item, string $path): bool
+    {
+        $imgs = [];
+        foreach (self::images((int) $item['id']) as $ci) {
+            $file = !empty($ci['stored_name']) ? Media::dir() . '/' . basename((string) $ci['stored_name']) : '';
+            $imgs[] = [
+                'path'         => $file,
+                'caption'      => (string) ($ci['caption'] ?? ''),
+                'photographer' => (string) ($ci['photographer'] ?? ''),
+            ];
+        }
+        return Docx::create($path, (string) $item['title'], (string) ($item['body'] ?? ''), $imgs);
+    }
+
     // --- KI-Generierung --------------------------------------------------
 
     /**
