@@ -116,8 +116,8 @@ $helpData = class_exists('Help') ? [
       <div style="margin-top:8px">
         <a href="<?= url('changelog') ?>" style="color:#9fb2d6;text-decoration:none" title="Changelog anzeigen">Version <?= e(APP_VERSION) ?> ↗</a>
       </div>
-      <div style="margin-top:10px;font-size:11px;line-height:1.5;color:#8194b5" title="App von Martin Vierling persönlich entwickelt. Wettbewerb durchgeführt und weiterentwickelt von Jehona Ahmeti und Martin Vierling im Vorstand der WJ Forchheim (Erstwettbewerb 2023/24).">
-        <?= e(copyright_notice(false)) ?><br>Wettbewerb: Jehona Ahmeti &amp; Martin Vierling
+      <div style="margin-top:10px;font-size:11px;line-height:1.5;color:#8194b5" title="App entwickelt von Martin Vierling. Konzept des Wettbewerbs: Wirtschaftsjunioren Forchheim.">
+        <?= e(copyright_notice(false)) ?>
       </div>
     </div>
   </aside>

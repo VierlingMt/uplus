@@ -154,11 +154,11 @@ Nutzungsrechte liegen bei Martin Vierling. Nutzung, Vervielfältigung, Bearbeitu
 oder Weitergabe – ganz oder in Teilen – nur mit ausdrücklicher schriftlicher
 Genehmigung. Der vollständige Text steht in [LICENSE](LICENSE).
 
-**Wettbewerb, Idee & Konzept:** Der Wettbewerb wurde von **Jehona Ahmeti** und
-**Martin Vierling** im Vorstand der Wirtschaftsjunioren Forchheim durchgeführt und
-weiterentwickelt (Erstwettbewerb 2023/24). Diese Nennung würdigt das gemeinsam
-getragene Wettbewerbskonzept und begründet keine Rechte an dieser Software (die
-App selbst stammt allein von Martin Vierling).
+**Wettbewerb & Konzept:** Das Konzept des Wettbewerbs stammt von den
+**Wirtschaftsjunioren Forchheim**; der Erstwettbewerb (2023/24) wurde von Jehona
+Ahmeti und Martin Vierling im Vorstand durchgeführt und weiterentwickelt. Dieser
+Bezug begründet keine Rechte an der Software – die App selbst stammt allein von
+Martin Vierling.
 
 Der Hinweis erscheint für Nutzer:innen dezent im Footer der Seitenleiste sowie auf
 der Anmeldeseite.
